@@ -2,15 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ── 像素風格全域背景 ─────────────────────────────── */
+/* ── 全域背景 ─────────────────────────────────────── */
 body {
   background-color: #07071a;
   background-image:
     radial-gradient(ellipse 100% 60% at 50% 0%,   rgba(100, 60, 200, 0.18) 0%, transparent 70%),
     radial-gradient(ellipse 80%  50% at 20% 80%,  rgba(30,  80, 180, 0.12) 0%, transparent 60%),
     radial-gradient(ellipse 60%  40% at 80% 60%,  rgba(140, 40, 120, 0.10) 0%, transparent 60%),
-    linear-gradient(rgba(120, 120, 255, 0.025) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(120, 120, 255, 0.025) 1px, transparent 1px);
+    linear-gradient(rgba(120, 120, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(120, 120, 255, 0.02) 1px, transparent 1px);
   background-size: 100% 100%, 100% 100%, 100% 100%, 24px 24px, 24px 24px;
   min-height: 100vh;
   color: #e8e8f0;
@@ -19,11 +19,11 @@ body {
 /* ── 像素字型感 ──────────────────────────────────── */
 .font-pixel { font-family: 'Courier New', monospace; }
 
-/* ── 玻璃卡片效果 ────────────────────────────────── */
+/* ── 玻璃卡片效果（加深背景讓文字更清楚） ─────────── */
 .glass {
-  background: rgba(255, 255, 255, 0.04);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(10, 8, 30, 0.75);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.10);
 }
 
 /* ── 霓虹文字光暈 ────────────────────────────────── */
@@ -49,18 +49,19 @@ body {
   z-index: 0;
 }
 
-/* ── 掃描線質感 ──────────────────────────────────── */
-.scanline::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: repeating-linear-gradient(
-    0deg,
-    transparent,
-    transparent 2px,
-    rgba(0, 0, 0, 0.08) 2px,
-    rgba(0, 0, 0, 0.08) 4px
-  );
-  pointer-events: none;
-  border-radius: inherit;
+/* ── 輸入框強制白色文字 ──────────────────────────── */
+input, textarea {
+  color: #ffffff !important;
+  caret-color: #a78bfa;
+}
+input::placeholder, textarea::placeholder {
+  color: rgba(255, 255, 255, 0.3) !important;
+}
+/* 清除瀏覽器自動填入的背景色 */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #ffffff !important;
+  -webkit-box-shadow: 0 0 0 1000px #0a0820 inset !important;
+  transition: background-color 5000s ease-in-out 0s;
 }

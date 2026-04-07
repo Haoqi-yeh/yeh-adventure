@@ -3,6 +3,14 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useGameStore } from "@/store/game-store";
 
+function friendlyError(msg: string): string {
+  if (msg.includes("Quota") || msg.includes("quota") || msg.includes("429"))
+    return "AI 額度暫時用完，請稍等幾分鐘再試";
+  if (msg.includes("API key") || msg.includes("401"))
+    return "API Key 設定有誤";
+  return "發生錯誤，請稍後再試";
+}
+
 const ICONS = ["▶", "◆", "●", "★"];
 
 export default function ChoicePanel() {
@@ -31,7 +39,7 @@ export default function ChoicePanel() {
             exit={{ opacity: 0 }}
             className="glass rounded-xl px-4 py-3 border border-red-500/40 text-red-300 text-xs font-pixel"
           >
-            ⚠ {error}
+            ⚠ {friendlyError(error)}
           </motion.div>
         )}
       </AnimatePresence>
