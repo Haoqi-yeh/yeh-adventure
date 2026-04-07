@@ -49,19 +49,24 @@ body {
   z-index: 0;
 }
 
-/* ── 輸入框強制白色文字 ──────────────────────────── */
-input, textarea {
-  color: #ffffff !important;
-  caret-color: #a78bfa;
+/* ── 輸入框（白底黑字） ──────────────────────────── */
+input, textarea, select {
+  color: #111111 !important;
+  caret-color: #6d28d9;
+  background-color: #ffffff;
 }
 input::placeholder, textarea::placeholder {
-  color: rgba(255, 255, 255, 0.3) !important;
+  color: rgba(0, 0, 0, 0.35) !important;
 }
-/* 清除瀏覽器自動填入的背景色 */
+select option {
+  color: #111111;
+  background-color: #ffffff;
+}
+/* 清除瀏覽器自動填入背景 */
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
 input:-webkit-autofill:focus {
-  -webkit-text-fill-color: #ffffff !important;
-  -webkit-box-shadow: 0 0 0 1000px #0a0820 inset !important;
+  -webkit-text-fill-color: #111111 !important;
+  -webkit-box-shadow: 0 0 0 1000px #ffffff inset !important;
   transition: background-color 5000s ease-in-out 0s;
 }
