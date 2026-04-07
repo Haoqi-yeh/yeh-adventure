@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { rollDice } from "@/lib/game/dice";
 import { advanceTick, rollWeather, shouldChangeWeather, getEnvDescription } from "@/lib/game/time";
@@ -9,7 +9,7 @@ import type {
   PlayerActionRequest, NarrativeResponse, AdventureRow, NPCStateRow, NPCUpdate,
 } from "@/lib/game/types";
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? "");
 
 export async function POST(req: NextRequest) {
   const body: PlayerActionRequest = await req.json();
@@ -85,14 +85,12 @@ export async function POST(req: NextRequest) {
     userMsg = `我的行動：${freeInput}`;
   }
 
-  const message = await anthropic.messages.create({
-    model: "claude-sonnet-4-6",
-    max_tokens: 1024,
-    system: systemPrompt,
-    messages: [{ role: "user", content: userMsg }],
+  const model = genAI.getGenerativeModel({
+    model: "gemini-2.0-flash",
+    systemInstruction: systemPrompt,
   });
-
-  const rawText = (message.content[0] as { text: string }).text;
+  const result = await model.generateContent(userMsg);
+  const rawText = result.response.text();
   const parsed = parseLLMResponse(rawText);
 
   // ── 4. 更新 NPC 狀態 ─────────────────────────────────────────
