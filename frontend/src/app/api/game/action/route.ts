@@ -12,6 +12,7 @@ import type {
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? "");
 
 export async function POST(req: NextRequest) {
+  try {
   const body: PlayerActionRequest = await req.json();
   const { adventureId, choiceIndex, freeInput, previousChoices } = body;
   const db = getSupabaseAdmin();
@@ -164,6 +165,11 @@ export async function POST(req: NextRequest) {
   };
 
   return NextResponse.json(response);
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error("[/api/game/action]", msg);
+    return NextResponse.json({ error: msg }, { status: 500 });
+  }
 }
 
 // ── 工具函式 ──────────────────────────────────────────────────────────────────
