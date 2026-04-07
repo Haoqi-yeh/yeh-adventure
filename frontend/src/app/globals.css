@@ -1,0 +1,14 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  background-color: #030712;
+  color: #f3f4f6;
+}
+
+/* 復古像素字型感 */
+.font-pixel {
+  font-family: 'Courier New', monospace;
+  image-rendering: pixelated;
+}
