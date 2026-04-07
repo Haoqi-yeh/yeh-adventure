@@ -17,7 +17,6 @@ export async function POST(req: NextRequest) {
   const { adventureId, choiceIndex, freeInput, previousChoices } = body;
   const db = getSupabaseAdmin();
 
-  // ── 載入冒險 ────────────────────────────────────────────────
   const { data: adventure, error: advErr } = await db
     .from("adventures")
     .select("*")
@@ -31,14 +30,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "此冒險已結束" }, { status: 400 });
   }
 
-  // ── 載入 NPC ────────────────────────────────────────────────
   const { data: npcRows } = await db
     .from("npc_states")
     .select("*")
     .eq("adventure_id", adventureId);
   const npcs: NPCStateRow[] = npcRows ?? [];
 
-  // ── 1. 骰子 ─────────────────────────────────────────────────
   const avgAffection = npcs.length
     ? Math.round(npcs.reduce((s, n) => s + n.affection, 0) / npcs.length)
     : 0;
@@ -53,14 +50,12 @@ export async function POST(req: NextRequest) {
     worldBonus: getWorldBonus(adventure),
   });
 
-  // ── 2. 推進時間 ──────────────────────────────────────────────
   const { newTick, timeOfDay } = advanceTick(adventure.tick);
   const weather = shouldChangeWeather(newTick)
     ? rollWeather(adventure.weather)
     : adventure.weather;
   const envDesc = getEnvDescription(timeOfDay, weather);
 
-  // ── 3. 呼叫 Claude ───────────────────────────────────────────
   const systemPrompt = buildSystemPrompt({
     worldType: adventure.world_type,
     narrativeHint: diceResult.narrativeHint,
@@ -87,14 +82,13 @@ export async function POST(req: NextRequest) {
   }
 
   const model = genAI.getGenerativeModel({
-    model: "gemini-2.0-flash",
+    model: "gemini-1.5-flash",
     systemInstruction: systemPrompt,
   });
   const result = await model.generateContent(userMsg);
   const rawText = result.response.text();
   const parsed = parseLLMResponse(rawText);
 
-  // ── 4. 更新 NPC 狀態 ─────────────────────────────────────────
   const npcUpdates: NPCUpdate[] = [];
   const npcMap = new Map(npcs.map(n => [n.name, n]));
 
@@ -115,7 +109,6 @@ export async function POST(req: NextRequest) {
     npcUpdates.push({ ...upd, newRelation });
   }
 
-  // ── 5. 更新冒險狀態 ──────────────────────────────────────────
   const sc = parsed.stateChanges;
   const newHp = Math.max(0, Math.min(adventure.hp_max, adventure.hp + (sc.hpDelta ?? 0)));
   const newMp = Math.max(0, Math.min(adventure.mp_max, adventure.mp + (sc.mpDelta ?? 0)));
@@ -140,7 +133,6 @@ export async function POST(req: NextRequest) {
     .select("*")
     .single();
 
-  // ── 6. 記錄 EventLog ─────────────────────────────────────────
   await db.from("event_logs").insert({
     adventure_id: adventureId,
     tick: newTick,
@@ -171,8 +163,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
-
-// ── 工具函式 ──────────────────────────────────────────────────────────────────
 
 function parseLLMResponse(raw: string) {
   const match = raw.match(/```json\s*([\s\S]*?)\s*```/);
