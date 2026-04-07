@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { useGameStore } from "@/store/game-store";
-import type { WorldType } from "@/types/game";
+import type { WorldType } from "@/lib/game/types";
 
 const WORLDS: { type: WorldType; emoji: string; name: string; desc: string }[] = [
   { type: "xian_xia",   emoji: "⚔️",  name: "仙俠",  desc: "修仙、靈力、宗門恩怨" },

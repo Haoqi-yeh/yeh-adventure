@@ -1,37 +1,29 @@
-import axios from "axios";
 import type {
-  AdventureState,
-  CreateAdventurePayload,
+  AdventureRow,
   NarrativeResponse,
-  PlayerActionPayload,
-} from "@/types/game";
+  StartAdventureRequest,
+  PlayerActionRequest,
+  LegacyRow,
+} from "@/lib/game/types";
 
-const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1",
-});
-
-export async function createAdventure(
-  payload: CreateAdventurePayload
-): Promise<AdventureState> {
-  const { data } = await api.post("/game/adventures", payload);
-  return data;
-}
-
-export async function getAdventure(id: string): Promise<AdventureState> {
-  const { data } = await api.get(`/game/adventures/${id}`);
-  return data;
-}
-
-export async function sendPlayerAction(
-  payload: PlayerActionPayload
-): Promise<NarrativeResponse> {
-  const { data } = await api.post("/game/action", payload);
-  return data;
-}
-
-export async function endAdventure(id: string, deathCause?: string) {
-  const { data } = await api.post(`/game/adventures/${id}/end`, null, {
-    params: { death_cause: deathCause || "主動結束" },
+async function post<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
   });
-  return data;
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error ?? "請求失敗");
+  }
+  return res.json();
 }
+
+export const createAdventure = (payload: StartAdventureRequest) =>
+  post<AdventureRow>("/api/game/start", payload);
+
+export const sendPlayerAction = (payload: PlayerActionRequest) =>
+  post<NarrativeResponse>("/api/game/action", payload);
+
+export const endAdventure = (adventureId: string, deathCause?: string) =>
+  post<LegacyRow>("/api/game/end", { adventureId, deathCause });

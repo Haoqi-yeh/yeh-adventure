@@ -1,9 +1,9 @@
 import { create } from "zustand";
-import type { AdventureState, NarrativeResponse, WorldType } from "@/types/game";
+import type { AdventureRow, NarrativeResponse, WorldType } from "@/lib/game/types";
 import { createAdventure, sendPlayerAction } from "@/lib/api";
 
 interface GameStore {
-  adventure: AdventureState | null;
+  adventure: AdventureRow | null;
   narrative: string;
   choices: string[];
   imagePrompt: string;
@@ -33,39 +33,33 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   startAdventure: async (worldType) => {
     const { playerName } = get();
-    if (!playerName.trim()) {
-      set({ error: "請先輸入名字" });
-      return;
-    }
+    if (!playerName.trim()) { set({ error: "請先輸入名字" }); return; }
     set({ isLoading: true, error: null });
     try {
-      const adventure = await createAdventure({
-        world_type: worldType,
-        player_name: playerName,
-      });
-      // 取得開場敘事
+      const adventure = await createAdventure({ playerName, worldType });
       const response = await sendPlayerAction({
-        adventure_id: adventure.id,
-        free_input: "開始冒險",
+        adventureId: adventure.id,
+        freeInput: "開始冒險",
       });
-      _applyResponse(set, response);
-    } catch (e) {
-      set({ error: "連線失敗，請確認後端服務是否啟動", isLoading: false });
+      applyResponse(set, response);
+    } catch (e: unknown) {
+      set({ error: e instanceof Error ? e.message : "連線失敗", isLoading: false });
     }
   },
 
   makeChoice: async (choiceIndex) => {
-    const { adventure } = get();
+    const { adventure, choices } = get();
     if (!adventure) return;
     set({ isLoading: true, error: null });
     try {
       const response = await sendPlayerAction({
-        adventure_id: adventure.id,
-        choice_index: choiceIndex,
+        adventureId: adventure.id,
+        choiceIndex,
+        previousChoices: choices,
       });
-      _applyResponse(set, response);
-    } catch (e) {
-      set({ error: "行動失敗，請稍後再試", isLoading: false });
+      applyResponse(set, response);
+    } catch (e: unknown) {
+      set({ error: e instanceof Error ? e.message : "行動失敗", isLoading: false });
     }
   },
 
@@ -74,28 +68,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (!adventure) return;
     set({ isLoading: true, error: null });
     try {
-      const response = await sendPlayerAction({
-        adventure_id: adventure.id,
-        free_input: input,
-      });
-      _applyResponse(set, response);
-    } catch (e) {
-      set({ error: "行動失敗，請稍後再試", isLoading: false });
+      const response = await sendPlayerAction({ adventureId: adventure.id, freeInput: input });
+      applyResponse(set, response);
+    } catch (e: unknown) {
+      set({ error: e instanceof Error ? e.message : "行動失敗", isLoading: false });
     }
   },
 
-  reset: () =>
-    set({
-      adventure: null,
-      narrative: "",
-      choices: [],
-      imagePrompt: "",
-      isLoading: false,
-      error: null,
-    }),
+  reset: () => set({ adventure: null, narrative: "", choices: [], imagePrompt: "", isLoading: false, error: null }),
 }));
 
-function _applyResponse(
+function applyResponse(
   set: (partial: Partial<GameStore>) => void,
   response: NarrativeResponse
 ) {
@@ -103,8 +86,9 @@ function _applyResponse(
     adventure: response.state,
     narrative: response.narrative,
     choices: response.choices,
-    imagePrompt: response.image_prompt,
-    useSafeImage: response.use_safe_image,
+    imagePrompt: response.imagePrompt,
+    useSafeImage: response.useSafeImage,
     isLoading: false,
+    error: null,
   });
 }
