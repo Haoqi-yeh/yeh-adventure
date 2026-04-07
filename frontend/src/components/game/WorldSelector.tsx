@@ -80,7 +80,6 @@ export default function WorldSelector() {
               </option>
             ))}
           </select>
-          {/* 選中世界的描述提示 */}
           <p className="text-purple-300/50 text-xs font-pixel px-1 pt-1">
             {selectedWorld.emoji} {selectedWorld.desc}
           </p>
