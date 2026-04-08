@@ -159,11 +159,21 @@ const CLOTHING_BADGES: Record<string, { icon: string; label: string; color: stri
   bare:       { icon: "⭕", label: "赤裸",     color: "#dc2626" },
 };
 const BODY_BADGES: Record<string, { icon: string; label: string; color: string }> = {
-  flushed:   { icon: "😳", label: "臉紅",   color: "#f472b6" },
-  sweaty:    { icon: "💦", label: "汗濕",   color: "#60a5fa" },
-  injured:   { icon: "🩸", label: "受傷",   color: "#ef4444" },
-  exhausted: { icon: "😮‍💨", label: "疲憊", color: "#94a3b8" },
-  aroused:   { icon: "🔥", label: "亢奮",   color: "#fb923c" },
+  flushed:      { icon: "😳", label: "臉紅", color: "#f472b6" },
+  sweaty:       { icon: "💦", label: "汗濕", color: "#60a5fa" },
+  injured:      { icon: "🩸", label: "受傷", color: "#ef4444" },
+  exhausted:    { icon: "😮‍💨", label: "疲憊", color: "#94a3b8" },
+  aroused:      { icon: "🔥", label: "亢奮", color: "#fb923c" },
+  poisoned:     { icon: "🐍", label: "中毒", color: "#4ade80" },
+  inner_injured:{ icon: "💔", label: "內傷", color: "#c084fc" },
+  bleeding:     { icon: "🩸", label: "失血", color: "#dc2626" },
+  fever:        { icon: "🌡️", label: "發燒", color: "#f97316" },
+  starving:     { icon: "🫙", label: "飢餓", color: "#d97706" },
+  possessed:    { icon: "👻", label: "附身", color: "#818cf8" },
+  cursed:       { icon: "💀", label: "詛咒", color: "#6366f1" },
+  drunk:        { icon: "🍶", label: "醉酒", color: "#a78bfa" },
+  medicated:    { icon: "💊", label: "藥效中", color: "#34d399" },
+  paralyzed:    { icon: "⚡", label: "麻痺", color: "#67e8f9" },
 };
 
 function CharacterSprite({ worldAttr }: { worldAttr: Record<string, unknown> }) {

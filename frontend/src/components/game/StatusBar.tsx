@@ -44,12 +44,22 @@ const CLOTHING_DISPLAY: Record<string, { label: string; color: string }> = {
 };
 
 const BODY_DISPLAY: Record<string, { label: string; color: string }> = {
-  normal:    { label: "正常", color: "rgba(148,163,184,0.5)" },
-  flushed:   { label: "臉紅耳熱", color: "#f472b6" },
-  sweaty:    { label: "汗如雨下", color: "#60a5fa" },
-  injured:   { label: "帶傷", color: "#ef4444" },
-  exhausted: { label: "精疲力竭", color: "#94a3b8" },
-  aroused:   { label: "慾火中燒", color: "#fb923c" },
+  normal:       { label: "正常",   color: "rgba(148,163,184,0.5)" },
+  flushed:      { label: "臉紅耳熱", color: "#f472b6" },
+  sweaty:       { label: "汗如雨下", color: "#60a5fa" },
+  injured:      { label: "帶傷",   color: "#ef4444" },
+  exhausted:    { label: "精疲力竭", color: "#94a3b8" },
+  aroused:      { label: "慾火中燒", color: "#fb923c" },
+  poisoned:     { label: "中毒",   color: "#4ade80" },
+  inner_injured:{ label: "內傷",   color: "#c084fc" },
+  bleeding:     { label: "失血",   color: "#dc2626" },
+  fever:        { label: "發燒",   color: "#f97316" },
+  starving:     { label: "飢餓",   color: "#d97706" },
+  possessed:    { label: "附身",   color: "#818cf8" },
+  cursed:       { label: "詛咒",   color: "#6366f1" },
+  drunk:        { label: "醉酒",   color: "#a78bfa" },
+  medicated:    { label: "藥效中", color: "#34d399" },
+  paralyzed:    { label: "麻痺",   color: "#67e8f9" },
 };
 
 const WORLD_ATTRS: Record<string, { key: string; label: string; emoji: string; max?: number }[]> = {
@@ -342,7 +352,7 @@ export default function StatusBar({ accent }: { accent: string }) {
 
               {/* Lust / Willpower / Body State */}
               {showImmersive && (
-                <Section title="慾望與身體">
+                <Section title="身體狀況">
                   {lust !== null && (
                     <StatRow icon="🔥" label="慾望" value={lust} max={100} color={lust >= 70 ? "#f472b6" : lust >= 40 ? "#fb923c" : "#94a3b8"} accent={accent} />
                   )}

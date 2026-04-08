@@ -93,12 +93,22 @@ const CLOTHING_LABELS: Record<string, string> = {
 };
 
 const BODY_LABELS: Record<string, string> = {
-  normal: "正常",
-  flushed: "臉紅耳熱",
-  sweaty: "汗如雨下",
-  injured: "帶傷",
-  exhausted: "精疲力竭",
-  aroused: "慾火中燒",
+  normal:       "正常",
+  flushed:      "臉紅耳熱",
+  sweaty:       "汗如雨下",
+  injured:      "帶傷",
+  exhausted:    "精疲力竭",
+  aroused:      "慾火中燒",
+  poisoned:     "中毒",
+  inner_injured:"內傷",
+  bleeding:     "失血",
+  fever:        "發燒",
+  starving:     "飢餓",
+  possessed:    "附身",
+  cursed:       "詛咒",
+  drunk:        "醉酒",
+  medicated:    "藥效中",
+  paralyzed:    "麻痺",
 };
 
 export function buildSystemPrompt(params: {
@@ -162,8 +172,11 @@ export function buildSystemPrompt(params: {
   Object.entries(skillBonus).forEach(([s, v]) => legacyHints.push(`前世留下的【${s}】殘留記憶（加成 ${v > 0 ? "+" : ""}${v}）`));
   const legacyStr = legacyHints.length ? legacyHints.join("；") : "無前世傳承";
 
+  // Scenario hook (set at adventure creation, drives unique story + NPCs)
+  const scenarioHook = worldAttributes.scenario_hook as string | undefined;
+
   // Filter worldAttrs for display — exclude internal fields
-  const INTERNAL_KEYS = new Set(["world_flavor", "character_bio", "writing_style", "gender", "lust", "willpower", "clothing_state", "body_status"]);
+  const INTERNAL_KEYS = new Set(["world_flavor", "character_bio", "writing_style", "gender", "lust", "willpower", "clothing_state", "body_status", "scenario_hook"]);
   const worldAttrsStr = Object.entries(worldAttributes)
     .filter(([k]) => !INTERNAL_KEYS.has(k))
     .map(([k, v]) => `- ${k}：${v}`)
@@ -180,6 +193,7 @@ export function buildSystemPrompt(params: {
 
 ${worldPrompt}
 ${characterBio ? `\n【玩家角色設定】\n${characterBio}\n（請依照此設定塑造主角，並在敘事中融入這些背景細節。）` : ""}
+${scenarioHook ? `\n【本局開場設定】\n${scenarioHook}\n本局的故事必須完全基於上述開場設定展開，不可偏離或使用預設模板。NPC 必須是全新的角色，姓名、性格、與主角的初始關係都要獨特。` : ""}
 ${urgencyBlock ? "\n" + urgencyBlock : ""}
 
 ═══════════════ 當前狀態快照 ═══════════════
@@ -235,5 +249,5 @@ ${narrativeSummary || "冒險剛剛開始。"}
 
 useSafeImage 規則：含暴力/血腥/成人內容設 false，否則設 true。
 clothingState 可選值：normal / disheveled / partial / minimal / bare
-bodyStatus 可選值：normal / flushed / sweaty / injured / exhausted / aroused`;
+bodyStatus 可選值：normal / flushed / sweaty / injured / exhausted / aroused / poisoned / inner_injured / bleeding / fever / starving / possessed / cursed / drunk / medicated / paralyzed`;
 }
