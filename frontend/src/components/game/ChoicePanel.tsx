@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Send } from "lucide-react";
 import { useGameStore } from "@/store/game-store";
@@ -14,8 +14,129 @@ function friendlyError(msg: string): string {
   return "發生錯誤，請稍後再試";
 }
 
-// Pick a contextual pixel icon for each choice slot
+function parseChoice(text: string): { title: string; detail: string } {
+  const m = text.match(/^【(.{1,10})】(.*)$/);
+  if (m) return { title: m[1].trim(), detail: m[2].trim() };
+  return { title: text, detail: "" };
+}
+
 const SLOT_ICONS = ["⚔️", "🏃", "💬", "🔍", "🛡️", "✨", "🎲", "👁️"];
+
+function ChoiceButton({ choice, index, accent, isLoading, onChoose }: {
+  choice: string; index: number; accent: string; isLoading: boolean; onChoose: () => void;
+}) {
+  const { title, detail } = parseChoice(choice);
+  const [showTooltip, setShowTooltip] = useState(false);
+  const longPressRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleTouchStart = () => {
+    longPressRef.current = setTimeout(() => setShowTooltip(true), 500);
+  };
+  const handleTouchEnd = () => {
+    if (longPressRef.current) clearTimeout(longPressRef.current);
+    setTimeout(() => setShowTooltip(false), 2000);
+  };
+
+  return (
+    <div style={{ position: "relative" }}>
+      {/* Hover / long-press tooltip */}
+      <AnimatePresence>
+        {showTooltip && detail && (
+          <motion.div
+            initial={{ opacity: 0, y: 6, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 6, scale: 0.95 }}
+            transition={{ duration: 0.14 }}
+            style={{
+              position: "absolute", bottom: "calc(100% + 10px)", left: "50%",
+              transform: "translateX(-50%)",
+              background: "rgba(8,12,28,0.95)",
+              border: `1px solid ${accent}45`,
+              borderRadius: 10,
+              padding: "9px 13px",
+              fontSize: 11, color: "rgba(203,213,225,0.9)",
+              whiteSpace: "normal",
+              lineHeight: "1.6",
+              zIndex: 30,
+              pointerEvents: "none",
+              backdropFilter: "blur(10px)",
+              boxShadow: `0 6px 24px rgba(0,0,0,0.6), 0 0 14px ${accent}18`,
+              minWidth: 140, maxWidth: 210,
+              textAlign: "left",
+            }}
+          >
+            <div style={{
+              fontSize: 9, color: `${accent}90`, fontFamily: "monospace",
+              marginBottom: 4, letterSpacing: "0.12em", textTransform: "uppercase",
+            }}>
+              行動詳情
+            </div>
+            {detail}
+            {/* Down arrow */}
+            <div style={{
+              position: "absolute", bottom: -6, left: "50%",
+              transform: "translateX(-50%) rotate(45deg)",
+              width: 10, height: 10,
+              background: "rgba(8,12,28,0.95)",
+              borderRight: `1px solid ${accent}45`,
+              borderBottom: `1px solid ${accent}45`,
+            }} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <motion.button
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: index * 0.06 }}
+        whileTap={{ scale: 0.95 }}
+        onClick={onChoose}
+        disabled={isLoading}
+        onMouseEnter={() => detail && setShowTooltip(true)}
+        onMouseLeave={() => setShowTooltip(false)}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        style={{
+          width: "100%",
+          padding: "14px 10px",
+          borderRadius: 12,
+          border: `1px solid ${accent}35`,
+          background: "rgba(255,255,255,0.04)",
+          cursor: isLoading ? "not-allowed" : "pointer",
+          opacity: isLoading ? 0.4 : 1,
+          display: "flex", flexDirection: "column",
+          alignItems: "center", gap: 6,
+          textAlign: "center",
+          transition: "background 0.15s, border-color 0.15s",
+        }}
+        onMouseOver={e => {
+          if (!isLoading) {
+            (e.currentTarget as HTMLButtonElement).style.background = `${accent}18`;
+            (e.currentTarget as HTMLButtonElement).style.borderColor = `${accent}70`;
+          }
+        }}
+        onMouseOut={e => {
+          (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.04)";
+          (e.currentTarget as HTMLButtonElement).style.borderColor = `${accent}35`;
+        }}
+      >
+        <span style={{ fontSize: 22 }}>{SLOT_ICONS[index % SLOT_ICONS.length]}</span>
+        <span style={{
+          fontSize: 13, color: accent, fontWeight: 700,
+          fontFamily: "monospace", letterSpacing: "0.05em",
+          lineHeight: "1.3",
+        }}>
+          {title}
+        </span>
+        {detail && (
+          <span style={{ fontSize: 9, color: "rgba(148,163,184,0.3)", fontFamily: "monospace" }}>
+            ▲ 詳情
+          </span>
+        )}
+      </motion.button>
+    </div>
+  );
+}
 
 export default function ChoicePanel({ accent }: { accent: string }) {
   const { choices, makeChoice, freeAction, isLoading, adventure, error } = useGameStore();
@@ -35,9 +156,7 @@ export default function ChoicePanel({ accent }: { accent: string }) {
   return (
     <div style={{ padding: "14px 12px 20px" }}>
       {/* 分隔線 */}
-      <div style={{
-        display: "flex", alignItems: "center", gap: 10, marginBottom: 14,
-      }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
         <div style={{ flex: 1, height: 1, background: `${accent}25` }} />
         <span style={{ fontSize: 9, color: `${accent}80`, fontFamily: "monospace", letterSpacing: "0.2em" }}>
           CHOOSE ACTION
@@ -90,46 +209,14 @@ export default function ChoicePanel({ accent }: { accent: string }) {
             gap: 8,
           }}>
             {choices.map((choice, i) => (
-              <motion.button
+              <ChoiceButton
                 key={`${i}-${choice.slice(0, 12)}`}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.06 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => makeChoice(i)}
-                disabled={isLoading}
-                style={{
-                  padding: "12px 10px",
-                  borderRadius: 12,
-                  border: `1px solid ${accent}35`,
-                  background: "rgba(255,255,255,0.04)",
-                  cursor: isLoading ? "not-allowed" : "pointer",
-                  opacity: isLoading ? 0.4 : 1,
-                  display: "flex", flexDirection: "column",
-                  alignItems: "center", gap: 6,
-                  textAlign: "center",
-                  transition: "background 0.15s, border-color 0.15s, transform 0.1s",
-                }}
-                onMouseOver={e => {
-                  if (!isLoading) {
-                    (e.currentTarget as HTMLButtonElement).style.background = `${accent}18`;
-                    (e.currentTarget as HTMLButtonElement).style.borderColor = `${accent}70`;
-                  }
-                }}
-                onMouseOut={e => {
-                  (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.04)";
-                  (e.currentTarget as HTMLButtonElement).style.borderColor = `${accent}35`;
-                }}
-              >
-                <span style={{ fontSize: 22 }}>{SLOT_ICONS[i % SLOT_ICONS.length]}</span>
-                <span style={{
-                  fontSize: 12, color: "#e2e8f0", lineHeight: "1.4",
-                  display: "-webkit-box", WebkitLineClamp: 2,
-                  WebkitBoxOrient: "vertical", overflow: "hidden",
-                }}>
-                  {choice}
-                </span>
-              </motion.button>
+                choice={choice}
+                index={i}
+                accent={accent}
+                isLoading={isLoading}
+                onChoose={() => makeChoice(i)}
+              />
             ))}
           </div>
 

@@ -145,6 +145,10 @@ export async function POST(req: NextRequest) {
     state_snapshot: { hp: newHp, mp: newMp, stress: newStress, location: sc.location ?? adventure.location },
   });
 
+  // Fetch refreshed NPC states after updates
+  const { data: refreshedNpcs } = await db
+    .from("npc_states").select("*").eq("adventure_id", adventureId);
+
   const response: NarrativeResponse = {
     tick: newTick,
     narrative: parsed.narrative,
@@ -154,6 +158,7 @@ export async function POST(req: NextRequest) {
     useSafeImage: parsed.useSafeImage,
     diceDetail: diceResult,
     npcUpdates,
+    npcs: (refreshedNpcs ?? npcs) as NPCStateRow[],
   };
 
   return NextResponse.json(response);

@@ -20,7 +20,13 @@ const WORLD_FALLBACK_BG: Record<string, string> = {
 function getSceneUrl(imagePrompt: string, seed: number) {
   if (!imagePrompt) return "";
   const full = `16-bit pixel art style, retro gaming aesthetic, vibrant colors, ${imagePrompt}`;
-  return `https://image.pollinations.ai/prompt/${encodeURIComponent(full)}?width=800&height=400&nologo=true&seed=${seed}`;
+  return `https://image.pollinations.ai/prompt/${encodeURIComponent(full)}?width=512&height=256&nologo=true&seed=${seed}`;
+}
+
+function detectEvent(text: string): { type: "npc" | "event" | null; label: string } {
+  if (text.includes("【奇遇NPC】")) return { type: "npc", label: "✦ 奇遇 NPC" };
+  if (text.includes("【突發狀況】")) return { type: "event", label: "⚡ 突發狀況" };
+  return { type: null, label: "" };
 }
 
 export default function NarrativeBox({ accent }: { accent: string }) {
@@ -64,15 +70,28 @@ export default function NarrativeBox({ accent }: { accent: string }) {
     return () => { if (typerRef.current) clearInterval(typerRef.current); };
   }, [narrative, isLoading]);
 
+  // Event popup
+  const [showEventPopup, setShowEventPopup] = useState(false);
+  const eventInfo = detectEvent(narrative);
+
+  useEffect(() => {
+    if (!isLoading && eventInfo.type) {
+      const t = setTimeout(() => setShowEventPopup(true), 400);
+      return () => clearTimeout(t);
+    } else {
+      setShowEventPopup(false);
+    }
+  }, [narrative, isLoading, eventInfo.type]);
+
   return (
-    <div>
+    <div style={{ position: "relative" }}>
       {/* ── 場景圖 ── */}
       <div style={{
-        position: "relative", aspectRatio: "2/1", overflow: "hidden",
+        position: "relative", overflow: "hidden",
         background: fallbackBg,
         borderBottom: `1px solid ${accent}25`,
+        height: 200,
       }}>
-        {/* 生成圖片 */}
         {sceneUrl && (
           <motion.img
             key={sceneUrl}
@@ -82,11 +101,14 @@ export default function NarrativeBox({ accent }: { accent: string }) {
             initial={{ opacity: 0 }}
             animate={{ opacity: sceneLoaded ? 1 : 0 }}
             transition={{ duration: 1 }}
-            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
+            style={{
+              position: "absolute", inset: 0, width: "100%", height: "100%",
+              objectFit: "cover",
+              imageRendering: "pixelated",
+            }}
           />
         )}
 
-        {/* 載入中 overlay */}
         {(!sceneLoaded || isLoading) && (
           <div style={{
             position: "absolute", inset: 0,
@@ -96,7 +118,7 @@ export default function NarrativeBox({ accent }: { accent: string }) {
             {isLoading ? (
               <>
                 <div style={{ display: "flex", gap: 6 }}>
-                  {[0,1,2].map(i => (
+                  {[0, 1, 2].map(i => (
                     <motion.div key={i}
                       style={{ width: 8, height: 8, borderRadius: "50%", background: accent }}
                       animate={{ y: [0, -10, 0], opacity: [0.4, 1, 0.4] }}
@@ -116,14 +138,12 @@ export default function NarrativeBox({ accent }: { accent: string }) {
           </div>
         )}
 
-        {/* 底部漸層遮罩 */}
         <div style={{
           position: "absolute", bottom: 0, left: 0, right: 0, height: "40%",
           background: "linear-gradient(to top, #0a0e1e, transparent)",
           pointerEvents: "none",
         }} />
 
-        {/* imagePrompt 標籤 */}
         {imagePrompt && sceneLoaded && (
           <div style={{
             position: "absolute", bottom: 8, left: 12, right: 12,
@@ -134,6 +154,76 @@ export default function NarrativeBox({ accent }: { accent: string }) {
           </div>
         )}
       </div>
+
+      {/* ── 奇遇事件彈窗 ── */}
+      <AnimatePresence>
+        {showEventPopup && eventInfo.type && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setShowEventPopup(false)}
+              style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 40, backdropFilter: "blur(3px)" }}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.82, y: 24 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.82, y: 24 }}
+              transition={{ type: "spring", damping: 22, stiffness: 300 }}
+              style={{
+                position: "fixed", top: "50%", left: "50%",
+                transform: "translate(-50%, -50%)",
+                width: "min(340px, 88vw)", zIndex: 50,
+                background: "#090c1a",
+                borderRadius: 18,
+                padding: "28px 22px 22px",
+                textAlign: "center",
+              }}
+            >
+              {/* Gold flashing border */}
+              <motion.div
+                animate={{ opacity: [0.5, 1, 0.5] }}
+                transition={{ repeat: Infinity, duration: 1.6 }}
+                style={{
+                  position: "absolute", inset: 0, borderRadius: 18,
+                  border: "2px solid #fbbf24",
+                  boxShadow: "0 0 20px #fbbf2450, inset 0 0 20px #fbbf2408",
+                  pointerEvents: "none",
+                }}
+              />
+
+              <div style={{ fontSize: 38, marginBottom: 10 }}>
+                {eventInfo.type === "npc" ? "🌟" : "⚡"}
+              </div>
+              <div style={{
+                fontSize: 12, fontFamily: "monospace", letterSpacing: "0.2em",
+                color: "#fbbf24", fontWeight: 700, marginBottom: 14,
+                textTransform: "uppercase",
+              }}>
+                {eventInfo.label}
+              </div>
+              <div style={{
+                fontSize: 12, color: "rgba(203,213,225,0.75)", lineHeight: "1.75",
+                maxHeight: 160, overflowY: "auto",
+                textAlign: "left",
+              }}>
+                {narrative.replace(/【奇遇NPC】|【突發狀況】/g, "").trim().slice(0, 220)}
+                {narrative.length > 220 ? "…" : ""}
+              </div>
+              <button
+                onClick={() => setShowEventPopup(false)}
+                style={{
+                  marginTop: 18, padding: "8px 30px", borderRadius: 10,
+                  background: "rgba(251,191,36,0.12)", border: "1px solid rgba(251,191,36,0.4)",
+                  color: "#fbbf24", fontSize: 12, cursor: "pointer",
+                  fontFamily: "monospace", letterSpacing: "0.12em",
+                }}
+              >
+                繼續
+              </button>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* ── 敘事文字 ── */}
       <div style={{

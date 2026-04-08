@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { AdventureRow, NarrativeResponse, WorldType } from "@/lib/game/types";
+import type { AdventureRow, NarrativeResponse, NPCStateRow, WorldType } from "@/lib/game/types";
 import { createAdventure, sendPlayerAction } from "@/lib/api";
 
 interface GameStore {
@@ -12,6 +12,7 @@ interface GameStore {
   error: string | null;
   playerName: string;
   characterBio: string;
+  npcs: NPCStateRow[];
 
   setPlayerName: (name: string) => void;
   setCharacterBio: (bio: string) => void;
@@ -31,6 +32,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   error: null,
   playerName: "",
   characterBio: "",
+  npcs: [],
 
   setPlayerName: (name) => set({ playerName: name }),
   setCharacterBio: (bio) => set({ characterBio: bio }),
@@ -41,10 +43,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const adventure = await createAdventure({ playerName, worldType, characterBio: characterBio.trim() || undefined });
-      const response = await sendPlayerAction({
-        adventureId: adventure.id,
-        freeInput: "開始冒險",
-      });
+      const response = await sendPlayerAction({ adventureId: adventure.id, freeInput: "開始冒險" });
       applyResponse(set, response);
     } catch (e: unknown) {
       set({ error: e instanceof Error ? e.message : "連線失敗", isLoading: false });
@@ -56,11 +55,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (!adventure) return;
     set({ isLoading: true, error: null });
     try {
-      const response = await sendPlayerAction({
-        adventureId: adventure.id,
-        choiceIndex,
-        previousChoices: choices,
-      });
+      const response = await sendPlayerAction({ adventureId: adventure.id, choiceIndex, previousChoices: choices });
       applyResponse(set, response);
     } catch (e: unknown) {
       set({ error: e instanceof Error ? e.message : "行動失敗", isLoading: false });
@@ -79,19 +74,20 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }
   },
 
-  reset: () => set({ adventure: null, narrative: "", choices: [], imagePrompt: "", isLoading: false, error: null, characterBio: "" }),
+  reset: () => set({
+    adventure: null, narrative: "", choices: [], imagePrompt: "",
+    isLoading: false, error: null, characterBio: "", npcs: [],
+  }),
 }));
 
-function applyResponse(
-  set: (partial: Partial<GameStore>) => void,
-  response: NarrativeResponse
-) {
+function applyResponse(set: (partial: Partial<GameStore>) => void, response: NarrativeResponse) {
   set({
     adventure: response.state,
     narrative: response.narrative,
     choices: response.choices,
     imagePrompt: response.imagePrompt,
     useSafeImage: response.useSafeImage,
+    npcs: response.npcs ?? [],
     isLoading: false,
     error: null,
   });

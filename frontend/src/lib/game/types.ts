@@ -114,6 +114,7 @@ export interface NarrativeResponse {
   useSafeImage: boolean;
   diceDetail: DiceDetail | null;
   npcUpdates: NPCUpdate[];
+  npcs: NPCStateRow[];
 }
 
 export interface DiceDetail {

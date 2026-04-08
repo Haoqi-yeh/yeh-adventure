@@ -113,12 +113,14 @@ ${narrativeSummary || "冒險剛剛開始。"}
 
 你的任務：
 1. 用九把刀風格寫出這一回合的敘事（150~300 字）。
-2. 敘事結尾給出 3～4 個行動選項（白話，不要標號）。
+   如有重大事件（NPC 突然出現、命運轉折），在敘事中插入 【奇遇NPC】或 【突發狀況】標籤。
+2. 給出 3～4 個行動選項，每個格式為：【行動標題（4字以內）】一句話描述動機與細節（20字以內）
+   例如：【悄悄跟上】靠近那個奇怪身影，看清他究竟在幹嘛
 3. 輸出一個 JSON 區塊（包在 \`\`\`json ... \`\`\` 內）：
 {
   "narrative": "敘事文字",
-  "choices": ["選項一", "選項二", "選項三"],
-  "imagePrompt": "Pixel art style, 16-bit, vibrant colors, retro gaming aesthetic, [英文場景描述]",
+  "choices": ["【標題】細節描述", "【標題】細節描述", "【標題】細節描述"],
+  "imagePrompt": "16-bit pixel art, retro gaming, vibrant colors, [英文場景描述，不超過20字]",
   "useSafeImage": true,
   "npcUpdates": [{"name": "NPC名", "affectionDelta": 0, "reactionText": "NPC反應"}],
   "stateChanges": {"hpDelta": 0, "mpDelta": 0, "stressDelta": 0, "location": "${location}", "ticksConsumed": 1}
