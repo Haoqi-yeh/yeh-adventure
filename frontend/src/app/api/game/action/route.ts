@@ -116,6 +116,20 @@ export async function POST(req: NextRequest) {
   const newSummary = ((adventure.narrative_summary ?? "") + "\n" + parsed.narrative).slice(-500);
   const newStatus = newHp <= 0 ? "dead" : "active";
 
+  // Lust / Willpower / clothing / body status
+  const currentWorldAttrs = (adventure.world_attributes ?? {}) as Record<string, unknown>;
+  const currentLust = (currentWorldAttrs.lust as number) ?? 50;
+  const currentWillpower = (currentWorldAttrs.willpower as number) ?? 70;
+  const newLust = Math.max(0, Math.min(100, currentLust + (sc.lustDelta ?? 0)));
+  const newWillpower = Math.max(0, Math.min(100, currentWillpower + (sc.willpowerDelta ?? 0)));
+  const updatedWorldAttrs = {
+    ...currentWorldAttrs,
+    lust: newLust,
+    willpower: newWillpower,
+    ...(sc.clothingState ? { clothing_state: sc.clothingState } : {}),
+    ...(sc.bodyStatus ? { body_status: sc.bodyStatus } : {}),
+  };
+
   const { data: updatedAdventure } = await db
     .from("adventures")
     .update({
@@ -128,6 +142,7 @@ export async function POST(req: NextRequest) {
       location: sc.location ?? adventure.location,
       narrative_summary: newSummary,
       status: newStatus,
+      world_attributes: updatedWorldAttrs,
     })
     .eq("id", adventureId)
     .select("*")
@@ -184,7 +199,10 @@ function parseLLMResponse(raw: string) {
     useSafeImage: (data.useSafeImage as boolean) ?? true,
     npcUpdates: (data.npcUpdates as { name: string; affectionDelta: number; reactionText: string }[]) ?? [],
     stateChanges: (data.stateChanges as {
-      hpDelta?: number; mpDelta?: number; stressDelta?: number; location?: string; ticksConsumed?: number;
+      hpDelta?: number; mpDelta?: number; stressDelta?: number;
+      lustDelta?: number; willpowerDelta?: number;
+      clothingState?: string; bodyStatus?: string;
+      location?: string; ticksConsumed?: number;
     }) ?? {},
   };
 }

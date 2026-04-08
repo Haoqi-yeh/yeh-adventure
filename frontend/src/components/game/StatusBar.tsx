@@ -7,6 +7,23 @@ import { useGameStore } from "@/store/game-store";
 const WEATHER_LABEL: Record<string, string> = { clear: "☀️ 晴", rain: "🌧️ 雨", fog: "🌫️ 霧", thunder: "⛈️ 雷" };
 const TIME_LABEL: Record<string, string> = { dawn: "🌅 黎明", morning: "🌤️ 早晨", noon: "☀️ 正午", dusk: "🌆 黃昏", night: "🌙 深夜" };
 
+const CLOTHING_DISPLAY: Record<string, { label: string; color: string }> = {
+  normal:     { label: "衣著整齊", color: "rgba(148,163,184,0.5)" },
+  disheveled: { label: "衣衫凌亂", color: "#f59e0b" },
+  partial:    { label: "衣物散亂", color: "#f87171" },
+  minimal:    { label: "衣不蔽體", color: "#ef4444" },
+  bare:       { label: "赤裸", color: "#dc2626" },
+};
+
+const BODY_DISPLAY: Record<string, { label: string; color: string }> = {
+  normal:    { label: "正常", color: "rgba(148,163,184,0.5)" },
+  flushed:   { label: "臉紅耳熱", color: "#f472b6" },
+  sweaty:    { label: "汗如雨下", color: "#60a5fa" },
+  injured:   { label: "帶傷", color: "#ef4444" },
+  exhausted: { label: "精疲力竭", color: "#94a3b8" },
+  aroused:   { label: "慾火中燒", color: "#fb923c" },
+};
+
 const WORLD_ATTRS: Record<string, { key: string; label: string; emoji: string; max?: number }[]> = {
   xian_xia:        [{ key: "cultivation_level", label: "修為境界", emoji: "🧘" }, { key: "spirit_root", label: "靈根品質", emoji: "🌱" }, { key: "spirit_power", label: "靈力值", emoji: "💜", max: 1000 }],
   campus:          [{ key: "study_score", label: "學業成績", emoji: "📚", max: 100 }, { key: "popularity", label: "人氣指數", emoji: "⭐", max: 100 }, { key: "romance_points", label: "桃花指數", emoji: "💕", max: 100 }],
@@ -163,9 +180,15 @@ export default function StatusBar({ accent }: { accent: string }) {
   const mpPct = Math.round((adventure.mp / adventure.mp_max) * 100);
   const hpColor = hpPct < 20 ? "#ef4444" : hpPct < 50 ? "#f59e0b" : "#22c55e";
 
-  const worldAttr = adventure.world_attributes as Record<string, unknown>;
+  const worldAttr = (adventure.world_attributes ?? {}) as Record<string, unknown>;
   const worldKey = (worldAttr?.world_flavor as string) ?? adventure.world_type;
   const charPortraitUrl = getCharPortraitUrl(playerName, worldKey);
+
+  const lust = (worldAttr.lust as number) ?? null;
+  const willpower = (worldAttr.willpower as number) ?? null;
+  const clothingState = (worldAttr.clothing_state as string) ?? "normal";
+  const bodyStatus = (worldAttr.body_status as string) ?? "normal";
+  const showImmersive = lust !== null || clothingState !== "normal" || bodyStatus !== "normal";
 
   return (
     <>
@@ -183,6 +206,7 @@ export default function StatusBar({ accent }: { accent: string }) {
         <MiniBar value={hpPct} color={hpColor} icon="❤️" />
         <MiniBar value={mpPct} color="#3b82f6" icon="💧" />
         <MiniBar value={adventure.stress} color={adventure.stress > 70 ? "#f43f5e" : "#a855f7"} icon="🧠" />
+        {lust !== null && <MiniBar value={lust} color="#f472b6" icon="🔥" />}
         <span style={{ marginLeft: "auto", fontSize: 10, color: accent, fontFamily: "monospace", opacity: 0.7 }}>
           📍{adventure.location?.slice(0, 8)} · {TIME_LABEL[adventure.time_of_day]?.slice(0, 2)} ·
           <span style={{ opacity: 0.5 }}> 詳細 ▸</span>
@@ -258,6 +282,38 @@ export default function StatusBar({ accent }: { accent: string }) {
                   <span style={{ color: accent, fontWeight: 700 }}>{adventure.charisma}</span>
                 </div>
               </Section>
+
+              {/* Lust / Willpower / Body State */}
+              {showImmersive && (
+                <Section title="慾望與身體">
+                  {lust !== null && (
+                    <StatRow icon="🔥" label="慾望" value={lust} max={100} color={lust >= 70 ? "#f472b6" : lust >= 40 ? "#fb923c" : "#94a3b8"} accent={accent} />
+                  )}
+                  {willpower !== null && (
+                    <StatRow icon="⚡" label="意志" value={willpower} max={100} color={willpower >= 60 ? "#60a5fa" : willpower >= 30 ? "#f59e0b" : "#ef4444"} accent={accent} />
+                  )}
+                  {(clothingState !== "normal" || bodyStatus !== "normal") && (
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 4 }}>
+                      {bodyStatus !== "normal" && (() => {
+                        const bd = BODY_DISPLAY[bodyStatus] ?? { label: bodyStatus, color: "#94a3b8" };
+                        return (
+                          <span style={{ padding: "2px 9px", borderRadius: 20, fontSize: 10, background: `${bd.color}18`, border: `1px solid ${bd.color}50`, color: bd.color }}>
+                            🫀 {bd.label}
+                          </span>
+                        );
+                      })()}
+                      {clothingState !== "normal" && (() => {
+                        const cd = CLOTHING_DISPLAY[clothingState] ?? { label: clothingState, color: "#94a3b8" };
+                        return (
+                          <span style={{ padding: "2px 9px", borderRadius: 20, fontSize: 10, background: `${cd.color}18`, border: `1px solid ${cd.color}50`, color: cd.color }}>
+                            👗 {cd.label}
+                          </span>
+                        );
+                      })()}
+                    </div>
+                  )}
+                </Section>
+              )}
 
               {/* World-specific */}
               {(WORLD_ATTRS[worldKey] ?? []).length > 0 && (

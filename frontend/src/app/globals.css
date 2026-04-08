@@ -6,7 +6,6 @@
 html {
   /* pixel-art background set inline in layout.tsx; this is the fallback */
   background-color: #050a15;
-  image-rendering: pixelated;
 }
 
 html, body {

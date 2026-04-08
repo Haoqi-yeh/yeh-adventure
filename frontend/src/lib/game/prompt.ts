@@ -47,15 +47,16 @@ const WRITING_STYLES: Record<string, string> = {
 6. 選項白話，直接說要做什麼，不文青。`.trim(),
 
   "情色成人風格": `
-你是一個沉浸式文字冒險遊戲的敘事引擎，使用繁體中文，成人限制級風格（18+）。
-【成人敘事規範】
-1. 描寫大膽直接，情慾張力、挑逗場景正面書寫不迴避。
-2. 身體感官描述具體細膩，讓讀者感受到每一個觸感和溫度。
-3. 對白可以明確帶性暗示，角色可以表達慾望和需求。
-4. 情節包含曖昧、誘惑、親密場景，大膽推進。
-5. 保持故事性，情慾場景要有情境和角色動機，不只是行為描述。
-6. 每次輸出的敘事長度控制在 150～300 字之間。
-7. 以情慾懸念收尾，選項推進親密關係或情慾可能。`.trim(),
+你是一個沉浸式文字冒險遊戲的敘事引擎，使用繁體中文，成人限制級慢熱風格（18+）。
+【成人沉浸式慢熱敘事規範】
+1. 慢熱原則：情慾需要自然升溫，不要直接跳進高潮。先描述環境、角色神情、衣著、氣息。在情境成熟前，保持在暗示與感官描寫的層面。
+2. 感官先行：優先描寫觸感、溫度、呼吸聲、氣味——讓讀者感受到身體的存在，而不只是行為。
+3. 衣著是敘事元素：衣物的狀態（正常→凌亂→散開）一步一步融入故事，每個狀態變化都有情境支撐。
+4. 心理張力：寫出慾望與克制之間的拉鋸。角色的內心掙扎比外在行為更重要。
+5. 慾望（Lust）體現為身體感官反應：心跳加速、臉頰發熱、呼吸變淺、腦中浮現的畫面。Lust越高，感官描述越細膩大膽。
+6. 意志（Willpower）體現為克制力：意志越低，角色越難抗拒本能衝動或他人的誘惑，選擇更衝動或屈服。
+7. 每次輸出的敘事長度控制在 150～300 字之間。
+8. 以情慾懸念、情境升溫收尾，選項讓玩家決定繼續推進或抗拒。`.trim(),
 };
 
 const DEFAULT_STYLE = "九把刀風格";
@@ -81,6 +82,23 @@ const URGENCY: Partial<Record<NarrativeHint, string>> = {
   CRITICAL_FAIL: `【事件：關鍵失敗】\n這次行動徹底搞砸了。後果要寫清楚，不要含糊帶過。`,
   CRITICAL_SUCCESS: `【事件：完美成功】\n超乎預期的成功。寫出「幹，我真的做到了」的爽感，但帶點「這什麼鬼運氣」的困惑。`,
   HIGH_STRESS: `【狀態：極度壓力】\n主角的精神快繃斷了。決策可能有偏差，情緒可能失控。`,
+};
+
+const CLOTHING_LABELS: Record<string, string> = {
+  normal: "正常",
+  disheveled: "衣衫凌亂",
+  partial: "衣物散亂",
+  minimal: "衣不蔽體",
+  bare: "赤裸",
+};
+
+const BODY_LABELS: Record<string, string> = {
+  normal: "正常",
+  flushed: "臉紅耳熱",
+  sweaty: "汗如雨下",
+  injured: "帶傷",
+  exhausted: "精疲力竭",
+  aroused: "慾火中燒",
 };
 
 export function buildSystemPrompt(params: {
@@ -119,6 +137,15 @@ export function buildSystemPrompt(params: {
   const writingStyleKey = (worldAttributes.writing_style as string) ?? DEFAULT_STYLE;
   const styleBase = WRITING_STYLES[writingStyleKey] ?? WRITING_STYLES[DEFAULT_STYLE];
 
+  // Lust / Willpower / clothing / body status
+  const lust = (worldAttributes.lust as number) ?? 50;
+  const willpower = (worldAttributes.willpower as number) ?? 70;
+  const clothingState = (worldAttributes.clothing_state as string) ?? "normal";
+  const bodyStatus = (worldAttributes.body_status as string) ?? "normal";
+  const clothingLabel = CLOTHING_LABELS[clothingState] ?? clothingState;
+  const bodyLabel = BODY_LABELS[bodyStatus] ?? bodyStatus;
+  const trackLust = writingStyleKey === "情色成人風格" || lust !== 50 || willpower !== 70;
+
   const hpRatio = hpMax > 0 ? Math.round((hp / hpMax) * 100) : 0;
   const urgencyBlock = URGENCY[narrativeHint] ?? "";
   const tagsStr = personalityTags.length ? personalityTags.join("、") : "平凡人";
@@ -132,7 +159,19 @@ export function buildSystemPrompt(params: {
   Object.entries(skillBonus).forEach(([s, v]) => legacyHints.push(`前世留下的【${s}】殘留記憶（加成 ${v > 0 ? "+" : ""}${v}）`));
   const legacyStr = legacyHints.length ? legacyHints.join("；") : "無前世傳承";
 
-  const worldAttrsStr = Object.entries(worldAttributes).map(([k, v]) => `- ${k}：${v}`).join("\n") || "（無特殊屬性）";
+  // Filter worldAttrs for display — exclude internal fields
+  const INTERNAL_KEYS = new Set(["world_flavor", "character_bio", "writing_style", "lust", "willpower", "clothing_state", "body_status"]);
+  const worldAttrsStr = Object.entries(worldAttributes)
+    .filter(([k]) => !INTERNAL_KEYS.has(k))
+    .map(([k, v]) => `- ${k}：${v}`)
+    .join("\n") || "（無特殊屬性）";
+
+  const lustBlock = trackLust ? `
+【慾望與意志】
+- 慾望（Lust）：${lust}/100 — ${lust >= 80 ? "極度渴望，感官敏銳至極" : lust >= 60 ? "慾火湧動，難以冷靜" : lust >= 40 ? "心中有所感動" : "平靜，慾念輕微"}
+- 意志（Willpower）：${willpower}/100 — ${willpower >= 80 ? "意志堅定，理智清晰" : willpower >= 50 ? "尚能克制，但有動搖" : willpower >= 25 ? "克制力薄弱，容易動搖" : "意志瓦解，難以抗拒衝動"}
+- 衣著狀態：${clothingLabel}
+- 身體狀態：${bodyLabel}` : "";
 
   return `${styleBase}
 
@@ -153,6 +192,7 @@ ${urgencyBlock ? "\n" + urgencyBlock : ""}
 - 個性標籤：${tagsStr}
 - 技能：${skillsStr}
 - 傳承記憶：${legacyStr}
+${lustBlock}
 
 【世界觀特殊屬性】
 ${worldAttrsStr}
@@ -168,17 +208,29 @@ ${narrativeSummary || "冒險剛剛開始。"}
 1. 用${writingStyleKey}寫出這一回合的敘事（${writingStyleKey === "日常直白風格" ? "100~200" : "150~300"} 字）。
    如有重大 NPC 登場，在敘事中插入 【奇遇NPC：NPC名字】標籤。
    如有突發危機或命運轉折，插入 【突發狀況：事件摘要】標籤。
-2. 給出 3～4 個行動選項，每個格式為：【行動標題（4字以內）】一句話描述動機與細節（20字以內）
-   例如：【悄悄跟上】靠近那個奇怪身影，看清他究竟在幹嘛
+   ${trackLust ? "衣著與身體狀態若有變化，要自然地融入敘事描寫中。" : ""}
+2. 給出 3～4 個行動選項。格式：
+   【行動標題（4字以內）】一句話描述動機與細節（20字以內）
+   若此行動有顯著的慾望/意志/HP/MP/名聲風險或收益，在描述後加上風險標注：
+   | ⚠ 慾望+15（只在變化顯著時加入，不要每個選項都加）
+   例如：【順勢靠近】讓他抱著自己，感受他的溫度 | ⚠ 慾望+20 意志-10
 3. 輸出一個 JSON 區塊（包在 \`\`\`json ... \`\`\` 內）：
 {
   "narrative": "敘事文字",
-  "choices": ["【標題】細節描述", "【標題】細節描述", "【標題】細節描述"],
+  "choices": ["【標題】細節描述", "【標題】細節 | ⚠ 慾望+15", "【標題】細節描述"],
   "imagePrompt": "16-bit pixel art, retro gaming, vibrant colors, [英文場景描述，不超過20字]",
   "useSafeImage": true,
   "npcUpdates": [{"name": "NPC名", "affectionDelta": 0, "reactionText": "NPC反應"}],
-  "stateChanges": {"hpDelta": 0, "mpDelta": 0, "stressDelta": 0, "location": "${location}", "ticksConsumed": 1}
+  "stateChanges": {
+    "hpDelta": 0, "mpDelta": 0, "stressDelta": 0,
+    "lustDelta": 0, "willpowerDelta": 0,
+    "clothingState": "${clothingState}",
+    "bodyStatus": "${bodyStatus}",
+    "location": "${location}", "ticksConsumed": 1
+  }
 }
 
-useSafeImage 規則：含暴力/血腥/成人內容設 false，否則設 true。`;
+useSafeImage 規則：含暴力/血腥/成人內容設 false，否則設 true。
+clothingState 可選值：normal / disheveled / partial / minimal / bare
+bodyStatus 可選值：normal / flushed / sweaty / injured / exhausted / aroused`;
 }

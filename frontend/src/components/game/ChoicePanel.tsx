@@ -14,16 +14,33 @@ function friendlyError(msg: string): string {
   return "發生錯誤，請稍後再試";
 }
 
-function parseChoice(text: string): { title: string; detail: string } {
-  const m = text.match(/^【(.{1,10})】(.*)$/);
-  if (m) return { title: m[1].trim(), detail: m[2].trim() };
-  return { title: text, detail: "" };
+function parseChoice(text: string): { title: string; detail: string; risk: string } {
+  const titleMatch = text.match(/^【(.{1,10})】(.*)$/);
+  if (titleMatch) {
+    const rest = titleMatch[2].trim();
+    const pipeIdx = rest.lastIndexOf("| ⚠");
+    if (pipeIdx !== -1) {
+      return {
+        title: titleMatch[1].trim(),
+        detail: rest.slice(0, pipeIdx).trim(),
+        risk: rest.slice(pipeIdx + 3).trim(),
+      };
+    }
+    return { title: titleMatch[1].trim(), detail: rest, risk: "" };
+  }
+  // No 【】 bracket — check for pipe separator
+  const pipeIdx = text.lastIndexOf("| ⚠");
+  if (pipeIdx !== -1) {
+    return { title: text.slice(0, pipeIdx).trim(), detail: "", risk: text.slice(pipeIdx + 3).trim() };
+  }
+  return { title: text, detail: "", risk: "" };
 }
 
 function ChoiceButton({ choice, index, accent, isLoading, onChoose }: {
   choice: string; index: number; accent: string; isLoading: boolean; onChoose: () => void;
 }) {
-  const { title, detail } = parseChoice(choice);
+  const { title, detail, risk } = parseChoice(choice);
+  const hasTooltip = !!(detail || risk);
   const [showTooltip, setShowTooltip] = useState(false);
   const longPressRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -39,7 +56,7 @@ function ChoiceButton({ choice, index, accent, isLoading, onChoose }: {
     <div style={{ position: "relative" }}>
       {/* Hover / long-press tooltip */}
       <AnimatePresence>
-        {showTooltip && detail && (
+        {showTooltip && hasTooltip && (
           <motion.div
             initial={{ opacity: 0, y: 6, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -63,13 +80,28 @@ function ChoiceButton({ choice, index, accent, isLoading, onChoose }: {
               textAlign: "left",
             }}
           >
-            <div style={{
-              fontSize: 9, color: `${accent}90`, fontFamily: "monospace",
-              marginBottom: 4, letterSpacing: "0.12em", textTransform: "uppercase",
-            }}>
-              行動詳情
-            </div>
-            {detail}
+            {detail && (
+              <>
+                <div style={{
+                  fontSize: 9, color: `${accent}90`, fontFamily: "monospace",
+                  marginBottom: 4, letterSpacing: "0.12em", textTransform: "uppercase",
+                }}>
+                  行動詳情
+                </div>
+                <div>{detail}</div>
+              </>
+            )}
+            {risk && (
+              <div style={{
+                marginTop: detail ? 7 : 0,
+                paddingTop: detail ? 6 : 0,
+                borderTop: detail ? "1px solid rgba(255,255,255,0.06)" : "none",
+                fontSize: 10, color: "#fb923c",
+                fontFamily: "monospace", letterSpacing: "0.04em",
+              }}>
+                ⚠ {risk}
+              </div>
+            )}
             {/* Down arrow */}
             <div style={{
               position: "absolute", bottom: -6, left: "50%",
@@ -90,7 +122,7 @@ function ChoiceButton({ choice, index, accent, isLoading, onChoose }: {
         whileTap={{ scale: 0.95 }}
         onClick={onChoose}
         disabled={isLoading}
-        onMouseEnter={() => detail && setShowTooltip(true)}
+        onMouseEnter={() => hasTooltip && setShowTooltip(true)}
         onMouseLeave={() => setShowTooltip(false)}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
@@ -125,9 +157,9 @@ function ChoiceButton({ choice, index, accent, isLoading, onChoose }: {
         }}>
           {title}
         </span>
-        {detail && (
-          <span style={{ fontSize: 9, color: "rgba(148,163,184,0.28)", fontFamily: "monospace", letterSpacing: "0.05em" }}>
-            ▲ 詳情
+        {hasTooltip && (
+          <span style={{ fontSize: 9, color: risk ? "rgba(251,146,60,0.45)" : "rgba(148,163,184,0.28)", fontFamily: "monospace", letterSpacing: "0.05em" }}>
+            {risk ? "⚠ 風險" : "▲ 詳情"}
           </span>
         )}
       </motion.button>

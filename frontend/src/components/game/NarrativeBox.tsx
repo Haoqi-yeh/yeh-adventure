@@ -53,6 +53,66 @@ function detectEvent(text: string): { type: "npc" | "event" | null; label: strin
   return { type: null, label: "", detail: "" };
 }
 
+// State-reactive character status badges shown in scene area
+const CLOTHING_BADGES: Record<string, { icon: string; label: string; color: string }> = {
+  disheveled: { icon: "👕", label: "衣衫凌亂", color: "#f59e0b" },
+  partial:    { icon: "🔴", label: "衣物散亂", color: "#f87171" },
+  minimal:    { icon: "🔴", label: "衣不蔽體", color: "#ef4444" },
+  bare:       { icon: "⭕", label: "赤裸",     color: "#dc2626" },
+};
+const BODY_BADGES: Record<string, { icon: string; label: string; color: string }> = {
+  flushed:   { icon: "😳", label: "臉紅",   color: "#f472b6" },
+  sweaty:    { icon: "💦", label: "汗濕",   color: "#60a5fa" },
+  injured:   { icon: "🩸", label: "受傷",   color: "#ef4444" },
+  exhausted: { icon: "😮‍💨", label: "疲憊", color: "#94a3b8" },
+  aroused:   { icon: "🔥", label: "亢奮",   color: "#fb923c" },
+};
+
+function CharacterSprite({ worldAttr }: { worldAttr: Record<string, unknown> }) {
+  const clothing = (worldAttr.clothing_state as string) ?? "normal";
+  const bodyStatus = (worldAttr.body_status as string) ?? "normal";
+  const clothingBadge = CLOTHING_BADGES[clothing];
+  const bodyBadge = BODY_BADGES[bodyStatus];
+  if (!clothingBadge && !bodyBadge) return null;
+  return (
+    <div style={{
+      position: "absolute", bottom: 48, right: 10,
+      display: "flex", flexDirection: "column", gap: 4, zIndex: 5,
+    }}>
+      {bodyBadge && (
+        <motion.div
+          initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.3 }}
+          style={{
+            display: "flex", alignItems: "center", gap: 4,
+            background: "rgba(0,0,0,0.72)", borderRadius: 20,
+            padding: "3px 9px",
+            border: `1px solid ${bodyBadge.color}50`,
+            backdropFilter: "blur(4px)",
+          }}
+        >
+          <span style={{ fontSize: 10 }}>{bodyBadge.icon}</span>
+          <span style={{ fontSize: 9, color: bodyBadge.color, fontFamily: "monospace", letterSpacing: "0.05em" }}>{bodyBadge.label}</span>
+        </motion.div>
+      )}
+      {clothingBadge && (
+        <motion.div
+          initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.3, delay: 0.08 }}
+          style={{
+            display: "flex", alignItems: "center", gap: 4,
+            background: "rgba(0,0,0,0.72)", borderRadius: 20,
+            padding: "3px 9px",
+            border: `1px solid ${clothingBadge.color}50`,
+            backdropFilter: "blur(4px)",
+          }}
+        >
+          <span style={{ fontSize: 10 }}>{clothingBadge.icon}</span>
+          <span style={{ fontSize: 9, color: clothingBadge.color, fontFamily: "monospace", letterSpacing: "0.05em" }}>{clothingBadge.label}</span>
+        </motion.div>
+      )}
+    </div>
+  );
+}
+
 export default function NarrativeBox({ accent }: { accent: string }) {
   const { narrative, imagePrompt, useSafeImage, isLoading, adventure } = useGameStore();
 
@@ -210,6 +270,8 @@ export default function NarrativeBox({ accent }: { accent: string }) {
           background: "linear-gradient(to top, #0a0e1e, transparent)",
           pointerEvents: "none",
         }} />
+
+        <CharacterSprite worldAttr={worldAttr} />
 
         {imagePrompt && sceneLoaded && (
           <div style={{
