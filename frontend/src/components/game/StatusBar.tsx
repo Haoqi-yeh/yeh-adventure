@@ -89,17 +89,23 @@ function hashStr(str: string): number {
   return h % 99999;
 }
 
-// Anime-style half-body portrait — gender + world type determine the look
+// Anime-style half-body portrait — gender token MUST be first for SD/FLUX to respect it
 function getCharPortraitUrl(playerName: string, worldKey: string, gender?: string): string {
   const desc = WORLD_CHAR_DESC[worldKey] ?? WORLD_CHAR_DESC.custom;
-  // Include gender in seed so different genders get different stable images
+  // Seed includes gender so portrait changes deterministically when gender changes
   const seed = hashStr(playerName + worldKey + "char" + (gender ?? ""));
-  const genderDesc = gender === "男性"
-    ? "male, handsome young man, masculine,"
-    : gender === "女性"
-    ? "female, beautiful young woman, feminine,"
-    : "";
-  const prompt = `Aesthetic Anime Style, 90s retro anime pixel art, cel-shaded, high contrast, game character portrait, ${genderDesc} ${desc}, half body, head and upper torso, facing forward, plain dark background, detailed`;
+
+  // "1boy" / "1girl" at position 0 carries the highest attention weight in SD/FLUX models.
+  // Placing gender in the middle of a long prompt is nearly ineffective.
+  let prompt: string;
+  if (gender === "男性") {
+    prompt = `1boy, male, young man, ${desc}, Aesthetic Anime Style, 90s retro anime, cel-shaded, half body portrait, head and shoulders, plain dark background, detailed, high quality`;
+  } else if (gender === "女性") {
+    prompt = `1girl, female, young woman, ${desc}, Aesthetic Anime Style, 90s retro anime, cel-shaded, half body portrait, head and shoulders, plain dark background, detailed, high quality`;
+  } else {
+    prompt = `Aesthetic Anime Style, 90s retro anime pixel art, cel-shaded, high contrast, game character portrait, ${desc}, half body, head and upper torso, facing forward, plain dark background, detailed`;
+  }
+
   return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=128&height=192&nologo=true&seed=${seed}`;
 }
 
