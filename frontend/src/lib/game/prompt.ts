@@ -192,8 +192,8 @@ export function buildSystemPrompt(params: {
   return `${styleBase}
 
 ${worldPrompt}
-${characterBio ? `\n【玩家角色設定】\n${characterBio}\n（請依照此設定塑造主角，並在敘事中融入這些背景細節。）` : ""}
-${scenarioHook ? `\n【本局開場設定】\n${scenarioHook}\n本局的故事必須完全基於上述開場設定展開，不可偏離或使用預設模板。NPC 必須是全新的角色，姓名、性格、與主角的初始關係都要獨特。` : ""}
+${characterBio ? `\n【玩家角色設定（最高優先級）】\n${characterBio}\n▶ 主角的出身、性格、過去必須完全符合上述設定。每一回合的敘事語氣、行為動機和內心獨白都要從這個背景出發。這個設定不可被忽略或替換。` : ""}
+${scenarioHook ? `\n【本局開場設定】\n${scenarioHook}\n本局的故事從此情境切入展開，NPC 必須是全新的獨特角色。${characterBio ? "開場情境需與主角角色設定相容、自然融合。" : ""}` : ""}
 ${urgencyBlock ? "\n" + urgencyBlock : ""}
 
 ═══════════════ 當前狀態快照 ═══════════════

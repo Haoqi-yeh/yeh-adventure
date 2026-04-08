@@ -99,30 +99,21 @@ function hashStr(str: string): number {
   return h % 99999;
 }
 
-// Anime-style half-body portrait — gender token MUST be first for SD/FLUX to respect it
+// Pixel art RPG sprite portrait — visible pixel grid, black outlines, JRPG style
 function getCharPortraitUrl(playerName: string, worldKey: string, gender?: string): string {
   const desc = WORLD_CHAR_DESC[worldKey] ?? WORLD_CHAR_DESC.custom;
-  // Seed includes gender so portrait changes deterministically when gender changes
   const seed = hashStr(playerName + worldKey + "char" + (gender ?? ""));
 
-  // "1boy" / "1girl" at position 0 carries the highest attention weight in SD/FLUX models.
-  // Placing gender in the middle of a long prompt is nearly ineffective.
-  let prompt: string;
-  if (gender === "男性") {
-    prompt = `1boy, male, young man, ${desc}, Aesthetic Anime Style, 90s retro anime, cel-shaded, half body portrait, head and shoulders, plain dark background, detailed, high quality`;
-  } else if (gender === "女性") {
-    prompt = `1girl, female, young woman, ${desc}, Aesthetic Anime Style, 90s retro anime, cel-shaded, half body portrait, head and shoulders, plain dark background, detailed, high quality`;
-  } else {
-    prompt = `Aesthetic Anime Style, 90s retro anime pixel art, cel-shaded, high contrast, game character portrait, ${desc}, half body, head and upper torso, facing forward, plain dark background, detailed`;
-  }
+  const genderToken = gender === "男性" ? "1boy, male, " : gender === "女性" ? "1girl, female, " : "";
+  const prompt = `${genderToken}pixel art, 16-bit RPG character portrait, pixelated anime style, thick black pixel outlines, limited color palette, white background, JRPG sprite, retro game character, head and shoulders, ${desc}, visible pixels, pixel grid`;
 
-  return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=128&height=192&nologo=true&seed=${seed}`;
+  return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=128&height=192&nologo=true&seed=${seed}&model=flux-schnell`;
 }
 
 function getNPCPortraitUrl(npcName: string, worldKey: string): string {
   const seed = hashStr(npcName + worldKey + "npc");
-  const prompt = `Aesthetic Anime Style, 90s retro anime pixel art, cel-shaded, game NPC character portrait, ${npcName}, half body, head and upper torso, plain dark background`;
-  return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=96&height=128&nologo=true&seed=${seed}`;
+  const prompt = `pixel art, 16-bit RPG NPC portrait, pixelated anime style, thick black pixel outlines, limited color palette, white background, JRPG sprite, retro game character, head and shoulders, ${npcName}, visible pixels`;
+  return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=96&height=128&nologo=true&seed=${seed}&model=flux-schnell`;
 }
 
 // Portrait card — small thumbnail, hover/tap expands to reveal full half-body
@@ -223,8 +214,8 @@ export default function StatusBar({ accent }: { accent: string }) {
   const { adventure, npcs, playerName } = useGameStore();
   const [open, setOpen] = useState(false);
   const isMobile = useIsMobile();
-  // Scale helper — apply 20% reduction on mobile
-  const s = (n: number) => isMobile ? Math.round(n * 0.8) : n;
+  // Scale helper — apply 36% reduction on mobile (0.8 × 0.8 = 0.64)
+  const s = (n: number) => isMobile ? Math.round(n * 0.64) : n;
 
   if (!adventure) return null;
 

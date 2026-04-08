@@ -93,7 +93,7 @@ export async function POST(req: NextRequest) {
         const geminiStream = await model.generateContentStream({
           contents: [{ role: "user", parts: [{ text: userMsg }] }],
           generationConfig: {
-            maxOutputTokens: 1100,
+            maxOutputTokens: 2500,
             temperature: 0.92,
           },
         });
