@@ -35,12 +35,17 @@ export default function WorldSelector() {
   const [selected, setSelected] = useState<WorldType>("campus");
 
   return (
-    <div className="min-h-screen w-full flex flex-col items-center justify-center px-4 py-12">
+    <div style={{
+      minHeight: "100vh", width: "100%",
+      display: "flex", flexDirection: "column",
+      alignItems: "center", justifyContent: "center",
+      padding: "3rem 1rem",
+    }}>
       <motion.div
         initial={{ opacity: 0, y: 32 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: "easeOut" }}
-        className="w-full max-w-sm space-y-6"
+        style={{ width: "100%", maxWidth: "400px", display: "flex", flexDirection: "column", gap: "1.5rem" }}
       >
         {/* Logo + 標題 */}
         <div className="flex flex-col items-center gap-3 text-center">
@@ -48,8 +53,12 @@ export default function WorldSelector() {
                           flex items-center justify-center shadow-xl shadow-purple-900/50">
             <Sparkles size={26} className="text-white" />
           </div>
-          <h1 className="text-4xl font-bold tracking-tight text-transparent bg-clip-text
-                         bg-gradient-to-r from-purple-400 via-pink-400 to-indigo-400">
+          <h1 style={{
+            fontSize: "2.5rem", fontWeight: 700, letterSpacing: "-0.02em",
+            background: "linear-gradient(135deg, #c084fc 0%, #f472b6 50%, #818cf8 100%)",
+            WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
+            backgroundClip: "text",
+          }}>
             做個白日夢冒險
           </h1>
           <p className="text-slate-500 text-xs tracking-widest">
