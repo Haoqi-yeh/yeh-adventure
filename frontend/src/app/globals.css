@@ -49,24 +49,24 @@ body {
   z-index: 0;
 }
 
-/* ── 輸入框（白底黑字） ──────────────────────────── */
+/* ── 輸入框（深色背景白字） ─────────────────────── */
 input, textarea, select {
-  color: #111111 !important;
-  caret-color: #6d28d9;
-  background-color: #ffffff;
+  color: #f1f5f9 !important;
+  caret-color: #a78bfa;
+  background-color: transparent;
 }
 input::placeholder, textarea::placeholder {
-  color: rgba(0, 0, 0, 0.35) !important;
+  color: rgba(148, 163, 184, 0.6) !important;
 }
 select option {
-  color: #111111;
-  background-color: #ffffff;
+  color: #f1f5f9;
+  background-color: #1e293b;
 }
 /* 清除瀏覽器自動填入背景 */
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
 input:-webkit-autofill:focus {
-  -webkit-text-fill-color: #111111 !important;
-  -webkit-box-shadow: 0 0 0 1000px #ffffff inset !important;
+  -webkit-text-fill-color: #f1f5f9 !important;
+  -webkit-box-shadow: 0 0 0 1000px #1e293b inset !important;
   transition: background-color 5000s ease-in-out 0s;
 }
