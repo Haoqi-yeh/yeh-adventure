@@ -89,11 +89,17 @@ function hashStr(str: string): number {
   return h % 99999;
 }
 
-// Anime-style half-body portrait — deterministic seed keeps look consistent
-function getCharPortraitUrl(playerName: string, worldKey: string): string {
+// Anime-style half-body portrait — gender + world type determine the look
+function getCharPortraitUrl(playerName: string, worldKey: string, gender?: string): string {
   const desc = WORLD_CHAR_DESC[worldKey] ?? WORLD_CHAR_DESC.custom;
-  const seed = hashStr(playerName + worldKey + "char");
-  const prompt = `Aesthetic Anime Style, 90s retro anime pixel art, cel-shaded, high contrast, game character portrait, ${desc}, half body, head and upper torso, facing forward, plain dark background, detailed`;
+  // Include gender in seed so different genders get different stable images
+  const seed = hashStr(playerName + worldKey + "char" + (gender ?? ""));
+  const genderDesc = gender === "男性"
+    ? "male, handsome young man, masculine,"
+    : gender === "女性"
+    ? "female, beautiful young woman, feminine,"
+    : "";
+  const prompt = `Aesthetic Anime Style, 90s retro anime pixel art, cel-shaded, high contrast, game character portrait, ${genderDesc} ${desc}, half body, head and upper torso, facing forward, plain dark background, detailed`;
   return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=128&height=192&nologo=true&seed=${seed}`;
 }
 
@@ -210,7 +216,8 @@ export default function StatusBar({ accent }: { accent: string }) {
 
   const worldAttr = (adventure.world_attributes ?? {}) as Record<string, unknown>;
   const worldKey = (worldAttr?.world_flavor as string) ?? adventure.world_type;
-  const charPortraitUrl = getCharPortraitUrl(playerName, worldKey);
+  const gender = (worldAttr.gender as string) ?? undefined;
+  const charPortraitUrl = getCharPortraitUrl(playerName, worldKey, gender);
 
   const lust = (worldAttr.lust as number) ?? null;
   const willpower = (worldAttr.willpower as number) ?? null;

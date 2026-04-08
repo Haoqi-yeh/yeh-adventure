@@ -34,11 +34,13 @@ const STARS = [
   { w: 1, h: 1, t: 95, l: 75, dur: 3.6, delay: 3.2 },
 ];
 
-// Deterministic global background — higher resolution for sharpness
+// Deterministic global background
+// flux-schnell: faster + sharper output than default flux
+// "sharp pixel edges, crisp lines" forces harder cel-shaded look
 const BG_PROMPT = encodeURIComponent(
-  "16-bit pixel art style, high-definition, retro gaming aesthetic, vibrant colors. A massive, complex, fusion-style fantastical floating island suspended in a sea of pink and purple pixelated clouds and nebula. The island is an intricate fusion: a traditional Wuxia sword-tower, a Japanese school gate with flickering neon pixel signs, a sprawling wasteland camp with scavengers, a western fantasy castle, a cyberpunk glowing tree with circuit patterns, a haunted shrine, a palace complex, and a martial arts arena. A tiny pixelated female character Lia stands on the island edge overlooking a neon pixel-art horizon. Darker palette of deep blues purples golds."
+  "pixel art, sharp pixel edges, crisp lines, high contrast, cel-shaded, retro 16-bit game background. Fantastical floating island at dusk, pink and purple pixel clouds, neon-lit. The island has: a Wuxia sword-tower, Japanese school gate with neon signs, western fantasy castle, cyberpunk glowing circuit tree, haunted shrine, palace pavilion, martial arts arena. Deep blue-purple sky, vivid gold highlights. Tiny anime characters on the island edge. Vibrant saturated colors, no blur, no soft glow."
 );
-const GLOBAL_BG_URL = `https://image.pollinations.ai/prompt/${BG_PROMPT}?width=1920&height=1080&nologo=true&seed=42`;
+const GLOBAL_BG_URL = `https://image.pollinations.ai/prompt/${BG_PROMPT}?width=1920&height=1080&nologo=true&seed=77&model=flux-schnell`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -49,8 +51,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       style={{
         backgroundImage: `url("${GLOBAL_BG_URL}")`,
         backgroundSize: "cover",
-        backgroundPosition: "center",
-        backgroundAttachment: "fixed",
+        backgroundPosition: "center top",
         backgroundRepeat: "no-repeat",
         backgroundColor: "#050a15", // fallback while image loads
       }}
@@ -67,7 +68,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* Dark overlay — z-index:0 sits above the <html> background but below stars */}
         <div style={{
           position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none",
-          background: "rgba(5, 10, 21, 0.52)",
+          background: "rgba(5, 10, 21, 0.38)",
         }} />
 
         {STARS.map((s, i) => (

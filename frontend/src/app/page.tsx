@@ -39,10 +39,9 @@ export default function Home() {
         width: "100%", maxWidth: 480,
         minHeight: "100vh",
         display: "flex", flexDirection: "column",
-        background: "rgba(5, 10, 21, 0.88)",
-        backdropFilter: "blur(2px)",
-        borderLeft: "1px solid rgba(255,255,255,0.05)",
-        borderRight: "1px solid rgba(255,255,255,0.05)",
+        background: "rgba(5, 10, 21, 0.92)",
+        borderLeft: "1px solid rgba(255,255,255,0.06)",
+        borderRight: "1px solid rgba(255,255,255,0.06)",
       }}>
         {/* 頂部 Header */}
         <div style={{
