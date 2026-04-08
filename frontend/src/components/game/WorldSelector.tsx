@@ -50,11 +50,18 @@ const inputStyle: React.CSSProperties = {
   boxSizing: "border-box",
 };
 
+const GENDERS = [
+  { value: "不指定", icon: "🎭" },
+  { value: "男性",   icon: "♂" },
+  { value: "女性",   icon: "♀" },
+] as const;
+
 export default function WorldSelector() {
   const {
     playerName, setPlayerName,
     characterBio, setCharacterBio,
     writingStyle, setWritingStyle,
+    gender, setGender,
     startAdventure, isLoading, error,
   } = useGameStore();
   const [selected, setSelected] = useState<WorldType>("campus");
@@ -125,6 +132,37 @@ export default function WorldSelector() {
             placeholder="輸入你的名字..."
             style={inputStyle}
           />
+        </div>
+
+        {/* 性別 */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+          <label style={{ color: "rgba(148,163,184,0.7)", fontSize: "11px", letterSpacing: "0.15em", textTransform: "uppercase" }}>
+            性別
+          </label>
+          <div style={{ display: "flex", gap: "8px" }}>
+            {GENDERS.map(({ value, icon }) => {
+              const active = gender === value;
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setGender(value)}
+                  style={{
+                    flex: 1, padding: "10px 0", borderRadius: "12px",
+                    border: `1px solid ${active ? "rgba(167,139,250,0.65)" : "rgba(148,163,184,0.2)"}`,
+                    background: active ? "rgba(124,58,237,0.22)" : "rgba(15,23,42,0.6)",
+                    color: active ? "#c084fc" : "rgba(148,163,184,0.65)",
+                    fontSize: "13px", fontWeight: active ? 700 : 400,
+                    cursor: "pointer", letterSpacing: "0.04em",
+                    transition: "all 0.15s",
+                    boxShadow: active ? "0 0 12px rgba(124,58,237,0.25)" : "none",
+                  }}
+                >
+                  {icon} {value}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* 世界 */}

@@ -89,6 +89,7 @@ export interface StartAdventureRequest {
   worldType: WorldType;
   characterBio?: string;
   writingStyle?: string;
+  gender?: string;
   inheritLegacyId?: string;
 }
 

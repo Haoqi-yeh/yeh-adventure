@@ -13,11 +13,13 @@ interface GameStore {
   playerName: string;
   characterBio: string;
   writingStyle: string;
+  gender: string;
   npcs: NPCStateRow[];
 
   setPlayerName: (name: string) => void;
   setCharacterBio: (bio: string) => void;
   setWritingStyle: (style: string) => void;
+  setGender: (gender: string) => void;
   startAdventure: (worldType: WorldType) => Promise<void>;
   makeChoice: (choiceIndex: number) => Promise<void>;
   freeAction: (input: string) => Promise<void>;
@@ -35,18 +37,20 @@ export const useGameStore = create<GameStore>((set, get) => ({
   playerName: "",
   characterBio: "",
   writingStyle: "九把刀風格",
+  gender: "不指定",
   npcs: [],
 
   setPlayerName: (name) => set({ playerName: name }),
   setCharacterBio: (bio) => set({ characterBio: bio }),
   setWritingStyle: (style) => set({ writingStyle: style }),
+  setGender: (g) => set({ gender: g }),
 
   startAdventure: async (worldType) => {
-    const { playerName, characterBio, writingStyle } = get();
+    const { playerName, characterBio, writingStyle, gender } = get();
     if (!playerName.trim()) { set({ error: "請先輸入名字" }); return; }
     set({ isLoading: true, error: null });
     try {
-      const adventure = await createAdventure({ playerName, worldType, characterBio: characterBio.trim() || undefined, writingStyle: writingStyle || undefined });
+      const adventure = await createAdventure({ playerName, worldType, characterBio: characterBio.trim() || undefined, writingStyle: writingStyle || undefined, gender: gender !== "不指定" ? gender : undefined });
       const response = await sendPlayerAction({ adventureId: adventure.id, freeInput: "開始冒險" });
       applyResponse(set, response);
     } catch (e: unknown) {
@@ -80,7 +84,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   reset: () => set({
     adventure: null, narrative: "", choices: [], imagePrompt: "",
-    isLoading: false, error: null, characterBio: "", writingStyle: "九把刀風格", npcs: [],
+    isLoading: false, error: null, characterBio: "", writingStyle: "九把刀風格", gender: "不指定", npcs: [],
   }),
 }));
 

@@ -137,6 +137,9 @@ export function buildSystemPrompt(params: {
   const writingStyleKey = (worldAttributes.writing_style as string) ?? DEFAULT_STYLE;
   const styleBase = WRITING_STYLES[writingStyleKey] ?? WRITING_STYLES[DEFAULT_STYLE];
 
+  // Gender (from world_attributes, set at adventure creation)
+  const gender = (worldAttributes.gender as string) ?? null;
+
   // Lust / Willpower / clothing / body status
   const lust = (worldAttributes.lust as number) ?? 50;
   const willpower = (worldAttributes.willpower as number) ?? 70;
@@ -160,7 +163,7 @@ export function buildSystemPrompt(params: {
   const legacyStr = legacyHints.length ? legacyHints.join("；") : "無前世傳承";
 
   // Filter worldAttrs for display — exclude internal fields
-  const INTERNAL_KEYS = new Set(["world_flavor", "character_bio", "writing_style", "lust", "willpower", "clothing_state", "body_status"]);
+  const INTERNAL_KEYS = new Set(["world_flavor", "character_bio", "writing_style", "gender", "lust", "willpower", "clothing_state", "body_status"]);
   const worldAttrsStr = Object.entries(worldAttributes)
     .filter(([k]) => !INTERNAL_KEYS.has(k))
     .map(([k, v]) => `- ${k}：${v}`)
@@ -188,7 +191,7 @@ ${urgencyBlock ? "\n" + urgencyBlock : ""}
 - HP：${hp}/${hpMax}（${hpRatio}%）
 - MP：${mp}/${mpMax}
 - 壓力：${stress}/100
-- 魅力：${charisma}
+- 魅力：${charisma}${gender ? `\n- 性別：${gender}` : ""}
 - 個性標籤：${tagsStr}
 - 技能：${skillsStr}
 - 傳承記憶：${legacyStr}

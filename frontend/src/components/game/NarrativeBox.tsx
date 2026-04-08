@@ -27,13 +27,16 @@ function hashSeed(str: string): number {
   return h % 99999;
 }
 
-function getSceneUrl(imagePrompt: string, useSafeImage: boolean): string {
+function getSceneUrl(imagePrompt: string, useSafeImage: boolean, retry = 0): string {
   if (!imagePrompt) return "";
-  const seed = hashSeed(imagePrompt);
+  // Add retry offset to seed so each retry hits a different cache slot
+  const seed = (hashSeed(imagePrompt) + retry * 17) % 99999;
   if (useSafeImage) {
+    // flux-schnell: ~2-3s vs ~6-8s for standard flux — big speed win
     const full = `Aesthetic Anime Style, 90s retro anime pixel art, high contrast, cel-shaded, ${imagePrompt}`;
-    return `https://image.pollinations.ai/prompt/${encodeURIComponent(full)}?width=384&height=384&nologo=true&seed=${seed}`;
+    return `https://image.pollinations.ai/prompt/${encodeURIComponent(full)}?width=256&height=256&nologo=true&seed=${seed}&model=flux-schnell`;
   } else {
+    // Adult scenes: keep flux-anime for quality; 384×384 acceptable
     const full = `Aesthetic Anime Style, 90s retro anime illustration, adult content, mature, beautiful detailed, cel-shaded, ${imagePrompt}`;
     return `https://image.pollinations.ai/prompt/${encodeURIComponent(full)}?width=384&height=384&nologo=true&seed=${seed}&model=flux-anime`;
   }
@@ -205,24 +208,57 @@ export default function NarrativeBox({ accent }: { accent: string }) {
   const fallbackBg = WORLD_FALLBACK_BG[worldKey] ?? WORLD_FALLBACK_BG.custom;
   const npcNames  = npcs.map(n => n.name);
 
-  // ── Scene image with crossfade ──────────────────────────────────────────────
+  // ── Scene image with crossfade + auto-retry ──────────────────────────────────
   const [sceneUrl, setSceneUrl] = useState("");
   const [prevSceneUrl, setPrevSceneUrl] = useState("");
   const [sceneLoaded, setSceneLoaded] = useState(false);
   const [sceneError, setSceneError] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Reset retry when prompt changes (new scene)
+  useEffect(() => {
+    setRetryCount(0);
+    if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+  }, [imagePrompt]);
+
+  // Update URL whenever prompt or retry count changes
   useEffect(() => {
     if (!imagePrompt) return;
-    const newUrl = getSceneUrl(imagePrompt, useSafeImage);
-    if (newUrl === sceneUrl) return;
-    setPrevSceneUrl(sceneUrl);
+    const newUrl = getSceneUrl(imagePrompt, useSafeImage, retryCount);
+    // On retry (retryCount > 0) always refresh; on first load skip if same URL
+    if (newUrl === sceneUrl && retryCount === 0) return;
+    if (retryCount === 0) {
+      // New scene — crossfade from previous
+      setPrevSceneUrl(sceneUrl);
+    }
+    // On retry, keep prevSceneUrl intact (don't flash)
     setSceneLoaded(false);
     setSceneError(false);
     setSceneUrl(newUrl);
-  }, [imagePrompt, useSafeImage]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [imagePrompt, useSafeImage, retryCount]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleImageLoad  = useCallback(() => { setSceneLoaded(true); setPrevSceneUrl(""); }, []);
-  const handleImageError = useCallback(() => { setSceneError(true); setSceneLoaded(false); }, []);
+  const handleImageLoad = useCallback(() => {
+    setSceneLoaded(true);
+    setPrevSceneUrl("");
+    if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+  }, []);
+
+  const handleImageError = useCallback(() => {
+    setSceneLoaded(false);
+    // Auto-retry up to 2 times with 2.5s delay
+    setRetryCount(prev => {
+      if (prev < 2) {
+        retryTimerRef.current = setTimeout(() => {
+          setSceneError(false);
+          setRetryCount(r => r + 1);
+        }, 2500);
+        return prev; // don't change yet; the timer will increment
+      }
+      setSceneError(true); // give up after 2 retries
+      return prev;
+    });
+  }, []);
 
   // ── Typewriter ─────────────────────────────────────────────────────────────
   const [displayed, setDisplayed] = useState("");
