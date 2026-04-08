@@ -11,7 +11,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="zh-TW">
       <body>
         {/* 漂浮星點 */}
-        {[...Array(20)].map((_, i) => (
+        {[...Array(24)].map((_, i) => (
           <span
             key={i}
             className="star"
@@ -26,7 +26,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             }}
           />
         ))}
-        <div className="relative z-10">{children}</div>
+        <div className="relative z-10 w-full min-h-screen">{children}</div>
       </body>
     </html>
   );
