@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const body: StartAdventureRequest = await req.json();
-    const { playerName, worldType, characterBio, inheritLegacyId } = body;
+    const { playerName, worldType, characterBio, writingStyle, inheritLegacyId } = body;
     const db = getSupabaseAdmin();
     // Map new world types to "custom" for DB compatibility; store real flavor in world_attributes
     const dbWorldType = DB_WORLD_TYPES.has(worldType) ? worldType : "custom";
@@ -50,6 +50,7 @@ export async function POST(req: NextRequest) {
     const worldAttributes: Record<string, unknown> = {
       ...(worldType !== dbWorldType ? { world_flavor: worldType } : {}),
       ...(characterBio ? { character_bio: characterBio } : {}),
+      ...(writingStyle ? { writing_style: writingStyle } : {}),
     };
 
     const { data: adventure, error } = await db

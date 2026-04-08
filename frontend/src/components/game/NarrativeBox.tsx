@@ -23,10 +23,18 @@ function getSceneUrl(imagePrompt: string, seed: number) {
   return `https://image.pollinations.ai/prompt/${encodeURIComponent(full)}?width=512&height=256&nologo=true&seed=${seed}`;
 }
 
-function detectEvent(text: string): { type: "npc" | "event" | null; label: string } {
-  if (text.includes("【奇遇NPC】")) return { type: "npc", label: "✦ 奇遇 NPC" };
-  if (text.includes("【突發狀況】")) return { type: "event", label: "⚡ 突發狀況" };
-  return { type: null, label: "" };
+function detectEvent(text: string): { type: "npc" | "event" | null; label: string; detail: string } {
+  // Match 【奇遇NPC：名字】 or plain 【奇遇NPC】
+  const npcMatch = text.match(/【奇遇NPC[：:]([^】]+)】/);
+  if (npcMatch) return { type: "npc", label: "✦ 奇遇 NPC", detail: npcMatch[1] };
+  if (text.includes("【奇遇NPC】")) return { type: "npc", label: "✦ 奇遇 NPC", detail: "" };
+
+  // Match 【突發狀況：摘要】 or plain 【突發狀況】
+  const eventMatch = text.match(/【突發狀況[：:]([^】]+)】/);
+  if (eventMatch) return { type: "event", label: "⚡ 突發狀況", detail: eventMatch[1] };
+  if (text.includes("【突發狀況】")) return { type: "event", label: "⚡ 突發狀況", detail: "" };
+
+  return { type: null, label: "", detail: "" };
 }
 
 export default function NarrativeBox({ accent }: { accent: string }) {
@@ -76,7 +84,7 @@ export default function NarrativeBox({ accent }: { accent: string }) {
 
   useEffect(() => {
     if (!isLoading && eventInfo.type) {
-      const t = setTimeout(() => setShowEventPopup(true), 400);
+      const t = setTimeout(() => setShowEventPopup(true), 500);
       return () => clearTimeout(t);
     } else {
       setShowEventPopup(false);
@@ -201,12 +209,24 @@ export default function NarrativeBox({ accent }: { accent: string }) {
               }}>
                 {eventInfo.label}
               </div>
+              {eventInfo.detail && (
+                <div style={{
+                  fontSize: 13, color: "#fbbf24", fontWeight: 700,
+                  marginBottom: 10, letterSpacing: "0.05em",
+                }}>
+                  「{eventInfo.detail}」
+                </div>
+              )}
               <div style={{
                 fontSize: 12, color: "rgba(203,213,225,0.75)", lineHeight: "1.75",
                 maxHeight: 160, overflowY: "auto",
                 textAlign: "left",
               }}>
-                {narrative.replace(/【奇遇NPC】|【突發狀況】/g, "").trim().slice(0, 220)}
+                {narrative
+                  .replace(/【奇遇NPC[：:]?[^】]*】/g, "")
+                  .replace(/【突發狀況[：:]?[^】]*】/g, "")
+                  .trim()
+                  .slice(0, 220)}
                 {narrative.length > 220 ? "…" : ""}
               </div>
               <button
@@ -246,10 +266,9 @@ export default function NarrativeBox({ accent }: { accent: string }) {
           </div>
         ) : (
           <div style={{
-            fontSize: 14, lineHeight: "1.85",
+            fontSize: 14, lineHeight: "1.9",
             color: "#d1d5db",
             whiteSpace: "pre-wrap",
-            fontFamily: "Georgia, 'Times New Roman', serif",
             minHeight: 80,
           }}>
             {displayed || (

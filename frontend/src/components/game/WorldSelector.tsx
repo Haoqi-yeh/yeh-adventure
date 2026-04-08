@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, Play } from "lucide-react";
 import { useGameStore } from "@/store/game-store";
@@ -18,25 +18,13 @@ const WORLDS: { type: WorldType; emoji: string; name: string; desc: string }[] =
   { type: "wasteland",       emoji: "🏜️",  name: "廢土",   desc: "拾荒、變異、文明的殘骸" },
 ];
 
-const WORLD_PROMPTS: Record<string, string> = {
-  xian_xia:        "ancient chinese immortal cultivation realm, mystical floating mountains, glowing energy, sword spirit",
-  campus:          "japanese school campus, cherry blossom trees, anime students, warm spring afternoon",
-  apocalypse:      "post-apocalyptic ruined city, dark sky, survivors, debris and dust",
-  adult:           "neon-lit night city street, urban nightlife, rain reflections, cinematic atmosphere",
-  wuxia:           "ancient chinese martial arts, misty mountains, pagoda temples, waterfall, warriors",
-  western_fantasy: "magical fantasy kingdom, dragon flying, enchanted forest, medieval castle",
-  cyberpunk:       "cyberpunk city at night, neon signs, flying cars, holographic ads, rainy streets",
-  horror:          "haunted dark forest, full moon, fog, abandoned building, eerie atmosphere",
-  palace_intrigue: "ancient chinese imperial palace, red lanterns, beautiful courtyard, imperial guard",
-  wasteland:       "desert wasteland, ruined civilization, mutant creatures, sandstorm, bones",
-  custom:          "magical adventure landscape, mysterious portal, fantasy world",
-};
-
-function getBgUrl(worldType: string, seed: number) {
-  const base = WORLD_PROMPTS[worldType] ?? WORLD_PROMPTS.custom;
-  const prompt = encodeURIComponent(`${base}, pixel art style, 16-bit retro game, vibrant colors, detailed scene`);
-  return `https://image.pollinations.ai/prompt/${prompt}?width=1920&height=1080&nologo=true&seed=${seed}`;
-}
+const WRITING_STYLES = [
+  { value: "九把刀風格",   label: "九把刀風格",   desc: "直白熱血、短句切割" },
+  { value: "言情小說風格", label: "言情小說風格", desc: "細膩情感、心跳撩撥" },
+  { value: "龍傲天爽文風格", label: "龍傲天爽文風格", desc: "打臉反殺、爽到極致" },
+  { value: "日常直白風格", label: "日常直白風格", desc: "接地氣、像在聊天" },
+  { value: "情色成人風格", label: "情色成人風格 🔞", desc: "大膽描寫、情慾張力" },
+];
 
 function friendlyError(msg: string): { label: string; detail: string } {
   if (msg.includes("Quota") || msg.includes("quota") || msg.includes("429"))
@@ -63,17 +51,13 @@ const inputStyle: React.CSSProperties = {
 };
 
 export default function WorldSelector() {
-  const { playerName, setPlayerName, characterBio, setCharacterBio, startAdventure, isLoading, error } = useGameStore();
+  const {
+    playerName, setPlayerName,
+    characterBio, setCharacterBio,
+    writingStyle, setWritingStyle,
+    startAdventure, isLoading, error,
+  } = useGameStore();
   const [selected, setSelected] = useState<WorldType>("campus");
-  const [bgUrl, setBgUrl] = useState("");
-  const [bgLoaded, setBgLoaded] = useState(false);
-
-  // Generate random background when world changes
-  useEffect(() => {
-    setBgLoaded(false);
-    const seed = Math.floor(Math.random() * 99999);
-    setBgUrl(getBgUrl(selected, seed));
-  }, [selected]);
 
   return (
     <div style={{
@@ -81,35 +65,10 @@ export default function WorldSelector() {
       display: "flex", alignItems: "center", justifyContent: "center",
       position: "relative",
     }}>
-      {/* 背景色底層 */}
+      {/* Extra dark overlay on top of global bg (gives depth to card) */}
       <div style={{
         position: "absolute", inset: 0,
-        background: "linear-gradient(135deg, #0a0520 0%, #050a15 50%, #0a0520 100%)",
-      }} />
-
-      {/* Pollinations.ai 生成背景圖 */}
-      {bgUrl && (
-        <motion.img
-          key={bgUrl}
-          src={bgUrl}
-          alt=""
-          onLoad={() => setBgLoaded(true)}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: bgLoaded ? 0.35 : 0 }}
-          transition={{ duration: 1.2 }}
-          style={{
-            position: "absolute", inset: 0,
-            width: "100%", height: "100%",
-            objectFit: "cover",
-            pointerEvents: "none",
-          }}
-        />
-      )}
-
-      {/* 深色漸層遮罩（確保文字可讀） */}
-      <div style={{
-        position: "absolute", inset: 0,
-        background: "radial-gradient(ellipse 70% 70% at 50% 50%, rgba(5,10,21,0.6) 0%, rgba(5,10,21,0.85) 100%)",
+        background: "radial-gradient(ellipse 80% 80% at 50% 50%, rgba(5,10,21,0.3) 0%, rgba(5,10,21,0.7) 100%)",
         pointerEvents: "none",
       }} />
 
@@ -122,8 +81,9 @@ export default function WorldSelector() {
           position: "relative", zIndex: 10,
           width: "100%", maxWidth: "420px",
           padding: "2rem 1.5rem",
-          background: "rgba(8, 12, 26, 0.70)",
-          backdropFilter: "blur(20px)",
+          background: "rgba(8, 12, 26, 0.82)",
+          backdropFilter: "blur(24px)",
+          WebkitBackdropFilter: "blur(24px)",
           border: "1px solid rgba(148, 163, 184, 0.12)",
           borderRadius: "20px",
           display: "flex", flexDirection: "column", gap: "1.1rem",
@@ -148,14 +108,14 @@ export default function WorldSelector() {
             做個白日夢冒險
           </h1>
           <p style={{ color: "rgba(148,163,184,0.6)", fontSize: "11px", letterSpacing: "0.2em", margin: 0 }}>
-            ── 沉浸式文字冒險引擎 ──
+            ── 點進去，換個世界換一種活法 ──
           </p>
         </div>
 
         {/* 名字 */}
         <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
           <label style={{ color: "rgba(148,163,184,0.7)", fontSize: "11px", letterSpacing: "0.15em", textTransform: "uppercase" }}>
-            Your Name
+            你的名字
           </label>
           <input
             type="text"
@@ -170,7 +130,7 @@ export default function WorldSelector() {
         {/* 世界 */}
         <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
           <label style={{ color: "rgba(148,163,184,0.7)", fontSize: "11px", letterSpacing: "0.15em", textTransform: "uppercase" }}>
-            Choose Your World
+            選擇世界觀
           </label>
           <select
             value={selected}
@@ -185,10 +145,28 @@ export default function WorldSelector() {
           </select>
         </div>
 
+        {/* 文筆風格 */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+          <label style={{ color: "rgba(148,163,184,0.7)", fontSize: "11px", letterSpacing: "0.15em", textTransform: "uppercase" }}>
+            選擇文筆風格
+          </label>
+          <select
+            value={writingStyle}
+            onChange={(e) => setWritingStyle(e.target.value)}
+            style={{ ...inputStyle, cursor: "pointer" }}
+          >
+            {WRITING_STYLES.map((s) => (
+              <option key={s.value} value={s.value} style={{ background: "#0f172a", color: "#f1f5f9" }}>
+                {s.label} — {s.desc}
+              </option>
+            ))}
+          </select>
+        </div>
+
         {/* 角色設定 */}
         <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
           <label style={{ color: "rgba(148,163,184,0.7)", fontSize: "11px", letterSpacing: "0.15em", textTransform: "uppercase" }}>
-            Character Bio <span style={{ textTransform: "none", color: "rgba(100,116,139,0.7)", fontWeight: 400 }}>（選填）</span>
+            角色設定 <span style={{ textTransform: "none", color: "rgba(100,116,139,0.7)", fontWeight: 400 }}>（選填）</span>
           </label>
           <textarea
             value={characterBio}

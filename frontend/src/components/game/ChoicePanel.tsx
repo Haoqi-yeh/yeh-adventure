@@ -20,8 +20,6 @@ function parseChoice(text: string): { title: string; detail: string } {
   return { title: text, detail: "" };
 }
 
-const SLOT_ICONS = ["⚔️", "🏃", "💬", "🔍", "🛡️", "✨", "🎲", "👁️"];
-
 function ChoiceButton({ choice, index, accent, isLoading, onChoose }: {
   choice: string; index: number; accent: string; isLoading: boolean; onChoose: () => void;
 }) {
@@ -98,7 +96,7 @@ function ChoiceButton({ choice, index, accent, isLoading, onChoose }: {
         onTouchEnd={handleTouchEnd}
         style={{
           width: "100%",
-          padding: "14px 10px",
+          padding: "18px 10px",
           borderRadius: 12,
           border: `1px solid ${accent}35`,
           background: "rgba(255,255,255,0.04)",
@@ -120,16 +118,15 @@ function ChoiceButton({ choice, index, accent, isLoading, onChoose }: {
           (e.currentTarget as HTMLButtonElement).style.borderColor = `${accent}35`;
         }}
       >
-        <span style={{ fontSize: 22 }}>{SLOT_ICONS[index % SLOT_ICONS.length]}</span>
         <span style={{
-          fontSize: 13, color: accent, fontWeight: 700,
-          fontFamily: "monospace", letterSpacing: "0.05em",
-          lineHeight: "1.3",
+          fontSize: 15, color: accent, fontWeight: 700,
+          fontFamily: "monospace", letterSpacing: "0.06em",
+          lineHeight: "1.3", textAlign: "center",
         }}>
           {title}
         </span>
         {detail && (
-          <span style={{ fontSize: 9, color: "rgba(148,163,184,0.3)", fontFamily: "monospace" }}>
+          <span style={{ fontSize: 9, color: "rgba(148,163,184,0.28)", fontFamily: "monospace", letterSpacing: "0.05em" }}>
             ▲ 詳情
           </span>
         )}

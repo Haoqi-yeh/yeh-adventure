@@ -3,7 +3,11 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "做個白日夢冒險",
-  description: "沉浸式九把刀風格文字冒險遊戲",
+  description: "點進去，換個世界換一種活法",
+  openGraph: {
+    title: "做個白日夢冒險",
+    description: "點進去，換個世界換一種活法",
+  },
 };
 
 // Fixed star positions (no Math.random at render time → no hydration mismatch)
@@ -30,10 +34,39 @@ const STARS = [
   { w: 1, h: 1, t: 95, l: 75, dur: 3.6, delay: 3.2 },
 ];
 
+// Fixed global background — same Pollinations.ai seed → deterministic image
+const BG_PROMPT = encodeURIComponent(
+  "16-bit pixel art style, high-definition, retro gaming aesthetic, vibrant colors. A massive, complex, fusion-style fantastical floating island suspended in a sea of pink and purple pixelated clouds and nebula. The island is an intricate fusion: a traditional Wuxia sword-tower, a Japanese school gate with flickering neon pixel signs, a sprawling wasteland camp with scavengers, a western fantasy castle, a cyberpunk glowing tree with circuit patterns, a haunted shrine, a palace complex, and a martial arts arena. A tiny pixelated female character Lia stands on the island edge overlooking a neon pixel-art horizon. Darker palette of deep blues purples golds."
+);
+const GLOBAL_BG_URL = `https://image.pollinations.ai/prompt/${BG_PROMPT}?width=1920&height=1080&nologo=true&seed=42`;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="zh-TW">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap"
+          rel="stylesheet"
+        />
+      </head>
       <body>
+        {/* Global fixed pixel art background */}
+        <div style={{
+          position: "fixed", inset: 0, zIndex: -1,
+          backgroundImage: `url("${GLOBAL_BG_URL}")`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+          imageRendering: "pixelated",
+        }} />
+        {/* Dark overlay over global bg */}
+        <div style={{
+          position: "fixed", inset: 0, zIndex: -1,
+          background: "rgba(5, 10, 21, 0.72)",
+        }} />
+
         {STARS.map((s, i) => (
           <span
             key={i}
