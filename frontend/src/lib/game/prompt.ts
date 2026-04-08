@@ -172,8 +172,8 @@ export function buildSystemPrompt(params: {
   Object.entries(skillBonus).forEach(([s, v]) => legacyHints.push(`前世留下的【${s}】殘留記憶（加成 ${v > 0 ? "+" : ""}${v}）`));
   const legacyStr = legacyHints.length ? legacyHints.join("；") : "無前世傳承";
 
-  // Scenario hook (set at adventure creation, drives unique story + NPCs)
-  const scenarioHook = worldAttributes.scenario_hook as string | undefined;
+  // Scenario hook — only inject on the very first tick; after that it's in narrative_summary
+  const scenarioHook = tick <= 1 ? (worldAttributes.scenario_hook as string | undefined) : undefined;
 
   // Filter worldAttrs for display — exclude internal fields
   const INTERNAL_KEYS = new Set(["world_flavor", "character_bio", "writing_style", "gender", "lust", "willpower", "clothing_state", "body_status", "scenario_hook"]);

@@ -211,7 +211,7 @@ function CharacterSprite({ worldAttr }: { worldAttr: Record<string, unknown> }) 
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function NarrativeBox({ accent }: { accent: string }) {
-  const { narrative, imagePrompt, useSafeImage, isLoading, adventure, npcs } = useGameStore();
+  const { narrative, imagePrompt, useSafeImage, isLoading, isStreaming, adventure, npcs } = useGameStore();
 
   const worldAttr = adventure ? (adventure.world_attributes as Record<string, unknown>) : {};
   const worldKey  = (worldAttr?.world_flavor as string) ?? adventure?.world_type ?? "custom";
@@ -270,15 +270,33 @@ export default function NarrativeBox({ accent }: { accent: string }) {
     });
   }, []);
 
-  // ── Typewriter ─────────────────────────────────────────────────────────────
+  // ── Typewriter — only runs after streaming finishes (non-streaming load) ────
   const [displayed, setDisplayed] = useState("");
   const [typing, setTyping] = useState(false);
-  const typerRef    = useRef<ReturnType<typeof setInterval> | null>(null);
+  const typerRef     = useRef<ReturnType<typeof setInterval> | null>(null);
   const narrativeRef = useRef(narrative);
   narrativeRef.current = narrative;
+  // Track the last narrative that the typewriter was started on
+  const typedNarrativeRef = useRef("");
 
   useEffect(() => {
-    if (!narrative || isLoading) { setDisplayed(""); setTyping(false); return; }
+    if (isStreaming) {
+      // During streaming: show text directly — streaming IS the typewriter
+      if (typerRef.current) clearInterval(typerRef.current);
+      setTyping(false);
+      setDisplayed(narrative);
+      typedNarrativeRef.current = narrative;
+      return;
+    }
+    if (!narrative || isLoading) {
+      setDisplayed("");
+      setTyping(false);
+      return;
+    }
+    // Skip typewriter if this narrative was already revealed via streaming
+    if (typedNarrativeRef.current === narrative) return;
+
+    typedNarrativeRef.current = narrative;
     setDisplayed("");
     setTyping(true);
     let i = 0;
@@ -292,7 +310,7 @@ export default function NarrativeBox({ accent }: { accent: string }) {
       }
     }, 20);
     return () => { if (typerRef.current) clearInterval(typerRef.current); };
-  }, [narrative, isLoading]);
+  }, [narrative, isLoading, isStreaming]);
 
   const skipTypewriter = () => {
     if (!typing) return;
@@ -487,13 +505,13 @@ export default function NarrativeBox({ accent }: { accent: string }) {
 
       {/* ── 敘事文字（點擊跳過）── */}
       <div
-        onClick={skipTypewriter}
+        onClick={isStreaming ? undefined : skipTypewriter}
         style={{
           padding: "18px 16px",
           background: "rgba(0,0,0,0.15)",
           borderBottom: "1px solid rgba(255,255,255,0.04)",
           minHeight: 140,
-          cursor: typing ? "pointer" : "default",
+          cursor: typing && !isStreaming ? "pointer" : "default",
         }}
       >
         {isLoading ? (
@@ -508,17 +526,17 @@ export default function NarrativeBox({ accent }: { accent: string }) {
         ) : displayed ? (
           <div style={{ minHeight: 80 }}>
             <FormattedNarrative text={displayed} npcNames={npcNames} />
-            {typing && (
-              <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 8 }}>
-                <motion.span
-                  animate={{ opacity: [1, 0] }}
-                  transition={{ repeat: Infinity, duration: 0.5 }}
-                  style={{ color: accent, fontSize: 14 }}
-                >▌</motion.span>
-                <span style={{ fontSize: 10, color: "rgba(148,163,184,0.22)", fontFamily: "monospace" }}>
-                  點擊跳過 →
-                </span>
-              </div>
+            {(typing || isStreaming) && (
+              <motion.span
+                animate={{ opacity: [1, 0] }}
+                transition={{ repeat: Infinity, duration: 0.5 }}
+                style={{ display: "inline-block", color: accent, fontSize: 14, marginLeft: 2 }}
+              >▌</motion.span>
+            )}
+            {typing && !isStreaming && (
+              <span style={{ marginLeft: 8, fontSize: 10, color: "rgba(148,163,184,0.22)", fontFamily: "monospace" }}>
+                點擊跳過 →
+              </span>
             )}
           </div>
         ) : (

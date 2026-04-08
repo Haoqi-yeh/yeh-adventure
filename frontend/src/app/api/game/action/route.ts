@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { rollDice } from "@/lib/game/dice";
@@ -10,50 +10,51 @@ import type {
 } from "@/lib/game/types";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? "");
+const encoder = new TextEncoder();
+
+// ── NDJSON helpers ────────────────────────────────────────────────────────────
+function chunk(obj: unknown) {
+  return encoder.encode(JSON.stringify(obj) + "\n");
+}
 
 export async function POST(req: NextRequest) {
-  try {
   const body: PlayerActionRequest = await req.json();
   const { adventureId, choiceIndex, freeInput, previousChoices } = body;
   const db = getSupabaseAdmin();
 
-  const { data: adventure, error: advErr } = await db
-    .from("adventures")
-    .select("*")
-    .eq("id", adventureId)
-    .single();
+  // ── Parallel initial DB fetch ─────────────────────────────────────────────
+  const [adventureRes, npcRes] = await Promise.all([
+    db.from("adventures").select("*").eq("id", adventureId).single(),
+    db.from("npc_states").select("*").eq("adventure_id", adventureId),
+  ]);
 
-  if (advErr || !adventure) {
-    return NextResponse.json({ error: "找不到冒險" }, { status: 404 });
+  if (adventureRes.error || !adventureRes.data) {
+    return new Response(
+      JSON.stringify({ error: "找不到冒險" }),
+      { status: 404, headers: { "Content-Type": "application/json" } }
+    );
   }
+  const adventure = adventureRes.data as AdventureRow;
   if (adventure.status !== "active") {
-    return NextResponse.json({ error: "此冒險已結束" }, { status: 400 });
+    return new Response(
+      JSON.stringify({ error: "此冒險已結束" }),
+      { status: 400, headers: { "Content-Type": "application/json" } }
+    );
   }
+  const npcs: NPCStateRow[] = npcRes.data ?? [];
 
-  const { data: npcRows } = await db
-    .from("npc_states")
-    .select("*")
-    .eq("adventure_id", adventureId);
-  const npcs: NPCStateRow[] = npcRows ?? [];
-
+  // ── Game logic ────────────────────────────────────────────────────────────
   const avgAffection = npcs.length
     ? Math.round(npcs.reduce((s, n) => s + n.affection, 0) / npcs.length)
     : 0;
   const hpRatio = adventure.hp_max > 0 ? adventure.hp / adventure.hp_max : 0;
   const diceResult = rollDice({
-    affection: avgAffection,
-    hpRatio,
-    stress: adventure.stress,
-    charisma: adventure.charisma,
-    weather: adventure.weather,
-    timeOfDay: adventure.time_of_day,
-    worldBonus: getWorldBonus(adventure),
+    affection: avgAffection, hpRatio, stress: adventure.stress, charisma: adventure.charisma,
+    weather: adventure.weather, timeOfDay: adventure.time_of_day, worldBonus: getWorldBonus(adventure),
   });
 
   const { newTick, timeOfDay } = advanceTick(adventure.tick);
-  const weather = shouldChangeWeather(newTick)
-    ? rollWeather(adventure.weather)
-    : adventure.weather;
+  const weather = shouldChangeWeather(newTick) ? rollWeather(adventure.weather) : adventure.weather;
   const envDesc = getEnvDescription(timeOfDay, weather);
 
   const systemPrompt = buildSystemPrompt({
@@ -62,10 +63,8 @@ export async function POST(req: NextRequest) {
     hp: adventure.hp, hpMax: adventure.hp_max,
     mp: adventure.mp, mpMax: adventure.mp_max,
     stress: adventure.stress, charisma: adventure.charisma,
-    tick: newTick, timeOfDay, weather,
-    location: adventure.location,
-    envDesc,
-    npcContext: buildNPCContext(npcs),
+    tick: newTick, timeOfDay, weather, location: adventure.location,
+    envDesc, npcContext: buildNPCContext(npcs),
     personalityTags: adventure.personality_tags ?? [],
     skills: adventure.skills ?? [],
     worldAttributes: adventure.world_attributes ?? {},
@@ -81,108 +80,155 @@ export async function POST(req: NextRequest) {
     userMsg = `我的行動：${freeInput}`;
   }
 
-  const model = genAI.getGenerativeModel({
-    model: "gemini-2.5-flash",
-    systemInstruction: systemPrompt,
+  // ── Streaming response ────────────────────────────────────────────────────
+  const stream = new ReadableStream({
+    async start(controller) {
+      try {
+        // gemini-2.0-flash: no thinking overhead, ~2-3s first token
+        const model = genAI.getGenerativeModel({
+          model: "gemini-2.0-flash",
+          systemInstruction: systemPrompt,
+        });
+
+        const geminiStream = await model.generateContentStream({
+          contents: [{ role: "user", parts: [{ text: userMsg }] }],
+          generationConfig: {
+            maxOutputTokens: 1100,
+            temperature: 0.92,
+          },
+        });
+
+        // ── Stream narrative tokens ──
+        let accumulated = "";
+        let sentUpTo = 0;
+        let inJson = false;
+
+        for await (const chk of geminiStream.stream) {
+          const text = chk.text();
+          accumulated += text;
+
+          if (!inJson) {
+            const jsonIdx = accumulated.indexOf("```json");
+            if (jsonIdx !== -1) {
+              inJson = true;
+              const remaining = accumulated.slice(sentUpTo, jsonIdx).trimEnd();
+              if (remaining) {
+                controller.enqueue(chunk({ t: "n", v: remaining }));
+              }
+            } else {
+              const unsent = accumulated.slice(sentUpTo);
+              if (unsent) {
+                controller.enqueue(chunk({ t: "n", v: unsent }));
+                sentUpTo = accumulated.length;
+              }
+            }
+          }
+        }
+
+        // ── Parse full LLM output ──
+        const parsed = parseLLMResponse(accumulated);
+
+        // ── Parallel NPC updates ──
+        const npcMap = new Map(npcs.map(n => [n.name, n]));
+        const npcUpdates: NPCUpdate[] = [];
+        const npcWritePromises: Promise<unknown>[] = [];
+
+        for (const upd of parsed.npcUpdates) {
+          const npc = npcMap.get(upd.name);
+          if (!npc) continue;
+          const { updatedNPC, newRelation } = applyAffectionDelta(npc, upd.affectionDelta, upd.reactionText, newTick);
+          npcWritePromises.push(
+            db.from("npc_states").update({
+              affection: updatedNPC.affection,
+              relation: updatedNPC.relation,
+              memory_log: updatedNPC.memory_log,
+            }).eq("id", npc.id)
+          );
+          npcUpdates.push({ ...upd, newRelation });
+        }
+
+        // ── State calculations ──
+        const sc = parsed.stateChanges;
+        const newHp    = Math.max(0, Math.min(adventure.hp_max, adventure.hp + (sc.hpDelta ?? 0)));
+        const newMp    = Math.max(0, Math.min(adventure.mp_max, adventure.mp + (sc.mpDelta ?? 0)));
+        const newStress = Math.max(0, Math.min(100, adventure.stress + (sc.stressDelta ?? 0)));
+        const newSummary = ((adventure.narrative_summary ?? "") + "\n" + parsed.narrative).slice(-500);
+        const newStatus = newHp <= 0 ? "dead" : "active";
+
+        const currentWorldAttrs = (adventure.world_attributes ?? {}) as Record<string, unknown>;
+        const currentLust     = (currentWorldAttrs.lust as number) ?? 50;
+        const currentWillpower = (currentWorldAttrs.willpower as number) ?? 70;
+        const updatedWorldAttrs = {
+          ...currentWorldAttrs,
+          lust:      Math.max(0, Math.min(100, currentLust     + (sc.lustDelta ?? 0))),
+          willpower: Math.max(0, Math.min(100, currentWillpower + (sc.willpowerDelta ?? 0))),
+          ...(sc.clothingState ? { clothing_state: sc.clothingState } : {}),
+          ...(sc.bodyStatus    ? { body_status: sc.bodyStatus }       : {}),
+        };
+
+        const newLocation = sc.location ?? adventure.location;
+
+        // ── Parallel DB writes ──
+        const [updResult, , , refreshResult] = await Promise.all([
+          db.from("adventures").update({
+            tick: newTick, time_of_day: timeOfDay, weather,
+            hp: newHp, mp: newMp, stress: newStress,
+            location: newLocation,
+            narrative_summary: newSummary,
+            status: newStatus,
+            world_attributes: updatedWorldAttrs,
+          }).eq("id", adventureId).select("*").single(),
+
+          db.from("event_logs").insert({
+            adventure_id: adventureId,
+            tick: newTick,
+            event_type: "player_action",
+            player_input: freeInput ?? `選項${choiceIndex}`,
+            choices_presented: parsed.choices,
+            choice_made: choiceIndex ?? null,
+            dice_result: diceResult,
+            narrative_output: parsed.narrative,
+            state_snapshot: { hp: newHp, mp: newMp, stress: newStress, location: newLocation },
+          }),
+
+          Promise.all(npcWritePromises),
+
+          db.from("npc_states").select("*").eq("adventure_id", adventureId),
+        ]);
+
+        const response: NarrativeResponse = {
+          tick: newTick,
+          narrative: parsed.narrative,
+          choices: parsed.choices,
+          state: ((updResult.data ?? adventure) as AdventureRow),
+          imagePrompt: parsed.imagePrompt,
+          useSafeImage: parsed.useSafeImage,
+          diceDetail: diceResult,
+          npcUpdates,
+          npcs: (refreshResult.data ?? npcs) as NPCStateRow[],
+        };
+
+        controller.enqueue(chunk({ t: "d", v: response }));
+        controller.close();
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : String(e);
+        console.error("[/api/game/action]", msg);
+        controller.enqueue(chunk({ t: "e", v: msg }));
+        controller.close();
+      }
+    },
   });
-  const result = await model.generateContent(userMsg);
-  const rawText = result.response.text();
-  const parsed = parseLLMResponse(rawText);
 
-  const npcUpdates: NPCUpdate[] = [];
-  const npcMap = new Map(npcs.map(n => [n.name, n]));
-
-  for (const upd of parsed.npcUpdates) {
-    const npc = npcMap.get(upd.name);
-    if (!npc) continue;
-    const { updatedNPC, newRelation } = applyAffectionDelta(
-      npc, upd.affectionDelta, upd.reactionText, newTick
-    );
-    await db
-      .from("npc_states")
-      .update({
-        affection: updatedNPC.affection,
-        relation: updatedNPC.relation,
-        memory_log: updatedNPC.memory_log,
-      })
-      .eq("id", npc.id);
-    npcUpdates.push({ ...upd, newRelation });
-  }
-
-  const sc = parsed.stateChanges;
-  const newHp = Math.max(0, Math.min(adventure.hp_max, adventure.hp + (sc.hpDelta ?? 0)));
-  const newMp = Math.max(0, Math.min(adventure.mp_max, adventure.mp + (sc.mpDelta ?? 0)));
-  const newStress = Math.max(0, Math.min(100, adventure.stress + (sc.stressDelta ?? 0)));
-  const newSummary = ((adventure.narrative_summary ?? "") + "\n" + parsed.narrative).slice(-500);
-  const newStatus = newHp <= 0 ? "dead" : "active";
-
-  // Lust / Willpower / clothing / body status
-  const currentWorldAttrs = (adventure.world_attributes ?? {}) as Record<string, unknown>;
-  const currentLust = (currentWorldAttrs.lust as number) ?? 50;
-  const currentWillpower = (currentWorldAttrs.willpower as number) ?? 70;
-  const newLust = Math.max(0, Math.min(100, currentLust + (sc.lustDelta ?? 0)));
-  const newWillpower = Math.max(0, Math.min(100, currentWillpower + (sc.willpowerDelta ?? 0)));
-  const updatedWorldAttrs = {
-    ...currentWorldAttrs,
-    lust: newLust,
-    willpower: newWillpower,
-    ...(sc.clothingState ? { clothing_state: sc.clothingState } : {}),
-    ...(sc.bodyStatus ? { body_status: sc.bodyStatus } : {}),
-  };
-
-  const { data: updatedAdventure } = await db
-    .from("adventures")
-    .update({
-      tick: newTick,
-      time_of_day: timeOfDay,
-      weather,
-      hp: newHp,
-      mp: newMp,
-      stress: newStress,
-      location: sc.location ?? adventure.location,
-      narrative_summary: newSummary,
-      status: newStatus,
-      world_attributes: updatedWorldAttrs,
-    })
-    .eq("id", adventureId)
-    .select("*")
-    .single();
-
-  await db.from("event_logs").insert({
-    adventure_id: adventureId,
-    tick: newTick,
-    event_type: "player_action",
-    player_input: freeInput ?? `選項${choiceIndex}`,
-    choices_presented: parsed.choices,
-    choice_made: choiceIndex ?? null,
-    dice_result: diceResult,
-    narrative_output: parsed.narrative,
-    state_snapshot: { hp: newHp, mp: newMp, stress: newStress, location: sc.location ?? adventure.location },
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/plain; charset=utf-8",
+      "Cache-Control": "no-cache",
+      "X-Accel-Buffering": "no",
+    },
   });
-
-  // Fetch refreshed NPC states after updates
-  const { data: refreshedNpcs } = await db
-    .from("npc_states").select("*").eq("adventure_id", adventureId);
-
-  const response: NarrativeResponse = {
-    tick: newTick,
-    narrative: parsed.narrative,
-    choices: parsed.choices,
-    state: (updatedAdventure ?? adventure) as AdventureRow,
-    imagePrompt: parsed.imagePrompt,
-    useSafeImage: parsed.useSafeImage,
-    diceDetail: diceResult,
-    npcUpdates,
-    npcs: (refreshedNpcs ?? npcs) as NPCStateRow[],
-  };
-
-  return NextResponse.json(response);
-  } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : String(e);
-    console.error("[/api/game/action]", msg);
-    return NextResponse.json({ error: msg }, { status: 500 });
-  }
 }
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function parseLLMResponse(raw: string) {
   const match = raw.match(/```json\s*([\s\S]*?)\s*```/);
@@ -193,12 +239,12 @@ function parseLLMResponse(raw: string) {
   const narrativeFromText = match ? raw.slice(0, raw.indexOf(match[0])).trim() : raw.trim();
 
   return {
-    narrative: (data.narrative as string) || narrativeFromText,
-    choices: (data.choices as string[]) ?? ["繼續前進", "觀察四周", "休息一下"],
+    narrative:   (data.narrative as string) || narrativeFromText,
+    choices:     (data.choices as string[]) ?? ["繼續前進", "觀察四周", "休息一下"],
     imagePrompt: (data.imagePrompt as string) ?? "Pixel art style, 16-bit, vibrant colors, retro gaming aesthetic, a mysterious scene",
-    useSafeImage: (data.useSafeImage as boolean) ?? true,
-    npcUpdates: (data.npcUpdates as { name: string; affectionDelta: number; reactionText: string }[]) ?? [],
-    stateChanges: (data.stateChanges as {
+    useSafeImage:(data.useSafeImage as boolean) ?? true,
+    npcUpdates:  (data.npcUpdates as { name: string; affectionDelta: number; reactionText: string }[]) ?? [],
+    stateChanges:(data.stateChanges as {
       hpDelta?: number; mpDelta?: number; stressDelta?: number;
       lustDelta?: number; willpowerDelta?: number;
       clothingState?: string; bodyStatus?: string;
@@ -209,11 +255,9 @@ function parseLLMResponse(raw: string) {
 
 function getWorldBonus(adventure: AdventureRow): number {
   const attrs = adventure.world_attributes ?? {};
-  if (adventure.world_type === "xian_xia") {
+  if (adventure.world_type === "xian_xia")
     return Math.min(((attrs.ling_li as number) ?? 0) / 1000, 0.2);
-  }
-  if (adventure.world_type === "campus") {
+  if (adventure.world_type === "campus")
     return (((attrs.grades as number) ?? 50) - 50) * 0.001;
-  }
   return 0;
 }
