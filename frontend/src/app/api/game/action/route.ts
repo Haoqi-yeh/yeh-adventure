@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
   const stream = new ReadableStream({
     async start(controller) {
       try {
-        // gemini-2.5-flash + thinkingBudget:0 = fast (no thinking overhead) + current model
+        // gemini-2.5-flash with streaming — tokens appear in real-time
         const model = genAI.getGenerativeModel({
           model: "gemini-2.5-flash",
           systemInstruction: systemPrompt,
@@ -95,7 +95,6 @@ export async function POST(req: NextRequest) {
           generationConfig: {
             maxOutputTokens: 1100,
             temperature: 0.92,
-            thinkingConfig: { thinkingBudget: 0 },
           },
         });
 
