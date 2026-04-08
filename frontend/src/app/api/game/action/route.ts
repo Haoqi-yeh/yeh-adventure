@@ -131,7 +131,7 @@ export async function POST(req: NextRequest) {
         // ── Parallel NPC updates ──
         const npcMap = new Map(npcs.map(n => [n.name, n]));
         const npcUpdates: NPCUpdate[] = [];
-        const npcWritePromises: Promise<unknown>[] = [];
+        const npcWritePromises: PromiseLike<unknown>[] = [];
 
         for (const upd of parsed.npcUpdates) {
           const npc = npcMap.get(upd.name);
