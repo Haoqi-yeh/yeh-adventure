@@ -3,10 +3,15 @@ import { getSupabaseAdmin } from "@/lib/supabase";
 import type { StartAdventureRequest, AdventureRow } from "@/lib/game/types";
 
 export async function POST(req: NextRequest) {
+  // World types supported natively by the DB enum
+  const DB_WORLD_TYPES = new Set(["xian_xia", "campus", "apocalypse", "adult", "custom"]);
+
   try {
     const body: StartAdventureRequest = await req.json();
-    const { playerName, worldType, inheritLegacyId } = body;
+    const { playerName, worldType, characterBio, inheritLegacyId } = body;
     const db = getSupabaseAdmin();
+    // Map new world types to "custom" for DB compatibility; store real flavor in world_attributes
+    const dbWorldType = DB_WORLD_TYPES.has(worldType) ? worldType : "custom";
 
     if (!playerName?.trim()) {
       return NextResponse.json({ error: "請填入角色名稱" }, { status: 400 });
@@ -42,9 +47,14 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    const worldAttributes: Record<string, unknown> = {
+      ...(worldType !== dbWorldType ? { world_flavor: worldType } : {}),
+      ...(characterBio ? { character_bio: characterBio } : {}),
+    };
+
     const { data: adventure, error } = await db
       .from("adventures")
-      .insert({ player_id: playerId, world_type: worldType, generation, legacy_modifiers: legacyModifiers })
+      .insert({ player_id: playerId, world_type: dbWorldType, generation, legacy_modifiers: legacyModifiers, world_attributes: worldAttributes })
       .select("*").single();
 
     if (error || !adventure)

@@ -1,6 +1,7 @@
 // ── 核心 Enum ──────────────────────────────────────────────────────────────────
 
-export type WorldType     = "xian_xia" | "campus" | "apocalypse" | "adult" | "custom";
+export type WorldType     = "xian_xia" | "campus" | "apocalypse" | "adult" | "custom"
+                          | "wuxia" | "western_fantasy" | "cyberpunk" | "horror" | "palace_intrigue" | "wasteland";
 export type WeatherType   = "clear" | "rain" | "fog" | "thunder";
 export type TimeOfDay     = "dawn" | "morning" | "noon" | "dusk" | "night";
 export type NPCRelation   = "neutral" | "friendly" | "romantic" | "hostile" | "vendetta";
@@ -86,6 +87,7 @@ export interface SpecialAbility {
 export interface StartAdventureRequest {
   playerName: string;
   worldType: WorldType;
+  characterBio?: string;
   inheritLegacyId?: string;
 }
 

@@ -11,8 +11,10 @@ interface GameStore {
   isLoading: boolean;
   error: string | null;
   playerName: string;
+  characterBio: string;
 
   setPlayerName: (name: string) => void;
+  setCharacterBio: (bio: string) => void;
   startAdventure: (worldType: WorldType) => Promise<void>;
   makeChoice: (choiceIndex: number) => Promise<void>;
   freeAction: (input: string) => Promise<void>;
@@ -28,15 +30,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
   isLoading: false,
   error: null,
   playerName: "",
+  characterBio: "",
 
   setPlayerName: (name) => set({ playerName: name }),
+  setCharacterBio: (bio) => set({ characterBio: bio }),
 
   startAdventure: async (worldType) => {
-    const { playerName } = get();
+    const { playerName, characterBio } = get();
     if (!playerName.trim()) { set({ error: "請先輸入名字" }); return; }
     set({ isLoading: true, error: null });
     try {
-      const adventure = await createAdventure({ playerName, worldType });
+      const adventure = await createAdventure({ playerName, worldType, characterBio: characterBio.trim() || undefined });
       const response = await sendPlayerAction({
         adventureId: adventure.id,
         freeInput: "開始冒險",
@@ -75,7 +79,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }
   },
 
-  reset: () => set({ adventure: null, narrative: "", choices: [], imagePrompt: "", isLoading: false, error: null }),
+  reset: () => set({ adventure: null, narrative: "", choices: [], imagePrompt: "", isLoading: false, error: null, characterBio: "" }),
 }));
 
 function applyResponse(
