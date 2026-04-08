@@ -6,21 +6,6 @@ import ChoicePanel from "@/components/game/ChoicePanel";
 import StatusBar from "@/components/game/StatusBar";
 import { motion } from "framer-motion";
 
-// World-specific atmospheric colors for the side panels and bg
-const WORLD_GLOW: Record<string, string> = {
-  xian_xia:        "radial-gradient(ellipse 60% 80% at 50% 0%, rgba(99,60,220,0.25) 0%, transparent 70%)",
-  campus:          "radial-gradient(ellipse 60% 80% at 50% 0%, rgba(236,72,153,0.20) 0%, transparent 70%)",
-  apocalypse:      "radial-gradient(ellipse 60% 80% at 50% 0%, rgba(234,88,12,0.25) 0%, transparent 70%)",
-  adult:           "radial-gradient(ellipse 60% 80% at 50% 0%, rgba(6,182,212,0.18) 0%, transparent 70%)",
-  wuxia:           "radial-gradient(ellipse 60% 80% at 50% 0%, rgba(220,38,38,0.22) 0%, transparent 70%)",
-  western_fantasy: "radial-gradient(ellipse 60% 80% at 50% 0%, rgba(16,185,129,0.20) 0%, transparent 70%)",
-  cyberpunk:       "radial-gradient(ellipse 60% 80% at 50% 0%, rgba(6,182,212,0.25) 0%, transparent 70%)",
-  horror:          "radial-gradient(ellipse 60% 80% at 50% 0%, rgba(20,83,45,0.30) 0%, transparent 70%)",
-  palace_intrigue: "radial-gradient(ellipse 60% 80% at 50% 0%, rgba(180,83,9,0.22) 0%, transparent 70%)",
-  wasteland:       "radial-gradient(ellipse 60% 80% at 50% 0%, rgba(161,98,7,0.22) 0%, transparent 70%)",
-  custom:          "radial-gradient(ellipse 60% 80% at 50% 0%, rgba(99,60,220,0.18) 0%, transparent 70%)",
-};
-
 export default function Home() {
   const { adventure, reset } = useGameStore();
 
@@ -28,23 +13,59 @@ export default function Home() {
 
   const worldAttr = adventure.world_attributes as Record<string, unknown>;
   const worldKey = (worldAttr?.world_flavor as string) ?? adventure.world_type;
-  const glow = WORLD_GLOW[worldKey] ?? WORLD_GLOW.custom;
+
+  const WORLD_ACCENT: Record<string, string> = {
+    xian_xia: "#a78bfa", campus: "#f472b6", apocalypse: "#fb923c",
+    adult: "#22d3ee", wuxia: "#f87171", western_fantasy: "#34d399",
+    cyberpunk: "#06b6d4", horror: "#4ade80", palace_intrigue: "#fbbf24",
+    wasteland: "#d97706", custom: "#a78bfa",
+  };
+  const accent = WORLD_ACCENT[worldKey] ?? "#a78bfa";
 
   return (
-    <div
-      className="min-h-screen w-full flex items-start justify-center"
-      style={{ backgroundImage: glow }}
-    >
-      {/* ── 中央手機欄 ── */}
-      <div className="w-full max-w-[480px] min-h-screen flex flex-col bg-[#080c1a]/90 border-x border-white/5">
-        {/* 頂部標題列 */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
-          <span className="text-sm font-bold text-purple-300 tracking-wider">
-            做個白日夢冒險
+    <div style={{
+      minHeight: "100vh", width: "100%",
+      background: "#0a0f1e",
+      display: "flex", alignItems: "flex-start", justifyContent: "center",
+    }}>
+      {/* 世界色光暈 */}
+      <div style={{
+        position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0,
+        background: `radial-gradient(ellipse 50% 40% at 50% 0%, ${accent}22 0%, transparent 70%)`,
+      }} />
+
+      {/* 中央遊戲欄 */}
+      <div style={{
+        position: "relative", zIndex: 1,
+        width: "100%", maxWidth: 480,
+        minHeight: "100vh",
+        display: "flex", flexDirection: "column",
+        background: "rgba(10, 14, 30, 0.95)",
+        borderLeft: "1px solid rgba(255,255,255,0.05)",
+        borderRight: "1px solid rgba(255,255,255,0.05)",
+      }}>
+        {/* 頂部 Header */}
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: "10px 16px",
+          borderBottom: `1px solid ${accent}33`,
+          background: "rgba(0,0,0,0.3)",
+        }}>
+          <span style={{
+            fontSize: 13, fontWeight: 700, letterSpacing: "0.12em",
+            color: accent, fontFamily: "monospace",
+          }}>
+            ◈ 做個白日夢冒險
           </span>
           <button
             onClick={reset}
-            className="text-xs text-white/25 hover:text-white/60 transition-colors"
+            style={{
+              fontSize: 11, color: "rgba(148,163,184,0.4)",
+              background: "none", border: "none", cursor: "pointer",
+              fontFamily: "monospace", letterSpacing: "0.05em",
+            }}
+            onMouseOver={e => (e.currentTarget.style.color = "rgba(148,163,184,0.8)")}
+            onMouseOut={e => (e.currentTarget.style.color = "rgba(148,163,184,0.4)")}
           >
             ← 重新開始
           </button>
@@ -52,15 +73,13 @@ export default function Home() {
 
         {/* 遊戲主體 */}
         <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex-1 flex flex-col gap-0 overflow-y-auto"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          style={{ flex: 1, display: "flex", flexDirection: "column", overflowY: "auto" }}
         >
-          <StatusBar />
-          <NarrativeBox />
-          <div className="px-4 pb-6 pt-2">
-            <ChoicePanel />
-          </div>
+          <StatusBar accent={accent} />
+          <NarrativeBox accent={accent} />
+          <ChoicePanel accent={accent} />
         </motion.div>
       </div>
     </div>

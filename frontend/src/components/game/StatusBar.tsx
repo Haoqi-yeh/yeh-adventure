@@ -1,50 +1,69 @@
 "use client";
 import { useGameStore } from "@/store/game-store";
 
-const WEATHER_EMOJI: Record<string, string> = { clear: "☀️", rain: "🌧️", fog: "🌫️", thunder: "⛈️" };
-const TIME_EMOJI:    Record<string, string> = { dawn: "🌅", morning: "🌤️", noon: "☀️", dusk: "🌆", night: "🌙" };
+const WEATHER_LABEL: Record<string, string> = { clear: "☀️ 晴", rain: "🌧️ 雨", fog: "🌫️ 霧", thunder: "⛈️ 雷" };
+const TIME_LABEL: Record<string, string> = { dawn: "🌅 黎明", morning: "🌤️ 早晨", noon: "☀️ 正午", dusk: "🌆 黃昏", night: "🌙 深夜" };
 
-export default function StatusBar() {
+export default function StatusBar({ accent }: { accent: string }) {
   const { adventure } = useGameStore();
   if (!adventure) return null;
 
   const hpPct  = Math.round((adventure.hp / adventure.hp_max) * 100);
   const mpPct  = Math.round((adventure.mp / adventure.mp_max) * 100);
-  const hpColor = hpPct < 20 ? "bg-red-500" : hpPct < 50 ? "bg-yellow-400" : "bg-emerald-400";
-  const stColor = adventure.stress > 70 ? "bg-rose-500" : "bg-violet-500";
+  const stPct  = adventure.stress;
+
+  const hpColor  = hpPct < 20 ? "#ef4444" : hpPct < 50 ? "#f59e0b" : "#22c55e";
+  const mpColor  = "#3b82f6";
+  const stColor  = stPct > 70 ? "#f43f5e" : "#a855f7";
 
   return (
-    <div className="border-b border-white/5 bg-[#05091a]/80">
+    <div style={{
+      padding: "10px 12px 8px",
+      borderBottom: "1px solid rgba(255,255,255,0.05)",
+      background: "rgba(0,0,0,0.2)",
+    }}>
       {/* 屬性列 */}
-      <div className="flex gap-2 px-4 py-2.5 overflow-x-auto">
-        <StatPill label="HP" value={adventure.hp} max={adventure.hp_max} pct={hpPct} barColor={hpColor} />
-        <StatPill label="MP" value={adventure.mp} max={adventure.mp_max} pct={mpPct} barColor="bg-blue-400" />
-        <StatPill label="壓力" value={adventure.stress} max={100} pct={adventure.stress} barColor={stColor} />
-        <div className="flex-shrink-0 px-3 py-1 rounded-lg bg-slate-800/60 border border-slate-700/40 text-center">
-          <div className="text-[9px] text-slate-500 uppercase tracking-wider">魅力</div>
-          <div className="text-sm font-bold text-amber-300">{adventure.charisma}</div>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <StatBar icon="❤️" label="HP" value={adventure.hp} max={adventure.hp_max} pct={hpPct} color={hpColor} />
+        <StatBar icon="💧" label="MP" value={adventure.mp} max={adventure.mp_max} pct={mpPct} color={mpColor} />
+        <StatBar icon="🧠" label="壓力" value={adventure.stress} max={100} pct={stPct} color={stColor} />
+        <div style={{
+          display: "flex", flexDirection: "column", gap: 2, justifyContent: "center",
+          padding: "4px 10px",
+          background: "rgba(255,255,255,0.04)",
+          border: `1px solid ${accent}30`,
+          borderRadius: 8, minWidth: 52, textAlign: "center",
+        }}>
+          <span style={{ fontSize: 10, color: "rgba(148,163,184,0.5)", fontFamily: "monospace" }}>✨魅力</span>
+          <span style={{ fontSize: 15, fontWeight: 700, color: accent, fontFamily: "monospace" }}>{adventure.charisma}</span>
         </div>
       </div>
 
-      {/* 位置 + 時間 */}
-      <div className="flex items-center justify-between px-4 pb-2 text-[10px] text-slate-500">
-        <span className="flex items-center gap-1 truncate max-w-[55%]">
-          <span>📍</span>
-          <span className="truncate">{adventure.location || "未知位置"}</span>
+      {/* 位置 & 時間 */}
+      <div style={{
+        display: "flex", justifyContent: "space-between", alignItems: "center",
+        marginTop: 7, fontSize: 10, color: "rgba(148,163,184,0.4)", fontFamily: "monospace",
+      }}>
+        <span style={{ maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          📍 {adventure.location || "未知位置"}
         </span>
-        <span className="flex items-center gap-2 flex-shrink-0">
-          <span>{TIME_EMOJI[adventure.time_of_day]}</span>
-          <span>{WEATHER_EMOJI[adventure.weather]}</span>
-          <span className="text-slate-600">第 {adventure.generation} 世 #{adventure.tick}</span>
+        <span style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+          <span>{TIME_LABEL[adventure.time_of_day]}</span>
+          <span>{WEATHER_LABEL[adventure.weather]}</span>
+          <span style={{ color: "rgba(148,163,184,0.25)" }}>#{adventure.tick}</span>
         </span>
       </div>
 
       {/* 個性標籤 */}
       {(adventure.personality_tags ?? []).length > 0 && (
-        <div className="flex flex-wrap gap-1 px-4 pb-2.5">
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 6 }}>
           {adventure.personality_tags.map((tag: string) => (
-            <span key={tag}
-              className="px-2 py-0.5 rounded-md text-[9px] bg-purple-900/40 border border-purple-700/30 text-purple-300">
+            <span key={tag} style={{
+              padding: "1px 7px", borderRadius: 5, fontSize: 9,
+              background: `${accent}18`,
+              border: `1px solid ${accent}35`,
+              color: accent, fontFamily: "monospace",
+            }}>
               {tag}
             </span>
           ))}
@@ -54,18 +73,32 @@ export default function StatusBar() {
   );
 }
 
-function StatPill({ label, value, max, pct, barColor }: {
-  label: string; value: number; max: number; pct: number; barColor: string;
+function StatBar({ icon, label, value, max, pct, color }: {
+  icon: string; label: string; value: number; max: number; pct: number; color: string;
 }) {
   return (
-    <div className="flex-shrink-0 px-3 py-1 rounded-lg bg-slate-800/60 border border-slate-700/40 min-w-[68px]">
-      <div className="flex justify-between items-center mb-1">
-        <span className="text-[9px] text-slate-500 uppercase tracking-wider">{label}</span>
-        <span className="text-[9px] text-slate-400">{value}/{max}</span>
+    <div style={{
+      flex: "1 1 80px", minWidth: 80,
+      padding: "5px 8px",
+      background: "rgba(255,255,255,0.03)",
+      border: "1px solid rgba(255,255,255,0.06)",
+      borderRadius: 8,
+    }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 4 }}>
+        <span style={{ fontSize: 12 }}>{icon}</span>
+        <span style={{ fontSize: 10, color: "rgba(148,163,184,0.6)", fontFamily: "monospace" }}>{label}</span>
+        <span style={{ marginLeft: "auto", fontSize: 10, color, fontFamily: "monospace", fontWeight: 700 }}>
+          {value}<span style={{ color: "rgba(148,163,184,0.3)", fontWeight: 400 }}>/{max}</span>
+        </span>
       </div>
-      <div className="h-1 bg-slate-700 rounded-full overflow-hidden">
-        <div className={`h-full rounded-full transition-all duration-700 ${barColor}`}
-             style={{ width: `${pct}%` }} />
+      <div style={{ height: 4, background: "rgba(255,255,255,0.06)", borderRadius: 2, overflow: "hidden" }}>
+        <div style={{
+          height: "100%", width: `${pct}%`,
+          background: color,
+          borderRadius: 2,
+          boxShadow: `0 0 6px ${color}80`,
+          transition: "width 0.6s ease",
+        }} />
       </div>
     </div>
   );
