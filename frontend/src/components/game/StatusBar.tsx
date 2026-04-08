@@ -223,6 +223,8 @@ export default function StatusBar({ accent }: { accent: string }) {
   const { adventure, npcs, playerName } = useGameStore();
   const [open, setOpen] = useState(false);
   const isMobile = useIsMobile();
+  // Scale helper — apply 20% reduction on mobile
+  const s = (n: number) => isMobile ? Math.round(n * 0.8) : n;
 
   if (!adventure) return null;
 
@@ -296,9 +298,9 @@ export default function StatusBar({ accent }: { accent: string }) {
                 background: "#0a0e1e",
                 backgroundImage: worldBgPattern || undefined,
                 borderTop: `2px solid ${accent}60`,
-                borderRadius: isMobile ? "16px 16px 0 0" : "20px 20px 0 0",
-                padding: "20px 16px 32px",
-                maxHeight: isMobile ? "90vh" : "82vh",
+                borderRadius: isMobile ? `${s(16)}px ${s(16)}px 0 0` : "20px 20px 0 0",
+                padding: isMobile ? `${s(20)}px ${s(16)}px ${s(32)}px` : "20px 16px 32px",
+                maxHeight: isMobile ? "78vh" : "82vh",
                 overflowY: "auto",
               }}
             >
@@ -311,27 +313,26 @@ export default function StatusBar({ accent }: { accent: string }) {
               </button>
 
               {/* ── Character portrait + identity ── */}
-              <div style={{ display: "flex", alignItems: "flex-start", gap: 14, marginBottom: 24 }}>
-                {/* Portrait: 72×108 thumbnail, hover reveals full half-body */}
+              <div style={{ display: "flex", alignItems: "flex-start", gap: s(14), marginBottom: s(24) }}>
                 <PixelPortrait
                   src={charPortraitUrl}
-                  thumbW={72}
-                  thumbH={108}
+                  thumbW={s(72)}
+                  thumbH={s(108)}
                   accent={accent}
                   label={playerName}
                 />
-                <div style={{ flex: 1, paddingTop: 4 }}>
-                  <div style={{ fontSize: 18, fontWeight: 700, color: accent }}>{playerName}</div>
-                  <div style={{ fontSize: 11, color: "rgba(148,163,184,0.5)", fontFamily: "monospace", marginTop: 3 }}>
+                <div style={{ flex: 1, paddingTop: s(4) }}>
+                  <div style={{ fontSize: s(18), fontWeight: 700, color: accent }}>{playerName}</div>
+                  <div style={{ fontSize: s(11), color: "rgba(148,163,184,0.5)", fontFamily: "monospace", marginTop: s(3) }}>
                     第 {adventure.generation} 世 · Tick {adventure.tick}
                   </div>
-                  <div style={{ fontSize: 10, color: "rgba(148,163,184,0.35)", marginTop: 4, fontFamily: "monospace" }}>
+                  <div style={{ fontSize: s(10), color: "rgba(148,163,184,0.35)", marginTop: s(4), fontFamily: "monospace" }}>
                     {TIME_LABEL[adventure.time_of_day]} · {WEATHER_LABEL[adventure.weather]}
                   </div>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 8 }}>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: s(4), marginTop: s(8) }}>
                     {(adventure.personality_tags ?? []).slice(0, 4).map((tag: string) => (
                       <span key={tag} style={{
-                        padding: "2px 8px", borderRadius: 20, fontSize: 10,
+                        padding: `2px ${s(8)}px`, borderRadius: 20, fontSize: s(10),
                         background: `${accent}18`, border: `1px solid ${accent}40`, color: accent,
                       }}>{tag}</span>
                     ))}
@@ -340,11 +341,11 @@ export default function StatusBar({ accent }: { accent: string }) {
               </div>
 
               {/* Core Stats */}
-              <Section title="基本屬性">
-                <StatRow icon="❤️" label="HP" value={adventure.hp} max={adventure.hp_max} color={hpColor} accent={accent} />
-                <StatRow icon="💧" label="MP" value={adventure.mp} max={adventure.mp_max} color="#3b82f6" accent={accent} />
-                <StatRow icon="🧠" label="壓力" value={adventure.stress} max={100} color={adventure.stress > 70 ? "#f43f5e" : "#a855f7"} accent={accent} />
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "rgba(203,213,225,0.8)", padding: "4px 0" }}>
+              <Section title="基本屬性" small={isMobile}>
+                <StatRow icon="❤️" label="HP" value={adventure.hp} max={adventure.hp_max} color={hpColor} accent={accent} small={isMobile} />
+                <StatRow icon="💧" label="MP" value={adventure.mp} max={adventure.mp_max} color="#3b82f6" accent={accent} small={isMobile} />
+                <StatRow icon="🧠" label="壓力" value={adventure.stress} max={100} color={adventure.stress > 70 ? "#f43f5e" : "#a855f7"} accent={accent} small={isMobile} />
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: s(12), color: "rgba(203,213,225,0.8)", padding: `${s(4)}px 0` }}>
                   <span>✨ 魅力</span>
                   <span style={{ color: accent, fontWeight: 700 }}>{adventure.charisma}</span>
                 </div>
@@ -352,19 +353,19 @@ export default function StatusBar({ accent }: { accent: string }) {
 
               {/* Lust / Willpower / Body State */}
               {showImmersive && (
-                <Section title="身體狀況">
+                <Section title="身體狀況" small={isMobile}>
                   {lust !== null && (
-                    <StatRow icon="🔥" label="慾望" value={lust} max={100} color={lust >= 70 ? "#f472b6" : lust >= 40 ? "#fb923c" : "#94a3b8"} accent={accent} />
+                    <StatRow icon="🔥" label="慾望" value={lust} max={100} color={lust >= 70 ? "#f472b6" : lust >= 40 ? "#fb923c" : "#94a3b8"} accent={accent} small={isMobile} />
                   )}
                   {willpower !== null && (
-                    <StatRow icon="⚡" label="意志" value={willpower} max={100} color={willpower >= 60 ? "#60a5fa" : willpower >= 30 ? "#f59e0b" : "#ef4444"} accent={accent} />
+                    <StatRow icon="⚡" label="意志" value={willpower} max={100} color={willpower >= 60 ? "#60a5fa" : willpower >= 30 ? "#f59e0b" : "#ef4444"} accent={accent} small={isMobile} />
                   )}
                   {(clothingState !== "normal" || bodyStatus !== "normal") && (
-                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 4 }}>
+                    <div style={{ display: "flex", gap: s(6), flexWrap: "wrap", marginTop: s(4) }}>
                       {bodyStatus !== "normal" && (() => {
                         const bd = BODY_DISPLAY[bodyStatus] ?? { label: bodyStatus, color: "#94a3b8" };
                         return (
-                          <span style={{ padding: "2px 9px", borderRadius: 20, fontSize: 10, background: `${bd.color}18`, border: `1px solid ${bd.color}50`, color: bd.color }}>
+                          <span style={{ padding: `2px ${s(9)}px`, borderRadius: 20, fontSize: s(10), background: `${bd.color}18`, border: `1px solid ${bd.color}50`, color: bd.color }}>
                             🫀 {bd.label}
                           </span>
                         );
@@ -372,7 +373,7 @@ export default function StatusBar({ accent }: { accent: string }) {
                       {clothingState !== "normal" && (() => {
                         const cd = CLOTHING_DISPLAY[clothingState] ?? { label: clothingState, color: "#94a3b8" };
                         return (
-                          <span style={{ padding: "2px 9px", borderRadius: 20, fontSize: 10, background: `${cd.color}18`, border: `1px solid ${cd.color}50`, color: cd.color }}>
+                          <span style={{ padding: `2px ${s(9)}px`, borderRadius: 20, fontSize: s(10), background: `${cd.color}18`, border: `1px solid ${cd.color}50`, color: cd.color }}>
                             👗 {cd.label}
                           </span>
                         );
@@ -384,11 +385,11 @@ export default function StatusBar({ accent }: { accent: string }) {
 
               {/* World-specific */}
               {(WORLD_ATTRS[worldKey] ?? []).length > 0 && (
-                <Section title="世界屬性">
+                <Section title="世界屬性" small={isMobile}>
                   {(WORLD_ATTRS[worldKey] ?? []).map(attr => {
                     const val = worldAttr?.[attr.key];
                     return (
-                      <div key={attr.key} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "rgba(203,213,225,0.8)", padding: "4px 0" }}>
+                      <div key={attr.key} style={{ display: "flex", justifyContent: "space-between", fontSize: s(12), color: "rgba(203,213,225,0.8)", padding: `${s(4)}px 0` }}>
                         <span>{attr.emoji} {attr.label}</span>
                         <span style={{ color: accent, fontWeight: 700 }}>{val !== undefined ? String(val) : "—"}</span>
                       </div>
@@ -399,7 +400,7 @@ export default function StatusBar({ accent }: { accent: string }) {
 
               {/* NPC list with portraits */}
               {npcs.length > 0 && (
-                <Section title="人際關係">
+                <Section title="人際關係" small={isMobile}>
                   {npcs.map(npc => {
                     const aff = npc.affection;
                     const pct = Math.abs(aff);
@@ -407,15 +408,14 @@ export default function StatusBar({ accent }: { accent: string }) {
                     const label = aff > 60 ? "摯友" : aff > 20 ? "友好" : aff > -20 ? "中立" : aff > -60 ? "警惕" : "仇恨";
                     const npcPortrait = getNPCPortraitUrl(npc.name, worldKey);
                     return (
-                      <div key={npc.id} style={{ marginBottom: 14, display: "flex", alignItems: "flex-start", gap: 10 }}>
-                        {/* NPC portrait: 44×60 thumbnail, hover expands */}
-                        <PixelPortrait src={npcPortrait} thumbW={44} thumbH={60} accent={color} label={npc.name} />
-                        <div style={{ flex: 1, paddingTop: 2 }}>
-                          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 5 }}>
+                      <div key={npc.id} style={{ marginBottom: s(14), display: "flex", alignItems: "flex-start", gap: s(10) }}>
+                        <PixelPortrait src={npcPortrait} thumbW={s(44)} thumbH={s(60)} accent={color} label={npc.name} />
+                        <div style={{ flex: 1, paddingTop: s(2) }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", fontSize: s(12), marginBottom: s(5) }}>
                             <span style={{ color: "#cbd5e1", fontFamily: "monospace" }}>{npc.name}</span>
-                            <span style={{ color, fontWeight: 700, fontSize: 10 }}>{label} {aff > 0 ? "+" : ""}{aff}</span>
+                            <span style={{ color, fontWeight: 700, fontSize: s(10) }}>{label} {aff > 0 ? "+" : ""}{aff}</span>
                           </div>
-                          <div style={{ height: 4, background: "rgba(255,255,255,0.06)", borderRadius: 2, overflow: "hidden" }}>
+                          <div style={{ height: s(4), background: "rgba(255,255,255,0.06)", borderRadius: 2, overflow: "hidden" }}>
                             <motion.div
                               initial={{ width: 0 }}
                               animate={{ width: `${pct}%` }}
@@ -431,8 +431,8 @@ export default function StatusBar({ accent }: { accent: string }) {
               )}
 
               {/* Location */}
-              <Section title="當前位置">
-                <div style={{ fontSize: 11, color: "rgba(148,163,184,0.6)", fontFamily: "monospace", lineHeight: 2 }}>
+              <Section title="當前位置" small={isMobile}>
+                <div style={{ fontSize: s(11), color: "rgba(148,163,184,0.6)", fontFamily: "monospace", lineHeight: 2 }}>
                   <div>📍 {adventure.location || "未知位置"}</div>
                   {isMobile && (
                     <div style={{ marginTop: 2 }}>
@@ -460,10 +460,10 @@ function MiniBar({ value, color, icon }: { value: number; color: string; icon: s
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, children, small }: { title: string; children: React.ReactNode; small?: boolean }) {
   return (
-    <div style={{ marginBottom: 20 }}>
-      <div style={{ fontSize: 10, color: "rgba(148,163,184,0.4)", letterSpacing: "0.18em", textTransform: "uppercase", fontFamily: "monospace", marginBottom: 8 }}>
+    <div style={{ marginBottom: small ? 16 : 20 }}>
+      <div style={{ fontSize: small ? 8 : 10, color: "rgba(148,163,184,0.4)", letterSpacing: "0.18em", textTransform: "uppercase", fontFamily: "monospace", marginBottom: small ? 6 : 8 }}>
         {title}
       </div>
       {children}
@@ -471,15 +471,15 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function StatRow({ icon, label, value, max, color, accent }: { icon: string; label: string; value: number; max: number; color: string; accent: string }) {
+function StatRow({ icon, label, value, max, color, accent, small }: { icon: string; label: string; value: number; max: number; color: string; accent: string; small?: boolean }) {
   const pct = Math.round((value / max) * 100);
   return (
-    <div style={{ marginBottom: 8 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "rgba(203,213,225,0.7)", marginBottom: 4 }}>
+    <div style={{ marginBottom: small ? 6 : 8 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: small ? 9 : 11, color: "rgba(203,213,225,0.7)", marginBottom: small ? 3 : 4 }}>
         <span>{icon} {label}</span>
         <span style={{ color, fontWeight: 700 }}>{value}<span style={{ color: "rgba(148,163,184,0.3)", fontWeight: 400 }}>/{max}</span></span>
       </div>
-      <div style={{ height: 5, background: "rgba(255,255,255,0.06)", borderRadius: 3, overflow: "hidden" }}>
+      <div style={{ height: small ? 4 : 5, background: "rgba(255,255,255,0.06)", borderRadius: 3, overflow: "hidden" }}>
         <motion.div
           initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.6 }}
           style={{ height: "100%", background: color, borderRadius: 3, boxShadow: `0 0 8px ${color}70` }}
