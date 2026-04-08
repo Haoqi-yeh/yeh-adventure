@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
 import { useGameStore } from "@/store/game-store";
@@ -21,22 +21,21 @@ const WORLD_ATTRS: Record<string, { key: string; label: string; emoji: string; m
   custom:          [],
 };
 
-// World-specific character appearance for portrait generation
+// World-specific half-body portrait descriptions
 const WORLD_CHAR_DESC: Record<string, string> = {
-  xian_xia:        "xianxia cultivator, ancient chinese flowing white robes, glowing golden eyes",
-  campus:          "japanese high school student, school uniform, backpack",
-  apocalypse:      "post-apocalyptic survivor, tactical gear, torn clothing",
-  adult:           "young adult, modern casual city clothes",
-  wuxia:           "chinese martial artist, traditional hanfu, sword on back",
-  western_fantasy: "medieval fantasy adventurer, cloak, sword and shield",
-  cyberpunk:       "cyberpunk character, mechanical arm, neon glow, dark jacket",
-  horror:          "pale mysterious figure, dark coat, unsettling calm",
-  palace_intrigue: "ancient chinese court noble, elaborate silk robes, headdress",
-  wasteland:       "wasteland scavenger, patchwork armor, gas mask at belt",
-  custom:          "adventurer, versatile outfit",
+  xian_xia:        "xianxia cultivator, white flowing robes, glowing eyes, sword on back",
+  campus:          "japanese school student, uniform, young",
+  apocalypse:      "post-apocalyptic survivor, tactical vest, determined",
+  adult:           "young adult, modern stylish clothes, attractive",
+  wuxia:           "chinese martial artist, traditional hanfu, warrior",
+  western_fantasy: "medieval fantasy adventurer, cloak, warrior",
+  cyberpunk:       "cyberpunk character, neon lights, mechanical arm",
+  horror:          "pale mysterious figure, dark coat",
+  palace_intrigue: "ancient chinese noble, elaborate silk robes, headdress",
+  wasteland:       "wasteland scavenger, patchwork armor, rugged",
+  custom:          "adventurer",
 };
 
-// Deterministic hash for stable portrait seeds
 function hashStr(str: string): number {
   let h = 5381;
   for (let i = 0; i < str.length; i++) {
@@ -45,17 +44,113 @@ function hashStr(str: string): number {
   return h % 99999;
 }
 
+// Half-body portrait: tall portrait ratio (width:height = 2:3), shows head+upper body
 function getCharPortraitUrl(playerName: string, worldKey: string): string {
   const desc = WORLD_CHAR_DESC[worldKey] ?? WORLD_CHAR_DESC.custom;
   const seed = hashStr(playerName + worldKey + "char");
-  const prompt = `16-bit pixel art, game character portrait, ${desc}, ${playerName}, full body sprite, white background, detailed pixel art`;
-  return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=120&height=120&nologo=true&seed=${seed}`;
+  const prompt = `16-bit pixel art, game character, ${desc}, half body portrait, head and upper torso, facing forward, plain dark background, detailed pixel art sprite, game rpg character`;
+  return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=128&height=192&nologo=true&seed=${seed}`;
 }
 
 function getNPCPortraitUrl(npcName: string, worldKey: string): string {
   const seed = hashStr(npcName + worldKey + "npc");
-  const prompt = `16-bit pixel art, game NPC character portrait, ${npcName}, ${WORLD_CHAR_DESC[worldKey] ?? "character"}, face and shoulders, pixel art sprite, game character`;
-  return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=64&height=64&nologo=true&seed=${seed}`;
+  const prompt = `16-bit pixel art, game NPC, ${npcName}, half body portrait, head and upper torso, plain dark background, pixel art sprite`;
+  return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=96&height=128&nologo=true&seed=${seed}`;
+}
+
+// Portrait card — small thumbnail, hover/tap expands to reveal full half-body
+function PixelPortrait({
+  src, thumbW, thumbH, accent, label,
+}: {
+  src: string; thumbW: number; thumbH: number; accent: string; label?: string;
+}) {
+  const [loaded, setLoaded] = useState(false);
+  const [errored, setErrored] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const longPressRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const expandedW = thumbW * 2.4;
+  const expandedH = thumbH * 2.4;
+
+  const handleTouchStart = () => {
+    longPressRef.current = setTimeout(() => setExpanded(true), 300);
+  };
+  const handleTouchEnd = () => {
+    if (longPressRef.current) clearTimeout(longPressRef.current);
+    setTimeout(() => setExpanded(false), 2200);
+  };
+
+  return (
+    <div style={{ position: "relative", width: thumbW, height: thumbH, flexShrink: 0 }}>
+      <motion.div
+        onMouseEnter={() => setExpanded(true)}
+        onMouseLeave={() => setExpanded(false)}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        animate={{
+          width: expanded ? expandedW : thumbW,
+          height: expanded ? expandedH : thumbH,
+          zIndex: expanded ? 200 : 1,
+        }}
+        transition={{ type: "spring", damping: 22, stiffness: 300 }}
+        style={{
+          position: "absolute", top: 0, left: 0,
+          borderRadius: 10,
+          border: `2px solid ${expanded ? accent : accent + "50"}`,
+          background: "rgba(10,14,30,0.9)",
+          overflow: "hidden",
+          boxShadow: expanded ? `0 12px 40px rgba(0,0,0,0.7), 0 0 24px ${accent}40` : "none",
+          cursor: "pointer",
+        }}
+      >
+        {/* Placeholder / emoji fallback while loading */}
+        {(!loaded || errored) && (
+          <div style={{
+            position: "absolute", inset: 0,
+            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+            gap: 4, background: "rgba(255,255,255,0.03)",
+          }}>
+            <span style={{ fontSize: thumbW > 60 ? 28 : 16 }}>
+              {errored ? "🖼️" : "👤"}
+            </span>
+            {!errored && (
+              <motion.div
+                animate={{ opacity: [0.3, 1, 0.3] }}
+                transition={{ repeat: Infinity, duration: 1.5 }}
+                style={{ width: thumbW * 0.6, height: 2, background: `${accent}40`, borderRadius: 1 }}
+              />
+            )}
+          </div>
+        )}
+        <img
+          src={src}
+          alt={label ?? ""}
+          onLoad={() => setLoaded(true)}
+          onError={() => setErrored(true)}
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            objectPosition: "top center",  // always shows face first
+            imageRendering: "pixelated",
+            opacity: loaded && !errored ? 1 : 0,
+            transition: "opacity 0.35s",
+          }}
+        />
+        {/* Name label on expand */}
+        {expanded && label && (
+          <div style={{
+            position: "absolute", bottom: 0, left: 0, right: 0,
+            padding: "4px 6px",
+            background: "linear-gradient(to top, rgba(0,0,0,0.8), transparent)",
+            fontSize: 10, color: accent, fontFamily: "monospace", textAlign: "center",
+          }}>
+            {label}
+          </div>
+        )}
+      </motion.div>
+    </div>
+  );
 }
 
 export default function StatusBar({ accent }: { accent: string }) {
@@ -70,12 +165,11 @@ export default function StatusBar({ accent }: { accent: string }) {
 
   const worldAttr = adventure.world_attributes as Record<string, unknown>;
   const worldKey = (worldAttr?.world_flavor as string) ?? adventure.world_type;
-
   const charPortraitUrl = getCharPortraitUrl(playerName, worldKey);
 
   return (
     <>
-      {/* ── Compact HUD bar (clickable) ── */}
+      {/* ── Compact HUD bar ── */}
       <button
         onClick={() => setOpen(true)}
         style={{
@@ -95,7 +189,7 @@ export default function StatusBar({ accent }: { accent: string }) {
         </span>
       </button>
 
-      {/* ── Detail popup modal ── */}
+      {/* ── Detail popup ── */}
       <AnimatePresence>
         {open && (
           <>
@@ -125,19 +219,29 @@ export default function StatusBar({ accent }: { accent: string }) {
                 <X size={14} color="rgba(148,163,184,0.7)" />
               </button>
 
-              {/* ── Character portrait + name ── */}
-              <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 20 }}>
-                <PixelPortrait src={charPortraitUrl} size={72} accent={accent} />
-                <div>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: accent }}>{playerName}</div>
-                  <div style={{ fontSize: 11, color: "rgba(148,163,184,0.5)", fontFamily: "monospace", marginTop: 2 }}>
+              {/* ── Character portrait + identity ── */}
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 14, marginBottom: 24 }}>
+                {/* Portrait: 72×108 thumbnail, hover reveals full half-body */}
+                <PixelPortrait
+                  src={charPortraitUrl}
+                  thumbW={72}
+                  thumbH={108}
+                  accent={accent}
+                  label={playerName}
+                />
+                <div style={{ flex: 1, paddingTop: 4 }}>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: accent }}>{playerName}</div>
+                  <div style={{ fontSize: 11, color: "rgba(148,163,184,0.5)", fontFamily: "monospace", marginTop: 3 }}>
                     第 {adventure.generation} 世 · Tick {adventure.tick}
                   </div>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 6 }}>
-                    {(adventure.personality_tags ?? []).slice(0, 3).map((tag: string) => (
+                  <div style={{ fontSize: 10, color: "rgba(148,163,184,0.35)", marginTop: 4, fontFamily: "monospace" }}>
+                    {TIME_LABEL[adventure.time_of_day]} · {WEATHER_LABEL[adventure.weather]}
+                  </div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 8 }}>
+                    {(adventure.personality_tags ?? []).slice(0, 4).map((tag: string) => (
                       <span key={tag} style={{
                         padding: "2px 8px", borderRadius: 20, fontSize: 10,
-                        background: `${accent}20`, border: `1px solid ${accent}40`, color: accent,
+                        background: `${accent}18`, border: `1px solid ${accent}40`, color: accent,
                       }}>{tag}</span>
                     ))}
                   </div>
@@ -170,21 +274,7 @@ export default function StatusBar({ accent }: { accent: string }) {
                 </Section>
               )}
 
-              {/* Personality Tags */}
-              {(adventure.personality_tags ?? []).length > 3 && (
-                <Section title="人格特質">
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6, paddingTop: 2 }}>
-                    {adventure.personality_tags.map((tag: string) => (
-                      <span key={tag} style={{
-                        padding: "3px 10px", borderRadius: 20, fontSize: 11,
-                        background: `${accent}20`, border: `1px solid ${accent}40`, color: accent,
-                      }}>{tag}</span>
-                    ))}
-                  </div>
-                </Section>
-              )}
-
-              {/* NPC Relationships with portraits */}
+              {/* NPC list with portraits */}
               {npcs.length > 0 && (
                 <Section title="人際關係">
                   {npcs.map(npc => {
@@ -194,22 +284,21 @@ export default function StatusBar({ accent }: { accent: string }) {
                     const label = aff > 60 ? "摯友" : aff > 20 ? "友好" : aff > -20 ? "中立" : aff > -60 ? "警惕" : "仇恨";
                     const npcPortrait = getNPCPortraitUrl(npc.name, worldKey);
                     return (
-                      <div key={npc.id} style={{ marginBottom: 12 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 5 }}>
-                          <PixelPortrait src={npcPortrait} size={36} accent={color} />
-                          <div style={{ flex: 1 }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11 }}>
-                              <span style={{ color: "#cbd5e1", fontFamily: "monospace" }}>{npc.name}</span>
-                              <span style={{ color, fontWeight: 700, fontSize: 10 }}>{label} {aff > 0 ? "+" : ""}{aff}</span>
-                            </div>
-                            <div style={{ height: 4, background: "rgba(255,255,255,0.06)", borderRadius: 2, overflow: "hidden", marginTop: 4 }}>
-                              <motion.div
-                                initial={{ width: 0 }}
-                                animate={{ width: `${pct}%` }}
-                                transition={{ duration: 0.6 }}
-                                style={{ height: "100%", background: color, borderRadius: 2, boxShadow: `0 0 6px ${color}80` }}
-                              />
-                            </div>
+                      <div key={npc.id} style={{ marginBottom: 14, display: "flex", alignItems: "flex-start", gap: 10 }}>
+                        {/* NPC portrait: 44×60 thumbnail, hover expands */}
+                        <PixelPortrait src={npcPortrait} thumbW={44} thumbH={60} accent={color} label={npc.name} />
+                        <div style={{ flex: 1, paddingTop: 2 }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 5 }}>
+                            <span style={{ color: "#cbd5e1", fontFamily: "monospace" }}>{npc.name}</span>
+                            <span style={{ color, fontWeight: 700, fontSize: 10 }}>{label} {aff > 0 ? "+" : ""}{aff}</span>
+                          </div>
+                          <div style={{ height: 4, background: "rgba(255,255,255,0.06)", borderRadius: 2, overflow: "hidden" }}>
+                            <motion.div
+                              initial={{ width: 0 }}
+                              animate={{ width: `${pct}%` }}
+                              transition={{ duration: 0.6 }}
+                              style={{ height: "100%", background: color, borderRadius: 2, boxShadow: `0 0 6px ${color}80` }}
+                            />
                           </div>
                         </div>
                       </div>
@@ -218,11 +307,10 @@ export default function StatusBar({ accent }: { accent: string }) {
                 </Section>
               )}
 
-              {/* Location & Time */}
-              <Section title="當前狀態">
+              {/* Location */}
+              <Section title="當前位置">
                 <div style={{ fontSize: 11, color: "rgba(148,163,184,0.6)", fontFamily: "monospace", lineHeight: 2 }}>
                   <div>📍 {adventure.location || "未知位置"}</div>
-                  <div>{TIME_LABEL[adventure.time_of_day]} · {WEATHER_LABEL[adventure.weather]}</div>
                 </div>
               </Section>
             </motion.div>
@@ -233,49 +321,12 @@ export default function StatusBar({ accent }: { accent: string }) {
   );
 }
 
-// ── Portrait image component (shows pixel art sprite, stable via deterministic URL) ──
-function PixelPortrait({ src, size, accent }: { src: string; size: number; accent: string }) {
-  const [loaded, setLoaded] = useState(false);
-  return (
-    <div style={{
-      width: size, height: size, borderRadius: 10, flexShrink: 0,
-      border: `1px solid ${accent}40`,
-      background: "rgba(255,255,255,0.04)",
-      overflow: "hidden", position: "relative",
-    }}>
-      {!loaded && (
-        <div style={{
-          position: "absolute", inset: 0,
-          display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: size > 50 ? 20 : 12,
-        }}>
-          {size > 50 ? "👤" : "·"}
-        </div>
-      )}
-      <img
-        src={src}
-        alt=""
-        onLoad={() => setLoaded(true)}
-        style={{
-          width: "100%", height: "100%", objectFit: "cover",
-          imageRendering: "pixelated",
-          opacity: loaded ? 1 : 0,
-          transition: "opacity 0.4s",
-        }}
-      />
-    </div>
-  );
-}
-
 function MiniBar({ value, color, icon }: { value: number; color: string; icon: string }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 4, flex: 1, minWidth: 0 }}>
       <span style={{ fontSize: 11, flexShrink: 0 }}>{icon}</span>
       <div style={{ flex: 1, height: 4, background: "rgba(255,255,255,0.06)", borderRadius: 2, overflow: "hidden" }}>
-        <div style={{
-          height: "100%", width: `${value}%`, background: color,
-          borderRadius: 2, boxShadow: `0 0 4px ${color}60`, transition: "width 0.5s",
-        }} />
+        <div style={{ height: "100%", width: `${value}%`, background: color, borderRadius: 2, boxShadow: `0 0 4px ${color}60`, transition: "width 0.5s" }} />
       </div>
     </div>
   );

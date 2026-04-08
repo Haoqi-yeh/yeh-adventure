@@ -17,7 +17,7 @@ const WORLD_FALLBACK_BG: Record<string, string> = {
   custom:          "linear-gradient(160deg,#1a0845,#050220)",
 };
 
-// Deterministic seed from imagePrompt so same scene always reuses the cached image
+// Deterministic seed — same scene always reuses the same cached Pollinations.ai image
 function hashSeed(str: string): number {
   let h = 5381;
   for (let i = 0; i < str.length; i++) {
@@ -26,11 +26,19 @@ function hashSeed(str: string): number {
   return h % 99999;
 }
 
-function getSceneUrl(imagePrompt: string) {
+function getSceneUrl(imagePrompt: string, useSafeImage: boolean): string {
   if (!imagePrompt) return "";
-  const full = `16-bit pixel art style, retro gaming aesthetic, vibrant colors, ${imagePrompt}`;
   const seed = hashSeed(imagePrompt);
-  return `https://image.pollinations.ai/prompt/${encodeURIComponent(full)}?width=512&height=256&nologo=true&seed=${seed}`;
+
+  if (useSafeImage) {
+    // Standard pixel-art scene
+    const full = `16-bit pixel art style, retro gaming aesthetic, vibrant colors, ${imagePrompt}`;
+    return `https://image.pollinations.ai/prompt/${encodeURIComponent(full)}?width=512&height=256&nologo=true&seed=${seed}`;
+  } else {
+    // Adult/intimate scene — anime illustration style, square aspect for character focus
+    const full = `anime art, 2D illustration, adult content, mature, ${imagePrompt}, detailed, high quality`;
+    return `https://image.pollinations.ai/prompt/${encodeURIComponent(full)}?width=512&height=512&nologo=true&seed=${seed}&model=flux-anime`;
+  }
 }
 
 function detectEvent(text: string): { type: "npc" | "event" | null; label: string; detail: string } {
@@ -46,32 +54,40 @@ function detectEvent(text: string): { type: "npc" | "event" | null; label: strin
 }
 
 export default function NarrativeBox({ accent }: { accent: string }) {
-  const { narrative, imagePrompt, isLoading, adventure } = useGameStore();
+  const { narrative, imagePrompt, useSafeImage, isLoading, adventure } = useGameStore();
 
   const worldAttr = adventure ? (adventure.world_attributes as Record<string, unknown>) : {};
   const worldKey = (worldAttr?.world_flavor as string) ?? adventure?.world_type ?? "custom";
   const fallbackBg = WORLD_FALLBACK_BG[worldKey] ?? WORLD_FALLBACK_BG.custom;
 
-  // ── Scene image with crossfade (old image stays visible while new loads) ──
+  // ── Scene image with crossfade & error handling ──
   const [sceneUrl, setSceneUrl] = useState("");
   const [prevSceneUrl, setPrevSceneUrl] = useState("");
   const [sceneLoaded, setSceneLoaded] = useState(false);
+  const [sceneError, setSceneError] = useState(false);
 
   useEffect(() => {
     if (!imagePrompt) return;
-    const newUrl = getSceneUrl(imagePrompt);
-    if (newUrl === sceneUrl) return; // same url → browser cache serves it, no re-gen
-    setPrevSceneUrl(sceneUrl);       // keep old image visible during load
+    const newUrl = getSceneUrl(imagePrompt, useSafeImage);
+    if (newUrl === sceneUrl) return;
+    setPrevSceneUrl(sceneUrl);
     setSceneLoaded(false);
+    setSceneError(false);
     setSceneUrl(newUrl);
-  }, [imagePrompt]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [imagePrompt, useSafeImage]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleImageLoad = useCallback(() => {
     setSceneLoaded(true);
-    setPrevSceneUrl(""); // release old image after crossfade completes
+    setPrevSceneUrl("");
   }, []);
 
-  // ── Typewriter effect (click/tap anywhere to skip to end) ──
+  const handleImageError = useCallback(() => {
+    // Hide broken image icon; fallback gradient is already showing
+    setSceneError(true);
+    setSceneLoaded(false);
+  }, []);
+
+  // ── Typewriter (click anywhere to skip) ──
   const [displayed, setDisplayed] = useState("");
   const [typing, setTyping] = useState(false);
   const typerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -115,6 +131,9 @@ export default function NarrativeBox({ accent }: { accent: string }) {
     }
   }, [narrative, isLoading, eventInfo.type]);
 
+  // Aspect ratio: adult scenes are 1:1 square, safe scenes are 2:1 landscape
+  const sceneH = useSafeImage ? 200 : 280;
+
   return (
     <div style={{ position: "relative" }}>
       {/* ── 場景圖 ── */}
@@ -122,39 +141,42 @@ export default function NarrativeBox({ accent }: { accent: string }) {
         position: "relative", overflow: "hidden",
         background: fallbackBg,
         borderBottom: `1px solid ${accent}25`,
-        height: 200,
+        height: sceneH,
+        transition: "height 0.3s ease",
       }}>
-        {/* Previous image — stays visible while new one loads (crossfade) */}
-        {prevSceneUrl && !sceneLoaded && (
+        {/* Previous image stays visible during crossfade */}
+        {prevSceneUrl && !sceneLoaded && !sceneError && (
           <img
             src={prevSceneUrl}
             alt=""
             style={{
               position: "absolute", inset: 0, width: "100%", height: "100%",
-              objectFit: "cover", imageRendering: "pixelated", opacity: 0.55,
+              objectFit: "cover", imageRendering: "pixelated", opacity: 0.5,
             }}
           />
         )}
 
-        {/* Current image — fades in on load */}
-        {sceneUrl && (
+        {/* Current image — hidden if error, fades in on load */}
+        {sceneUrl && !sceneError && (
           <motion.img
             key={sceneUrl}
             src={sceneUrl}
             alt=""
             onLoad={handleImageLoad}
+            onError={handleImageError}
             initial={{ opacity: 0 }}
             animate={{ opacity: sceneLoaded ? 1 : 0 }}
             transition={{ duration: 0.9 }}
             style={{
               position: "absolute", inset: 0, width: "100%", height: "100%",
-              objectFit: "cover", imageRendering: "pixelated",
+              objectFit: "cover",
+              imageRendering: useSafeImage ? "pixelated" : "auto",
             }}
           />
         )}
 
-        {/* Loading spinner — only shown when no prev image to fall back on */}
-        {!sceneLoaded && !prevSceneUrl && (
+        {/* Loading dots — only when no prev image available */}
+        {!sceneLoaded && !sceneError && !prevSceneUrl && (
           <div style={{
             position: "absolute", inset: 0,
             display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
@@ -176,7 +198,7 @@ export default function NarrativeBox({ accent }: { accent: string }) {
                 </span>
               </>
             ) : (
-              <span style={{ fontSize: 11, color: "rgba(148,163,184,0.2)", fontFamily: "monospace", letterSpacing: "0.12em" }}>
+              <span style={{ fontSize: 11, color: "rgba(148,163,184,0.18)", fontFamily: "monospace" }}>
                 SCENE LOADING...
               </span>
             )}
@@ -192,7 +214,7 @@ export default function NarrativeBox({ accent }: { accent: string }) {
         {imagePrompt && sceneLoaded && (
           <div style={{
             position: "absolute", bottom: 8, left: 12, right: 12,
-            fontSize: 9, color: "rgba(255,255,255,0.25)", fontFamily: "monospace",
+            fontSize: 9, color: "rgba(255,255,255,0.22)", fontFamily: "monospace",
             overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
           }}>
             🎨 {imagePrompt.slice(0, 80)}
@@ -234,45 +256,24 @@ export default function NarrativeBox({ accent }: { accent: string }) {
                   pointerEvents: "none",
                 }}
               />
-
               <div style={{ fontSize: 38, marginBottom: 10 }}>
                 {eventInfo.type === "npc" ? "🌟" : "⚡"}
               </div>
-              <div style={{
-                fontSize: 12, fontFamily: "monospace", letterSpacing: "0.2em",
-                color: "#fbbf24", fontWeight: 700, marginBottom: 14,
-                textTransform: "uppercase",
-              }}>
+              <div style={{ fontSize: 12, fontFamily: "monospace", letterSpacing: "0.2em", color: "#fbbf24", fontWeight: 700, marginBottom: 14, textTransform: "uppercase" }}>
                 {eventInfo.label}
               </div>
               {eventInfo.detail && (
-                <div style={{
-                  fontSize: 13, color: "#fbbf24", fontWeight: 700,
-                  marginBottom: 10, letterSpacing: "0.05em",
-                }}>
+                <div style={{ fontSize: 13, color: "#fbbf24", fontWeight: 700, marginBottom: 10 }}>
                   「{eventInfo.detail}」
                 </div>
               )}
-              <div style={{
-                fontSize: 12, color: "rgba(203,213,225,0.75)", lineHeight: "1.75",
-                maxHeight: 160, overflowY: "auto",
-                textAlign: "left",
-              }}>
-                {narrative
-                  .replace(/【奇遇NPC[：:]?[^】]*】/g, "")
-                  .replace(/【突發狀況[：:]?[^】]*】/g, "")
-                  .trim()
-                  .slice(0, 220)}
+              <div style={{ fontSize: 12, color: "rgba(203,213,225,0.75)", lineHeight: "1.75", maxHeight: 160, overflowY: "auto", textAlign: "left" }}>
+                {narrative.replace(/【奇遇NPC[：:]?[^】]*】/g, "").replace(/【突發狀況[：:]?[^】]*】/g, "").trim().slice(0, 220)}
                 {narrative.length > 220 ? "…" : ""}
               </div>
               <button
                 onClick={() => setShowEventPopup(false)}
-                style={{
-                  marginTop: 18, padding: "8px 30px", borderRadius: 10,
-                  background: "rgba(251,191,36,0.12)", border: "1px solid rgba(251,191,36,0.4)",
-                  color: "#fbbf24", fontSize: 12, cursor: "pointer",
-                  fontFamily: "monospace", letterSpacing: "0.12em",
-                }}
+                style={{ marginTop: 18, padding: "8px 30px", borderRadius: 10, background: "rgba(251,191,36,0.12)", border: "1px solid rgba(251,191,36,0.4)", color: "#fbbf24", fontSize: 12, cursor: "pointer", fontFamily: "monospace" }}
               >
                 繼續
               </button>
@@ -281,36 +282,18 @@ export default function NarrativeBox({ accent }: { accent: string }) {
         )}
       </AnimatePresence>
 
-      {/* ── 敘事文字（點擊跳過打字效果）── */}
+      {/* ── 敘事文字（點擊跳過）── */}
       <div
         onClick={skipTypewriter}
-        style={{
-          padding: "16px",
-          background: "rgba(0,0,0,0.15)",
-          borderBottom: "1px solid rgba(255,255,255,0.04)",
-          minHeight: 140,
-          cursor: typing ? "pointer" : "default",
-        }}
+        style={{ padding: "16px", background: "rgba(0,0,0,0.15)", borderBottom: "1px solid rgba(255,255,255,0.04)", minHeight: 140, cursor: typing ? "pointer" : "default" }}
       >
         {isLoading ? (
-          <div style={{
-            display: "flex", alignItems: "center", gap: 10,
-            color: "rgba(148,163,184,0.4)", padding: "20px 0",
-            fontFamily: "monospace", fontSize: 12, letterSpacing: "0.1em",
-          }}>
-            <motion.span
-              animate={{ opacity: [1, 0.3, 1] }}
-              transition={{ repeat: Infinity, duration: 1.2 }}
-            >▌</motion.span>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, color: "rgba(148,163,184,0.4)", padding: "20px 0", fontFamily: "monospace", fontSize: 12, letterSpacing: "0.1em" }}>
+            <motion.span animate={{ opacity: [1, 0.3, 1] }} transition={{ repeat: Infinity, duration: 1.2 }}>▌</motion.span>
             故事展開中...
           </div>
         ) : (
-          <div style={{
-            fontSize: 14, lineHeight: "1.9",
-            color: "#d1d5db",
-            whiteSpace: "pre-wrap",
-            minHeight: 80,
-          }}>
+          <div style={{ fontSize: 14, lineHeight: "1.9", color: "#d1d5db", whiteSpace: "pre-wrap", minHeight: 80 }}>
             {displayed || (
               <span style={{ color: "rgba(100,116,139,0.5)", fontFamily: "monospace", fontSize: 12, fontStyle: "italic" }}>
                 選擇世界，踏出第一步…
@@ -318,14 +301,8 @@ export default function NarrativeBox({ accent }: { accent: string }) {
             )}
             {typing && (
               <>
-                <motion.span
-                  animate={{ opacity: [1, 0] }}
-                  transition={{ repeat: Infinity, duration: 0.5 }}
-                  style={{ color: accent, marginLeft: 1 }}
-                >▌</motion.span>
-                <span style={{ display: "block", marginTop: 6, fontSize: 10, color: "rgba(148,163,184,0.25)", fontFamily: "monospace" }}>
-                  點擊跳過 →
-                </span>
+                <motion.span animate={{ opacity: [1, 0] }} transition={{ repeat: Infinity, duration: 0.5 }} style={{ color: accent, marginLeft: 1 }}>▌</motion.span>
+                <span style={{ display: "block", marginTop: 6, fontSize: 10, color: "rgba(148,163,184,0.22)", fontFamily: "monospace" }}>點擊跳過 →</span>
               </>
             )}
           </div>
