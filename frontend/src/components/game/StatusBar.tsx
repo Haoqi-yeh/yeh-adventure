@@ -1,8 +1,36 @@
 "use client";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
 import { useGameStore } from "@/store/game-store";
+
+// ── Mobile detection ──────────────────────────────────────────────────────────
+function useIsMobile(): boolean {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 480);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+  return isMobile;
+}
+
+// ── World-specific popup background patterns ─────────────────────────────────
+const WORLD_BG_PATTERN: Record<string, string> = {
+  xian_xia: [
+    "radial-gradient(ellipse 80% 50% at 25% 10%, rgba(167,139,250,0.09) 0%, transparent 60%)",
+    "radial-gradient(ellipse 60% 40% at 75% 90%, rgba(139,92,246,0.06) 0%, transparent 60%)",
+  ].join(","),
+  campus: [
+    "repeating-linear-gradient(0deg,transparent,transparent 39px,rgba(244,114,182,0.045) 39px,rgba(244,114,182,0.045) 40px)",
+    "repeating-linear-gradient(90deg,transparent,transparent 39px,rgba(244,114,182,0.045) 39px,rgba(244,114,182,0.045) 40px)",
+  ].join(","),
+  cyberpunk: "repeating-linear-gradient(90deg,transparent 0px,transparent 40px,rgba(6,182,212,0.05) 40px,rgba(6,182,212,0.05) 41px)",
+  horror: "radial-gradient(ellipse 80% 60% at 50% 100%, rgba(74,222,128,0.04) 0%, transparent 70%)",
+  palace_intrigue: "radial-gradient(ellipse 100% 30% at 50% 0%, rgba(251,191,36,0.06) 0%, transparent 70%)",
+  wasteland: "radial-gradient(ellipse 90% 40% at 50% 0%, rgba(217,119,6,0.05) 0%, transparent 70%)",
+};
 
 const WEATHER_LABEL: Record<string, string> = { clear: "☀️ 晴", rain: "🌧️ 雨", fog: "🌫️ 霧", thunder: "⛈️ 雷" };
 const TIME_LABEL: Record<string, string> = { dawn: "🌅 黎明", morning: "🌤️ 早晨", noon: "☀️ 正午", dusk: "🌆 黃昏", night: "🌙 深夜" };
@@ -61,17 +89,17 @@ function hashStr(str: string): number {
   return h % 99999;
 }
 
-// Half-body portrait: tall portrait ratio (width:height = 2:3), shows head+upper body
+// Anime-style half-body portrait — deterministic seed keeps look consistent
 function getCharPortraitUrl(playerName: string, worldKey: string): string {
   const desc = WORLD_CHAR_DESC[worldKey] ?? WORLD_CHAR_DESC.custom;
   const seed = hashStr(playerName + worldKey + "char");
-  const prompt = `16-bit pixel art, game character, ${desc}, half body portrait, head and upper torso, facing forward, plain dark background, detailed pixel art sprite, game rpg character`;
+  const prompt = `Aesthetic Anime Style, 90s retro anime pixel art, cel-shaded, high contrast, game character portrait, ${desc}, half body, head and upper torso, facing forward, plain dark background, detailed`;
   return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=128&height=192&nologo=true&seed=${seed}`;
 }
 
 function getNPCPortraitUrl(npcName: string, worldKey: string): string {
   const seed = hashStr(npcName + worldKey + "npc");
-  const prompt = `16-bit pixel art, game NPC, ${npcName}, half body portrait, head and upper torso, plain dark background, pixel art sprite`;
+  const prompt = `Aesthetic Anime Style, 90s retro anime pixel art, cel-shaded, game NPC character portrait, ${npcName}, half body, head and upper torso, plain dark background`;
   return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=96&height=128&nologo=true&seed=${seed}`;
 }
 
@@ -148,8 +176,7 @@ function PixelPortrait({
             width: "100%",
             height: "100%",
             objectFit: "cover",
-            objectPosition: "top center",  // always shows face first
-            imageRendering: "pixelated",
+            objectPosition: "top center",
             opacity: loaded && !errored ? 1 : 0,
             transition: "opacity 0.35s",
           }}
@@ -173,6 +200,7 @@ function PixelPortrait({
 export default function StatusBar({ accent }: { accent: string }) {
   const { adventure, npcs, playerName } = useGameStore();
   const [open, setOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   if (!adventure) return null;
 
@@ -190,6 +218,9 @@ export default function StatusBar({ accent }: { accent: string }) {
   const bodyStatus = (worldAttr.body_status as string) ?? "normal";
   const showImmersive = lust !== null || clothingState !== "normal" || bodyStatus !== "normal";
 
+  // World background pattern for popup
+  const worldBgPattern = WORLD_BG_PATTERN[worldKey] ?? "";
+
   return (
     <>
       {/* ── Compact HUD bar ── */}
@@ -199,7 +230,7 @@ export default function StatusBar({ accent }: { accent: string }) {
           width: "100%", padding: "9px 12px",
           background: "rgba(0,0,0,0.25)",
           borderBottom: `1px solid ${accent}25`,
-          display: "flex", alignItems: "center", gap: 8,
+          display: "flex", alignItems: "center", gap: isMobile ? 6 : 8,
           cursor: "pointer", border: "none", textAlign: "left",
         }}
       >
@@ -207,10 +238,18 @@ export default function StatusBar({ accent }: { accent: string }) {
         <MiniBar value={mpPct} color="#3b82f6" icon="💧" />
         <MiniBar value={adventure.stress} color={adventure.stress > 70 ? "#f43f5e" : "#a855f7"} icon="🧠" />
         {lust !== null && <MiniBar value={lust} color="#f472b6" icon="🔥" />}
-        <span style={{ marginLeft: "auto", fontSize: 10, color: accent, fontFamily: "monospace", opacity: 0.7 }}>
-          📍{adventure.location?.slice(0, 8)} · {TIME_LABEL[adventure.time_of_day]?.slice(0, 2)} ·
-          <span style={{ opacity: 0.5 }}> 詳細 ▸</span>
-        </span>
+        {isMobile ? (
+          /* Mobile: icon-only summary */
+          <span style={{ marginLeft: "auto", fontSize: 11, color: `${accent}70`, flexShrink: 0 }}>
+            {TIME_LABEL[adventure.time_of_day]?.slice(0, 2)} ▸
+          </span>
+        ) : (
+          /* Desktop: full location + time */
+          <span style={{ marginLeft: "auto", fontSize: 10, color: accent, fontFamily: "monospace", opacity: 0.7, flexShrink: 0 }}>
+            📍{adventure.location?.slice(0, 8)} · {TIME_LABEL[adventure.time_of_day]?.slice(0, 2)}
+            <span style={{ opacity: 0.5 }}> · 詳細 ▸</span>
+          </span>
+        )}
       </button>
 
       {/* ── Detail popup ── */}
@@ -226,13 +265,18 @@ export default function StatusBar({ accent }: { accent: string }) {
               initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 40 }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
               style={{
-                position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)",
-                width: "100%", maxWidth: 480, zIndex: 50,
+                position: "fixed", bottom: 0,
+                left: isMobile ? 0 : "50%",
+                transform: isMobile ? "none" : "translateX(-50%)",
+                width: "100%", maxWidth: isMobile ? "100%" : 480,
+                zIndex: 50,
                 background: "#0a0e1e",
+                backgroundImage: worldBgPattern || undefined,
                 borderTop: `2px solid ${accent}60`,
-                borderRadius: "20px 20px 0 0",
+                borderRadius: isMobile ? "16px 16px 0 0" : "20px 20px 0 0",
                 padding: "20px 16px 32px",
-                maxHeight: "82vh", overflowY: "auto",
+                maxHeight: isMobile ? "90vh" : "82vh",
+                overflowY: "auto",
               }}
             >
               <button onClick={() => setOpen(false)} style={{
@@ -367,6 +411,11 @@ export default function StatusBar({ accent }: { accent: string }) {
               <Section title="當前位置">
                 <div style={{ fontSize: 11, color: "rgba(148,163,184,0.6)", fontFamily: "monospace", lineHeight: 2 }}>
                   <div>📍 {adventure.location || "未知位置"}</div>
+                  {isMobile && (
+                    <div style={{ marginTop: 2 }}>
+                      {TIME_LABEL[adventure.time_of_day]} · {WEATHER_LABEL[adventure.weather]}
+                    </div>
+                  )}
                 </div>
               </Section>
             </motion.div>

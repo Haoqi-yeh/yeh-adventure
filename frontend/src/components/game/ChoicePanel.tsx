@@ -1,8 +1,19 @@
 "use client";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Send } from "lucide-react";
 import { useGameStore } from "@/store/game-store";
+
+function useIsMobile(): boolean {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 480);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+  return isMobile;
+}
 
 function friendlyError(msg: string): string {
   if (msg.includes("Quota") || msg.includes("quota") || msg.includes("429"))
@@ -36,8 +47,8 @@ function parseChoice(text: string): { title: string; detail: string; risk: strin
   return { title: text, detail: "", risk: "" };
 }
 
-function ChoiceButton({ choice, index, accent, isLoading, onChoose }: {
-  choice: string; index: number; accent: string; isLoading: boolean; onChoose: () => void;
+function ChoiceButton({ choice, index, accent, isLoading, isMobile, onChoose }: {
+  choice: string; index: number; accent: string; isLoading: boolean; isMobile: boolean; onChoose: () => void;
 }) {
   const { title, detail, risk } = parseChoice(choice);
   const hasTooltip = !!(detail || risk);
@@ -128,7 +139,7 @@ function ChoiceButton({ choice, index, accent, isLoading, onChoose }: {
         onTouchEnd={handleTouchEnd}
         style={{
           width: "100%",
-          padding: "18px 10px",
+          padding: isMobile ? "20px 8px" : "18px 10px",
           borderRadius: 12,
           border: `1px solid ${accent}35`,
           background: "rgba(255,255,255,0.04)",
@@ -138,6 +149,7 @@ function ChoiceButton({ choice, index, accent, isLoading, onChoose }: {
           alignItems: "center", gap: 6,
           textAlign: "center",
           transition: "background 0.15s, border-color 0.15s",
+          minHeight: isMobile ? 72 : 0,
         }}
         onMouseOver={e => {
           if (!isLoading) {
@@ -171,6 +183,7 @@ export default function ChoicePanel({ accent }: { accent: string }) {
   const { choices, makeChoice, freeAction, isLoading, adventure, error } = useGameStore();
   const [freeText, setFreeText] = useState("");
   const [showFree, setShowFree] = useState(false);
+  const isMobile = useIsMobile();
 
   if (!adventure) return null;
   const isDead = adventure.status === "dead";
@@ -231,11 +244,11 @@ export default function ChoicePanel({ accent }: { accent: string }) {
         </motion.div>
       ) : (
         <>
-          {/* 選項按鈕 — 2 欄 grid */}
+          {/* 選項按鈕 — 2×2 矩陣佈局（手機/桌面皆適用） */}
           <div style={{
             display: "grid",
             gridTemplateColumns: choices.length === 1 ? "1fr" : "1fr 1fr",
-            gap: 8,
+            gap: isMobile ? 6 : 8,
           }}>
             {choices.map((choice, i) => (
               <ChoiceButton
@@ -244,6 +257,7 @@ export default function ChoicePanel({ accent }: { accent: string }) {
                 index={i}
                 accent={accent}
                 isLoading={isLoading}
+                isMobile={isMobile}
                 onChoose={() => makeChoice(i)}
               />
             ))}

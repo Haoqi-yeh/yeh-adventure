@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useGameStore } from "@/store/game-store";
 
@@ -17,7 +17,8 @@ const WORLD_FALLBACK_BG: Record<string, string> = {
   custom:          "linear-gradient(160deg,#1a0845,#050220)",
 };
 
-// Deterministic seed — same scene always reuses the same cached Pollinations.ai image
+// ── Image generation ─────────────────────────────────────────────────────────
+
 function hashSeed(str: string): number {
   let h = 5381;
   for (let i = 0; i < str.length; i++) {
@@ -29,31 +30,125 @@ function hashSeed(str: string): number {
 function getSceneUrl(imagePrompt: string, useSafeImage: boolean): string {
   if (!imagePrompt) return "";
   const seed = hashSeed(imagePrompt);
-
   if (useSafeImage) {
-    // Standard pixel-art scene
-    const full = `16-bit pixel art style, retro gaming aesthetic, vibrant colors, ${imagePrompt}`;
-    return `https://image.pollinations.ai/prompt/${encodeURIComponent(full)}?width=512&height=256&nologo=true&seed=${seed}`;
+    const full = `Aesthetic Anime Style, 90s retro anime pixel art, high contrast, cel-shaded, ${imagePrompt}`;
+    return `https://image.pollinations.ai/prompt/${encodeURIComponent(full)}?width=384&height=384&nologo=true&seed=${seed}`;
   } else {
-    // Adult/intimate scene — anime illustration style, square aspect for character focus
-    const full = `anime art, 2D illustration, adult content, mature, ${imagePrompt}, detailed, high quality`;
-    return `https://image.pollinations.ai/prompt/${encodeURIComponent(full)}?width=512&height=512&nologo=true&seed=${seed}&model=flux-anime`;
+    const full = `Aesthetic Anime Style, 90s retro anime illustration, adult content, mature, beautiful detailed, cel-shaded, ${imagePrompt}`;
+    return `https://image.pollinations.ai/prompt/${encodeURIComponent(full)}?width=384&height=384&nologo=true&seed=${seed}&model=flux-anime`;
   }
 }
+
+// ── Event detection ───────────────────────────────────────────────────────────
 
 function detectEvent(text: string): { type: "npc" | "event" | null; label: string; detail: string } {
   const npcMatch = text.match(/【奇遇NPC[：:]([^】]+)】/);
   if (npcMatch) return { type: "npc", label: "✦ 奇遇 NPC", detail: npcMatch[1] };
   if (text.includes("【奇遇NPC】")) return { type: "npc", label: "✦ 奇遇 NPC", detail: "" };
-
   const eventMatch = text.match(/【突發狀況[：:]([^】]+)】/);
   if (eventMatch) return { type: "event", label: "⚡ 突發狀況", detail: eventMatch[1] };
   if (text.includes("【突發狀況】")) return { type: "event", label: "⚡ 突發狀況", detail: "" };
-
   return { type: null, label: "", detail: "" };
 }
 
-// State-reactive character status badges shown in scene area
+// ── Novel-style paragraph split (group 2 sentences per paragraph) ────────────
+
+function splitIntoParagraphs(text: string): string[] {
+  if (!text.trim()) return [];
+  const lines = text.split(/\n+/).map(l => l.trim()).filter(Boolean);
+  const result: string[] = [];
+
+  for (const line of lines) {
+    const sentPattern = /[^。！？…\n]+[。！？…]+/g;
+    const sentences: string[] = [];
+    let m: RegExpExecArray | null;
+    let lastEnd = 0;
+
+    while ((m = sentPattern.exec(line)) !== null) {
+      sentences.push(m[0]);
+      lastEnd = m.index + m[0].length;
+    }
+    const tail = line.slice(lastEnd).trim();
+    if (tail) sentences.push(tail);
+
+    if (sentences.length === 0) { result.push(line); continue; }
+
+    // Group every 2 sentences into one paragraph
+    for (let i = 0; i < sentences.length; i += 2) {
+      const para = sentences.slice(i, i + 2).join("");
+      if (para.trim()) result.push(para.trim());
+    }
+  }
+
+  return result.length ? result : [text];
+}
+
+// ── Keyword highlighting ──────────────────────────────────────────────────────
+// 【道具/地點】 → gold  |  NPC names → cyan
+
+function HighlightedText({ text, npcNames }: { text: string; npcNames: string[] }) {
+  const escapedNpcs = npcNames
+    .filter(n => n.trim())
+    .map(n => n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+
+  const patternStr = escapedNpcs.length > 0
+    ? `(【[^】]*】|${escapedNpcs.join("|")})`
+    : "(【[^】]*】)";
+  const pattern = new RegExp(patternStr, "g");
+
+  const parts: React.ReactNode[] = [];
+  let lastIdx = 0;
+  let match: RegExpExecArray | null;
+  let key = 0;
+
+  while ((match = pattern.exec(text)) !== null) {
+    if (match.index > lastIdx) {
+      parts.push(<span key={key++}>{text.slice(lastIdx, match.index)}</span>);
+    }
+    const matched = match[0];
+    if (matched.startsWith("【")) {
+      parts.push(
+        <span key={key++} style={{ color: "#fbbf24", fontWeight: 600 }}>{matched}</span>
+      );
+    } else {
+      // NPC name
+      parts.push(
+        <span key={key++} style={{ color: "#22d3ee", fontWeight: 500 }}>{matched}</span>
+      );
+    }
+    lastIdx = match.index + matched.length;
+  }
+  if (lastIdx < text.length) {
+    parts.push(<span key={key++}>{text.slice(lastIdx)}</span>);
+  }
+  return <>{parts}</>;
+}
+
+// ── Formatted narrative (paragraphs + highlights) ─────────────────────────────
+
+function FormattedNarrative({ text, npcNames }: { text: string; npcNames: string[] }) {
+  // Strip event tags — they are handled by the popup
+  const cleaned = text
+    .replace(/【奇遇NPC[：:][^】]*】/g, "")
+    .replace(/【突發狀況[：:][^】]*】/g, "")
+    .trim();
+
+  if (!cleaned) return null;
+  const paragraphs = splitIntoParagraphs(cleaned);
+
+  return (
+    <div style={{ fontSize: 14, lineHeight: "1.95", color: "#d1d5db" }}>
+      {paragraphs.map((para, pIdx) => (
+        <p key={pIdx} style={{ margin: 0, marginBottom: pIdx < paragraphs.length - 1 ? "0.85em" : 0 }}>
+          <HighlightedText text={para} npcNames={npcNames} />
+        </p>
+      ))}
+    </div>
+  );
+}
+
+// ── Character state badges (clothing / body) ──────────────────────────────────
+
 const CLOTHING_BADGES: Record<string, { icon: string; label: string; color: string }> = {
   disheveled: { icon: "👕", label: "衣衫凌亂", color: "#f59e0b" },
   partial:    { icon: "🔴", label: "衣物散亂", color: "#f87171" },
@@ -69,58 +164,48 @@ const BODY_BADGES: Record<string, { icon: string; label: string; color: string }
 };
 
 function CharacterSprite({ worldAttr }: { worldAttr: Record<string, unknown> }) {
-  const clothing = (worldAttr.clothing_state as string) ?? "normal";
-  const bodyStatus = (worldAttr.body_status as string) ?? "normal";
-  const clothingBadge = CLOTHING_BADGES[clothing];
-  const bodyBadge = BODY_BADGES[bodyStatus];
-  if (!clothingBadge && !bodyBadge) return null;
+  const clothing   = (worldAttr.clothing_state as string) ?? "normal";
+  const bodyStatus = (worldAttr.body_status   as string) ?? "normal";
+  const cBadge = CLOTHING_BADGES[clothing];
+  const bBadge = BODY_BADGES[bodyStatus];
+  if (!cBadge && !bBadge) return null;
+
+  const badgeStyle = (color: string): React.CSSProperties => ({
+    display: "flex", alignItems: "center", gap: 4,
+    background: "rgba(0,0,0,0.72)", borderRadius: 20,
+    padding: "3px 9px", border: `1px solid ${color}50`,
+    backdropFilter: "blur(4px)",
+  });
+
   return (
-    <div style={{
-      position: "absolute", bottom: 48, right: 10,
-      display: "flex", flexDirection: "column", gap: 4, zIndex: 5,
-    }}>
-      {bodyBadge && (
-        <motion.div
-          initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.3 }}
-          style={{
-            display: "flex", alignItems: "center", gap: 4,
-            background: "rgba(0,0,0,0.72)", borderRadius: 20,
-            padding: "3px 9px",
-            border: `1px solid ${bodyBadge.color}50`,
-            backdropFilter: "blur(4px)",
-          }}
-        >
-          <span style={{ fontSize: 10 }}>{bodyBadge.icon}</span>
-          <span style={{ fontSize: 9, color: bodyBadge.color, fontFamily: "monospace", letterSpacing: "0.05em" }}>{bodyBadge.label}</span>
+    <div style={{ position: "absolute", bottom: 48, right: 10, display: "flex", flexDirection: "column", gap: 4, zIndex: 5 }}>
+      {bBadge && (
+        <motion.div initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.3 }} style={badgeStyle(bBadge.color)}>
+          <span style={{ fontSize: 10 }}>{bBadge.icon}</span>
+          <span style={{ fontSize: 9, color: bBadge.color, fontFamily: "monospace", letterSpacing: "0.05em" }}>{bBadge.label}</span>
         </motion.div>
       )}
-      {clothingBadge && (
-        <motion.div
-          initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.3, delay: 0.08 }}
-          style={{
-            display: "flex", alignItems: "center", gap: 4,
-            background: "rgba(0,0,0,0.72)", borderRadius: 20,
-            padding: "3px 9px",
-            border: `1px solid ${clothingBadge.color}50`,
-            backdropFilter: "blur(4px)",
-          }}
-        >
-          <span style={{ fontSize: 10 }}>{clothingBadge.icon}</span>
-          <span style={{ fontSize: 9, color: clothingBadge.color, fontFamily: "monospace", letterSpacing: "0.05em" }}>{clothingBadge.label}</span>
+      {cBadge && (
+        <motion.div initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.3, delay: 0.08 }} style={badgeStyle(cBadge.color)}>
+          <span style={{ fontSize: 10 }}>{cBadge.icon}</span>
+          <span style={{ fontSize: 9, color: cBadge.color, fontFamily: "monospace", letterSpacing: "0.05em" }}>{cBadge.label}</span>
         </motion.div>
       )}
     </div>
   );
 }
 
+// ── Main component ────────────────────────────────────────────────────────────
+
 export default function NarrativeBox({ accent }: { accent: string }) {
-  const { narrative, imagePrompt, useSafeImage, isLoading, adventure } = useGameStore();
+  const { narrative, imagePrompt, useSafeImage, isLoading, adventure, npcs } = useGameStore();
 
   const worldAttr = adventure ? (adventure.world_attributes as Record<string, unknown>) : {};
-  const worldKey = (worldAttr?.world_flavor as string) ?? adventure?.world_type ?? "custom";
+  const worldKey  = (worldAttr?.world_flavor as string) ?? adventure?.world_type ?? "custom";
   const fallbackBg = WORLD_FALLBACK_BG[worldKey] ?? WORLD_FALLBACK_BG.custom;
+  const npcNames  = npcs.map(n => n.name);
 
-  // ── Scene image with crossfade & error handling ──
+  // ── Scene image with crossfade ──────────────────────────────────────────────
   const [sceneUrl, setSceneUrl] = useState("");
   const [prevSceneUrl, setPrevSceneUrl] = useState("");
   const [sceneLoaded, setSceneLoaded] = useState(false);
@@ -136,21 +221,13 @@ export default function NarrativeBox({ accent }: { accent: string }) {
     setSceneUrl(newUrl);
   }, [imagePrompt, useSafeImage]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleImageLoad = useCallback(() => {
-    setSceneLoaded(true);
-    setPrevSceneUrl("");
-  }, []);
+  const handleImageLoad  = useCallback(() => { setSceneLoaded(true); setPrevSceneUrl(""); }, []);
+  const handleImageError = useCallback(() => { setSceneError(true); setSceneLoaded(false); }, []);
 
-  const handleImageError = useCallback(() => {
-    // Hide broken image icon; fallback gradient is already showing
-    setSceneError(true);
-    setSceneLoaded(false);
-  }, []);
-
-  // ── Typewriter (click anywhere to skip) ──
+  // ── Typewriter ─────────────────────────────────────────────────────────────
   const [displayed, setDisplayed] = useState("");
   const [typing, setTyping] = useState(false);
-  const typerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const typerRef    = useRef<ReturnType<typeof setInterval> | null>(null);
   const narrativeRef = useRef(narrative);
   narrativeRef.current = narrative;
 
@@ -178,45 +255,39 @@ export default function NarrativeBox({ accent }: { accent: string }) {
     setTyping(false);
   };
 
-  // ── Event popup ──
+  // ── Encounter popup — only after tick 3 to avoid instant-popup on start ────
   const [showEventPopup, setShowEventPopup] = useState(false);
-  const eventInfo = detectEvent(narrative);
+  const eventInfo    = detectEvent(narrative);
+  const adventureTick = adventure?.tick ?? 0;
 
   useEffect(() => {
-    if (!isLoading && eventInfo.type) {
+    if (!isLoading && eventInfo.type && adventureTick > 3) {
       const t = setTimeout(() => setShowEventPopup(true), 600);
       return () => clearTimeout(t);
     } else {
       setShowEventPopup(false);
     }
-  }, [narrative, isLoading, eventInfo.type]);
-
-  // Aspect ratio: adult scenes are 1:1 square, safe scenes are 2:1 landscape
-  const sceneH = useSafeImage ? 200 : 280;
+  }, [narrative, isLoading, eventInfo.type, adventureTick]);
 
   return (
     <div style={{ position: "relative" }}>
+
       {/* ── 場景圖 ── */}
       <div style={{
         position: "relative", overflow: "hidden",
         background: fallbackBg,
         borderBottom: `1px solid ${accent}25`,
-        height: sceneH,
-        transition: "height 0.3s ease",
+        height: 240,
       }}>
-        {/* Previous image stays visible during crossfade */}
+        {/* Previous image fades during crossfade */}
         {prevSceneUrl && !sceneLoaded && !sceneError && (
-          <img
-            src={prevSceneUrl}
-            alt=""
-            style={{
-              position: "absolute", inset: 0, width: "100%", height: "100%",
-              objectFit: "cover", imageRendering: "pixelated", opacity: 0.5,
-            }}
-          />
+          <img src={prevSceneUrl} alt="" style={{
+            position: "absolute", inset: 0, width: "100%", height: "100%",
+            objectFit: "cover", objectPosition: "center top", opacity: 0.45,
+          }} />
         )}
 
-        {/* Current image — hidden if error, fades in on load */}
+        {/* Current image */}
         {sceneUrl && !sceneError && (
           <motion.img
             key={sceneUrl}
@@ -226,21 +297,19 @@ export default function NarrativeBox({ accent }: { accent: string }) {
             onError={handleImageError}
             initial={{ opacity: 0 }}
             animate={{ opacity: sceneLoaded ? 1 : 0 }}
-            transition={{ duration: 0.9 }}
+            transition={{ duration: 0.8 }}
             style={{
               position: "absolute", inset: 0, width: "100%", height: "100%",
-              objectFit: "cover",
-              imageRendering: useSafeImage ? "pixelated" : "auto",
+              objectFit: "cover", objectPosition: "center top",
             }}
           />
         )}
 
-        {/* Loading dots — only when no prev image available */}
+        {/* Loading indicator */}
         {!sceneLoaded && !sceneError && !prevSceneUrl && (
           <div style={{
             position: "absolute", inset: 0,
-            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-            gap: 12,
+            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12,
           }}>
             {isLoading ? (
               <>
@@ -265,18 +334,21 @@ export default function NarrativeBox({ accent }: { accent: string }) {
           </div>
         )}
 
+        {/* Bottom fade */}
         <div style={{
-          position: "absolute", bottom: 0, left: 0, right: 0, height: "40%",
+          position: "absolute", bottom: 0, left: 0, right: 0, height: "45%",
           background: "linear-gradient(to top, #0a0e1e, transparent)",
           pointerEvents: "none",
         }} />
 
+        {/* Character state badges */}
         <CharacterSprite worldAttr={worldAttr} />
 
+        {/* Image prompt label */}
         {imagePrompt && sceneLoaded && (
           <div style={{
             position: "absolute", bottom: 8, left: 12, right: 12,
-            fontSize: 9, color: "rgba(255,255,255,0.22)", fontFamily: "monospace",
+            fontSize: 9, color: "rgba(255,255,255,0.18)", fontFamily: "monospace",
             overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
           }}>
             🎨 {imagePrompt.slice(0, 80)}
@@ -284,14 +356,18 @@ export default function NarrativeBox({ accent }: { accent: string }) {
         )}
       </div>
 
-      {/* ── 奇遇事件彈窗 ── */}
+      {/* ── 奇遇事件彈窗 — glass morphism, tick > 3 only ── */}
       <AnimatePresence>
         {showEventPopup && eventInfo.type && (
           <>
             <motion.div
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={() => setShowEventPopup(false)}
-              style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 40, backdropFilter: "blur(3px)" }}
+              style={{
+                position: "fixed", inset: 0, zIndex: 40,
+                background: "rgba(0,0,0,0.55)",
+                backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)",
+              }}
             />
             <motion.div
               initial={{ opacity: 0, scale: 0.82, y: 24 }}
@@ -302,42 +378,61 @@ export default function NarrativeBox({ accent }: { accent: string }) {
                 position: "fixed", top: "50%", left: "50%",
                 transform: "translate(-50%, -50%)",
                 width: "min(340px, 88vw)", zIndex: 50,
-                background: "#090c1a",
-                borderRadius: 18,
+                background: "rgba(255,255,255,0.08)",
+                backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)",
+                borderRadius: 20,
+                border: "2px solid rgba(251,191,36,0.5)",
                 padding: "28px 22px 22px",
                 textAlign: "center",
+                boxShadow: "0 24px 60px rgba(0,0,0,0.5), 0 0 40px rgba(251,191,36,0.08)",
               }}
             >
+              {/* Animated border glow */}
               <motion.div
-                animate={{ opacity: [0.5, 1, 0.5] }}
-                transition={{ repeat: Infinity, duration: 1.6 }}
+                animate={{ opacity: [0.4, 1, 0.4] }}
+                transition={{ repeat: Infinity, duration: 1.8 }}
                 style={{
-                  position: "absolute", inset: 0, borderRadius: 18,
-                  border: "2px solid #fbbf24",
-                  boxShadow: "0 0 20px #fbbf2450, inset 0 0 20px #fbbf2408",
+                  position: "absolute", inset: 0, borderRadius: 20,
+                  border: "2px solid rgba(251,191,36,0.4)",
+                  boxShadow: "0 0 30px rgba(251,191,36,0.15), inset 0 0 30px rgba(251,191,36,0.03)",
                   pointerEvents: "none",
                 }}
               />
-              <div style={{ fontSize: 38, marginBottom: 10 }}>
-                {eventInfo.type === "npc" ? "🌟" : "⚡"}
-              </div>
-              <div style={{ fontSize: 12, fontFamily: "monospace", letterSpacing: "0.2em", color: "#fbbf24", fontWeight: 700, marginBottom: 14, textTransform: "uppercase" }}>
+
+              <div style={{ fontSize: 44, marginBottom: 8 }}>⭐</div>
+              <div style={{
+                fontSize: 12, fontFamily: "monospace", letterSpacing: "0.2em",
+                color: "#fbbf24", fontWeight: 700, marginBottom: 14, textTransform: "uppercase",
+              }}>
                 {eventInfo.label}
               </div>
               {eventInfo.detail && (
-                <div style={{ fontSize: 13, color: "#fbbf24", fontWeight: 700, marginBottom: 10 }}>
+                <div style={{ fontSize: 14, color: "#fde68a", fontWeight: 700, marginBottom: 12 }}>
                   「{eventInfo.detail}」
                 </div>
               )}
-              <div style={{ fontSize: 12, color: "rgba(203,213,225,0.75)", lineHeight: "1.75", maxHeight: 160, overflowY: "auto", textAlign: "left" }}>
-                {narrative.replace(/【奇遇NPC[：:]?[^】]*】/g, "").replace(/【突發狀況[：:]?[^】]*】/g, "").trim().slice(0, 220)}
+              <div style={{
+                fontSize: 12, color: "rgba(203,213,225,0.8)", lineHeight: "1.8",
+                maxHeight: 130, overflowY: "auto", textAlign: "left",
+              }}>
+                {narrative
+                  .replace(/【奇遇NPC[：:]?[^】]*】/g, "")
+                  .replace(/【突發狀況[：:]?[^】]*】/g, "")
+                  .trim()
+                  .slice(0, 220)}
                 {narrative.length > 220 ? "…" : ""}
               </div>
               <button
                 onClick={() => setShowEventPopup(false)}
-                style={{ marginTop: 18, padding: "8px 30px", borderRadius: 10, background: "rgba(251,191,36,0.12)", border: "1px solid rgba(251,191,36,0.4)", color: "#fbbf24", fontSize: 12, cursor: "pointer", fontFamily: "monospace" }}
+                style={{
+                  marginTop: 18, padding: "9px 32px", borderRadius: 12,
+                  background: "rgba(251,191,36,0.14)",
+                  border: "1px solid rgba(251,191,36,0.5)",
+                  color: "#fbbf24", fontSize: 12, cursor: "pointer",
+                  fontFamily: "monospace", fontWeight: 600, letterSpacing: "0.06em",
+                }}
               >
-                繼續
+                繼續冒險
               </button>
             </motion.div>
           </>
@@ -347,27 +442,46 @@ export default function NarrativeBox({ accent }: { accent: string }) {
       {/* ── 敘事文字（點擊跳過）── */}
       <div
         onClick={skipTypewriter}
-        style={{ padding: "16px", background: "rgba(0,0,0,0.15)", borderBottom: "1px solid rgba(255,255,255,0.04)", minHeight: 140, cursor: typing ? "pointer" : "default" }}
+        style={{
+          padding: "18px 16px",
+          background: "rgba(0,0,0,0.15)",
+          borderBottom: "1px solid rgba(255,255,255,0.04)",
+          minHeight: 140,
+          cursor: typing ? "pointer" : "default",
+        }}
       >
         {isLoading ? (
-          <div style={{ display: "flex", alignItems: "center", gap: 10, color: "rgba(148,163,184,0.4)", padding: "20px 0", fontFamily: "monospace", fontSize: 12, letterSpacing: "0.1em" }}>
+          <div style={{
+            display: "flex", alignItems: "center", gap: 10,
+            color: "rgba(148,163,184,0.4)", padding: "20px 0",
+            fontFamily: "monospace", fontSize: 12, letterSpacing: "0.1em",
+          }}>
             <motion.span animate={{ opacity: [1, 0.3, 1] }} transition={{ repeat: Infinity, duration: 1.2 }}>▌</motion.span>
             故事展開中...
           </div>
-        ) : (
-          <div style={{ fontSize: 14, lineHeight: "1.9", color: "#d1d5db", whiteSpace: "pre-wrap", minHeight: 80 }}>
-            {displayed || (
-              <span style={{ color: "rgba(100,116,139,0.5)", fontFamily: "monospace", fontSize: 12, fontStyle: "italic" }}>
-                選擇世界，踏出第一步…
-              </span>
-            )}
+        ) : displayed ? (
+          <div style={{ minHeight: 80 }}>
+            <FormattedNarrative text={displayed} npcNames={npcNames} />
             {typing && (
-              <>
-                <motion.span animate={{ opacity: [1, 0] }} transition={{ repeat: Infinity, duration: 0.5 }} style={{ color: accent, marginLeft: 1 }}>▌</motion.span>
-                <span style={{ display: "block", marginTop: 6, fontSize: 10, color: "rgba(148,163,184,0.22)", fontFamily: "monospace" }}>點擊跳過 →</span>
-              </>
+              <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 8 }}>
+                <motion.span
+                  animate={{ opacity: [1, 0] }}
+                  transition={{ repeat: Infinity, duration: 0.5 }}
+                  style={{ color: accent, fontSize: 14 }}
+                >▌</motion.span>
+                <span style={{ fontSize: 10, color: "rgba(148,163,184,0.22)", fontFamily: "monospace" }}>
+                  點擊跳過 →
+                </span>
+              </div>
             )}
           </div>
+        ) : (
+          <span style={{
+            color: "rgba(100,116,139,0.5)", fontFamily: "monospace",
+            fontSize: 12, fontStyle: "italic",
+          }}>
+            選擇世界，踏出第一步…
+          </span>
         )}
       </div>
     </div>
