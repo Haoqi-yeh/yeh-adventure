@@ -3,13 +3,22 @@
 @tailwind utilities;
 
 /* ── 全域底色與字體 ──────────────────────────────── */
-html, body {
+html {
+  /* pixel-art background set inline in layout.tsx; this is the fallback */
   background-color: #050a15;
+  image-rendering: pixelated;
+}
+
+html, body {
   min-height: 100vh;
   color: #e8e8f0;
   margin: 0;
   padding: 0;
   font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", "Noto Sans CJK TC", sans-serif;
+}
+
+body {
+  background: transparent; /* let <html> pixel-art background show through */
 }
 
 *, *::before, *::after {
@@ -28,7 +37,7 @@ html, body {
   animation: twinkle var(--dur, 3s) ease-in-out infinite;
   animation-delay: var(--delay, 0s);
   pointer-events: none;
-  z-index: 0;
+  z-index: 2; /* above the z-index:0 dark overlay */
 }
 
 /* ── 霓虹字體 ────────────────────────────────────── */

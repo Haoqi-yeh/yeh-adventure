@@ -34,15 +34,27 @@ const STARS = [
   { w: 1, h: 1, t: 95, l: 75, dur: 3.6, delay: 3.2 },
 ];
 
-// Fixed global background — same Pollinations.ai seed → deterministic image
+// Deterministic global background — fixed seed=42, same image every deploy
 const BG_PROMPT = encodeURIComponent(
   "16-bit pixel art style, high-definition, retro gaming aesthetic, vibrant colors. A massive, complex, fusion-style fantastical floating island suspended in a sea of pink and purple pixelated clouds and nebula. The island is an intricate fusion: a traditional Wuxia sword-tower, a Japanese school gate with flickering neon pixel signs, a sprawling wasteland camp with scavengers, a western fantasy castle, a cyberpunk glowing tree with circuit patterns, a haunted shrine, a palace complex, and a martial arts arena. A tiny pixelated female character Lia stands on the island edge overlooking a neon pixel-art horizon. Darker palette of deep blues purples golds."
 );
-const GLOBAL_BG_URL = `https://image.pollinations.ai/prompt/${BG_PROMPT}?width=1920&height=1080&nologo=true&seed=42`;
+const GLOBAL_BG_URL = `https://image.pollinations.ai/prompt/${BG_PROMPT}?width=1280&height=720&nologo=true&seed=42`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="zh-TW">
+    // The background image lives on <html> so it sits at the root canvas level,
+    // guaranteed to show beneath everything (stars, overlays, content).
+    <html
+      lang="zh-TW"
+      style={{
+        backgroundImage: `url("${GLOBAL_BG_URL}")`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundAttachment: "fixed",
+        backgroundRepeat: "no-repeat",
+        backgroundColor: "#050a15", // fallback while image loads
+      }}
+    >
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
@@ -52,19 +64,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body>
-        {/* Global fixed pixel art background */}
+        {/* Dark overlay — z-index:0 sits above the <html> background but below stars */}
         <div style={{
-          position: "fixed", inset: 0, zIndex: -1,
-          backgroundImage: `url("${GLOBAL_BG_URL}")`,
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          backgroundRepeat: "no-repeat",
-          imageRendering: "pixelated",
-        }} />
-        {/* Dark overlay over global bg */}
-        <div style={{
-          position: "fixed", inset: 0, zIndex: -1,
-          background: "rgba(5, 10, 21, 0.72)",
+          position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none",
+          background: "rgba(5, 10, 21, 0.52)",
         }} />
 
         {STARS.map((s, i) => (
@@ -82,6 +85,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             }}
           />
         ))}
+
         <div style={{ position: "relative", zIndex: 10, width: "100%", minHeight: "100vh" }}>
           {children}
         </div>

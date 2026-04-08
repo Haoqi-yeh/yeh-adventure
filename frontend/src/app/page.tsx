@@ -25,7 +25,6 @@ export default function Home() {
   return (
     <div style={{
       minHeight: "100vh", width: "100%",
-      background: "#0a0f1e",
       display: "flex", alignItems: "flex-start", justifyContent: "center",
     }}>
       {/* 世界色光暈 */}
@@ -40,7 +39,8 @@ export default function Home() {
         width: "100%", maxWidth: 480,
         minHeight: "100vh",
         display: "flex", flexDirection: "column",
-        background: "rgba(10, 14, 30, 0.95)",
+        background: "rgba(5, 10, 21, 0.88)",
+        backdropFilter: "blur(2px)",
         borderLeft: "1px solid rgba(255,255,255,0.05)",
         borderRight: "1px solid rgba(255,255,255,0.05)",
       }}>
