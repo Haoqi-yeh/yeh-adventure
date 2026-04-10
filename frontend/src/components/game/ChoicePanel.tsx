@@ -16,6 +16,10 @@ function useIsMobile(): boolean {
 }
 
 function friendlyError(msg: string): string {
+  if (msg.includes("超時") || msg.includes("timeout") || msg.includes("Timeout") || msg.includes("AbortError"))
+    return "請求超時，請稍後重試";
+  if (msg.includes("連線失敗") || msg.includes("Failed to fetch") || msg.includes("NetworkError"))
+    return "網路連線異常，請確認網路後重試";
   if (msg.includes("Quota") || msg.includes("quota") || msg.includes("429"))
     return "AI 額度暫時用完，請稍等幾分鐘再試";
   if (msg.includes("API key") || msg.includes("401"))

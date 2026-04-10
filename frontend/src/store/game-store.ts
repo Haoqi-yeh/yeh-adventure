@@ -32,11 +32,23 @@ async function streamAction(
   body: Record<string, unknown>,
   set: (partial: Partial<GameStore>) => void
 ) {
-  const res = await fetch("/api/game/action", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
+  const abort = new AbortController();
+  const abortTimer = setTimeout(() => abort.abort(), 55_000);
+
+  let res: Response;
+  try {
+    res = await fetch("/api/game/action", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: abort.signal,
+    });
+  } catch (e: unknown) {
+    clearTimeout(abortTimer);
+    const isAbort = e instanceof Error && e.name === "AbortError";
+    throw new Error(isAbort ? "請求超時，請稍後重試" : "連線失敗，請稍後重試");
+  }
+  clearTimeout(abortTimer);
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: res.statusText }));

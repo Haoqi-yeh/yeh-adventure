@@ -9,6 +9,9 @@ import type {
   PlayerActionRequest, NarrativeResponse, AdventureRow, NPCStateRow, NPCUpdate,
 } from "@/lib/game/types";
 
+// Extend Vercel / Next.js serverless function timeout to 60 s
+export const maxDuration = 60;
+
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? "");
 const encoder = new TextEncoder();
 
@@ -84,9 +87,9 @@ export async function POST(req: NextRequest) {
   const stream = new ReadableStream({
     async start(controller) {
       try {
-        // gemini-2.5-flash with streaming — tokens appear in real-time
+        // gemini-2.0-flash-lite: no thinking mode → sub-1s first token, stable, fast
         const model = genAI.getGenerativeModel({
-          model: "gemini-2.5-flash",
+          model: "gemini-2.0-flash-lite",
           systemInstruction: systemPrompt,
         });
 
