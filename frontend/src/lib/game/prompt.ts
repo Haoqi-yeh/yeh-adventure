@@ -247,7 +247,7 @@ ${worldPrompt}
 ${worldTerminology ? `\n【世界觀術語規範（邏輯自洽）】\n${worldTerminology}\n▶ 嚴禁在此世界觀中使用其他世界觀的概念和術語（例如：仙俠中不出現「技能點」，末日中不出現「靈力」）。` : ""}
 
 ${characterBlock}
-${scenarioHook ? `\n【本局開場設定】\n${scenarioHook}\n本局的故事從此情境切入展開，NPC 必須是全新的獨特角色。${characterBio ? "開場情境需與主角角色設定相容、自然融合。" : ""}` : ""}
+${scenarioHook ? `\n【本局開場靈感】\n${scenarioHook}\n▶ 以上是這局故事的靈感起點，可依此概念自由延伸，無需逐字照本宣科。NPC 必須是全新的獨特角色。${characterBio ? "開場情境需與主角角色設定自然融合。" : ""}` : ""}
 ${urgencyBlock ? "\n" + urgencyBlock : ""}
 
 ═══════════════ 當前狀態快照 ═══════════════

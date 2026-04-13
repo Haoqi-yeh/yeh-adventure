@@ -16,7 +16,7 @@ const WORLDS: { type: WorldType; emoji: string; name: string; desc: string }[] =
   { type: "horror",          emoji: "👻",  name: "怪談",   desc: "規則、禁忌、深夜的恐懼" },
   { type: "palace_intrigue", emoji: "👑",  name: "宮鬥",     desc: "權謀、位階、步步驚心的後宮" },
   { type: "wasteland",       emoji: "🏜️",  name: "廢土",     desc: "拾荒、變異、文明的殘骸" },
-  { type: "taiwanese_folk",  emoji: "🧧",  name: "台式都市傳說", desc: "乩身、宮廟、草根超自然" },
+  { type: "taiwanese_folk",  emoji: "🧧",  name: "宮廟",     desc: "乩身、符咒、草根超自然" },
 ];
 
 const WRITING_STYLES = [
