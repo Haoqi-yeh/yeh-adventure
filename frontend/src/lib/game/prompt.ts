@@ -3,7 +3,6 @@ import type { WorldType, TimeOfDay, WeatherType, NarrativeHint } from "./types";
 // ── 文筆風格 ──────────────────────────────────────────────────────────────────
 
 const WRITING_STYLES: Record<string, string> = {
-
   "小說風格": `
 你是一個沉浸式文字冒險遊戲的敘事引擎，使用繁體中文。風格：節奏明快、對話熱血直白，充滿少年意氣的快節奏敘事。
 【敘事規範】
@@ -62,7 +61,6 @@ const DEFAULT_STYLE = "小說風格";
 // ── 世界觀術語體系（邏輯自洽用） ───────────────────────────────────────────────
 
 const WORLD_TERMINOLOGY: Record<string, string> = {
-
   xian_xia:
     "成長用「境界（煉氣/築基/金丹/元嬰）、靈根、道心、悟性」；資源用「靈石、靈草、法寶、功法秘籍、丹藥」；組織用「宗門、散修、魔道、長老、弟子」；戰鬥用「靈力、法術、飛劍、神識、靈壓」。禁止使用等級、HP、魔法、技能點等遊戲術語。",
   wuxia:
@@ -87,11 +85,9 @@ const WORLD_TERMINOLOGY: Record<string, string> = {
     "成長用「功德、法力值、神緣、天命、神契等級」（禁止使用修為/境界/靈力）；技能用「符籙、指法、五營神將、法繩/法索、踏罡步斗、押煞」；威脅用「魔神仔、冤魂、地縛靈、外道、煞氣、邪神」；組織用「宮廟、乩壇、神軍、廟公、同門兄弟、神明指示」；禁止使用：靈力、內力、境界、魔法、法術等非台式術語。",
 };
 
-
 // ── 世界觀提示 ────────────────────────────────────────────────────────────────
 
 const WORLD_PROMPTS: Record<string, string> = {
-
   xian_xia:        `【世界觀：仙俠】\n修仙世界。靈力是命，道心是骨，宗門是背後的靠山或枷鎖。妖獸、魔修、天材地寶，每一樣都可能讓你暴富或暴斃。戰鬥要有重量感：劍氣、靈術、肉搏都行。`,
   campus:          `【世界觀：校園】\n高中或大學校園。考試壓力、社團、暗戀、霸凌、同儕壓力。這個世界沒有魔法、沒有古代文物、沒有修仙物件——所有衝突都來自人心。要有「青春本來就很爛也很美好」的矛盾感。所有出現的物品、地點、角色都必須100%符合現代校園生活，不得混入其他世界觀元素。`,
   apocalypse:      `【世界觀：末日】\n文明崩潰，物資稀缺，人性扭曲，活下去才是唯一目標。飢餓是真實的，死亡是隨機的，信任是奢侈品。`,
@@ -103,19 +99,19 @@ const WORLD_PROMPTS: Record<string, string> = {
   palace_intrigue: `【世界觀：宮鬥】\n皇宮是最精緻的籠子。每一句話都是刀，每一個笑都是佈局。位階決定生死，但智謀才是真正的武器。`,
   wasteland:       `【世界觀：廢土】\n文明的殘骸散落在荒原。變異體、拾荒者、殘存勢力在廢墟上重寫秩序。資源就是尊嚴，子彈就是貨幣。`,
   taiwanese_folk:  `【世界觀：台式都市傳說】
-
 現代台灣。神、魔、人三界共存於都市陰影中——西門町地下宮廟、老舊公寓的暗角、隱藏在巷弄深處的乩壇。這裡的超自然不是玄幻奇想，是台灣草根生活的一部分。
+
 筆法模仿星子《乩身》《太歲》風格：
 • 文字平實有力，帶草根江湖義氣，有底層與超自然碰撞的滄桑感。
 • 對話自然帶入台式口語（啦、阿、嘛、係啦、哩虎），稱呼神明要親切且敬畏（大聖爺、太子爺、老祖、娘娘、千歲爺）。
 • 戰鬥必須有：檀香氣、燒符的火光與焦味、神將威壓的重量感、法索（法鞭）的清脆聲、踏罡步斗的腳步聲。
 • 情感強調「命定羈絆」與「患難與共」——血腥戰鬥的空隙，能在路邊攤吃一碗麵，就是最踏實的溫柔。
+
 主角定位：職人化的神明代理人（乩身）。力量伴隨代價（五弊三缺）。不是高冷仙人，而是為守護平凡生活而滿身傷痕的戰士。`,
   custom:          `【世界觀：自訂】\n依照遊戲當前設定背景進行敘事，保持一致性。`,
 };
 
 const URGENCY: Partial<Record<NarrativeHint, string>> = {
-
   CRITICAL_HP: `【緊急：HP 極危】\n主角快死了。每個動作都可能是最後一個，呼吸都是痛的。讓讀者感覺到死亡的重量。`,
   CRITICAL_FAIL: `【事件：關鍵失敗】\n這次行動徹底搞砸了。後果要寫清楚，不要含糊帶過。`,
   CRITICAL_SUCCESS: `【事件：完美成功】\n超乎預期的成功。寫出「幹，我真的做到了」的爽感，但帶點「這什麼鬼運氣」的困惑。`,
@@ -123,7 +119,6 @@ const URGENCY: Partial<Record<NarrativeHint, string>> = {
 };
 
 const CLOTHING_LABELS: Record<string, string> = {
-
   normal: "正常",
   disheveled: "衣衫凌亂",
   partial: "衣物散亂",
@@ -132,7 +127,6 @@ const CLOTHING_LABELS: Record<string, string> = {
 };
 
 const BODY_LABELS: Record<string, string> = {
-
   normal:       "正常",
   flushed:      "臉紅耳熱",
   sweaty:       "汗如雨下",
@@ -152,7 +146,6 @@ const BODY_LABELS: Record<string, string> = {
 };
 
 export function buildSystemPrompt(params: {
-
   worldType: WorldType;
   playerName: string;
   narrativeHint: NarrativeHint;
@@ -234,24 +227,22 @@ export function buildSystemPrompt(params: {
     .join("\n") || "（無特殊屬性）";
 
   const lustBlock = trackLust ? `
-
 【慾望與意志】
 - 慾望（Lust）：${lust}/100 — ${lust >= 80 ? "極度渴望，感官敏銳至極" : lust >= 60 ? "慾火湧動，難以冷靜" : lust >= 40 ? "心中有所感動" : "平靜，慾念輕微"}
 - 意志（Willpower）：${willpower}/100 — ${willpower >= 80 ? "意志堅定，理智清晰" : willpower >= 50 ? "尚能克制，但有動搖" : willpower >= 25 ? "克制力薄弱，容易動搖" : "意志瓦解，難以抗拒衝動"}
 - 衣著狀態：${clothingLabel}
 - 身體狀態：${bodyLabel}` : "";
 
-  // World terminology block
-  const worldTerminology = WORLD_TERMINOLOGY[effectiveWorldType] ?? "";
-
   // Character block: strict bio or auto-protagonist — always inject playerName
+  // ──【注入：人設最高權重與開局隨機靈感】──
+  const randomSeeds = ["遭遇背叛", "神祕邂逅", "跌入絕境", "命運轉折", "被誤解的身分", "剛從漫長沉睡甦醒"];
+  const currentSeed = randomSeeds[(tick + generation + playerName.length) % randomSeeds.length];
+
   const characterBlock = characterBio
-    ? `【玩家角色設定（最高優先級）】
+    ? `【玩家角色設定（最高優先級，不得無視）】
 主角姓名：${playerName}（全程固定，任何情況下不可更改或遺忘）
 背景設定：${characterBio}
-▶ 上述設定是本故事的絕對核心，不可偏離或替換。
-▶ 主角的姓名必須是「${playerName}」，出身、性格缺陷、過去事件必須完整體現在每一回合的敘事語氣、行為動機、內心獨白中。
-▶ 若開場情境與角色設定有任何潛在矛盾，必須以能讓兩者自然融合的方式處理，而非忽略其中一個。`
+▶ 以上設定是核心必要條件，所有敘事、動機、對話風格必須嚴格遵守上述設定。`
     : `【玩家角色設定】
 主角姓名：${playerName}（全程固定，整個故事中必須以此名稱稱呼主角）
 【自動主角生成指令】
@@ -266,6 +257,7 @@ export function buildSystemPrompt(params: {
 
 ${worldPrompt}
 ${worldTerminology ? `\n【世界觀術語規範（邏輯自洽）】\n${worldTerminology}\n▶ 嚴禁在此世界觀中使用其他世界觀的概念和術語（例如：仙俠中不出現「技能點」，末日中不出現「靈力」）。` : ""}
+
 ${characterBlock}
 ${traitsBlock}
 ${scenarioHook ? `\n【本局開場靈感】\n${scenarioHook}\n▶ 以上是這局故事的靈感起點，可依此概念自由延伸，無需逐字照本宣科。NPC 必須是全新的獨特角色。${characterBio ? "開場情境需與主角角色設定自然融合。" : ""}` : ""}
@@ -275,7 +267,6 @@ ${urgencyBlock ? "\n" + urgencyBlock : ""}
 ▶ 若 Tick 為 1，請以此靈感開場：「${currentSeed}」。嚴禁重複開頭。
 
 ═══════════════ 當前狀態快照 ═══════════════
-
 【時間】第 ${generation} 世 | Tick ${tick} | ${timeOfDay} | ${weather}
 【地點】${location}
 【環境】${envDesc}
@@ -298,7 +289,6 @@ ${npcContext}
 
 【故事記憶摘要】
 ${narrativeSummary || "冒險剛剛開始。"}
-
 ═══════════════════════════════════════════
 
 【敘事驅動規則（每回合必須遵守）】
@@ -311,7 +301,6 @@ ${narrativeSummary || "冒險剛剛開始。"}
 不允許「什麼都沒改變」的回合，即使行動失敗也要帶來負面但清晰的結果。
 
 ▌動態世界模擬（NPC 自我運行）
-
 ${npcContext !== "目前沒有已知的 NPC。"
   ? "當前已建立的 NPC 在主角行動的同時不能靜止等待。\n必須在本回合敘事中加入至少一句他們「自我運行」的描寫：\n• 他們根據自身特質正在做的事（修煉、學習、管理勢力、謀劃、等待）\n• 他們因主角的行動或不在場而產生的情緒（思念、嫉妒、憤怒、擔憂、期待）\n這些發展不必立刻衝擊主線，但會在未來某回合作為意外衝突或援助出現。"
   : "當後方勢力或 NPC 建立後，他們在每回合都必須有自我運行的描寫，不能靜止等待主角。"
@@ -363,7 +352,7 @@ ${getWorldStatusHint(effectiveWorldType)}）
 {
   "narrative": "【情境演繹】的完整文字（含任何[系統提示]）\\n\\n【當前資訊更新】\\n一～二行狀態更新。narrative 欄位絕對不包含行動選項。",
   "choices": ["【標題4字內】動機細節描述20字內", "【標題】細節 | ⚠ 風險提示（只在變化顯著時加）", "【標題】細節描述"],
-  "imagePrompt": "8-bit pixel art, ${WORLD_IMAGE_STYLE[effectiveWorldType] ?? "adventure scene"}, [本回合具體場景的英文描述，不超過15字，必須符合世界觀、禁止出現現代室內或不相關元素]",
+  "imagePrompt": "8-bit pixel art, GBA pokemon emerald style, sharp pixel edges, vibrant colors, ${WORLD_IMAGE_STYLE[effectiveWorldType] ?? "retro scene"}, [具體英文描述]",
   "useSafeImage": true,
   "npcUpdates": [{"name": "NPC名", "affectionDelta": 0, "reactionText": "NPC反應"}],
   "stateChanges": {
@@ -381,22 +370,21 @@ clothingState 可選值：normal / disheveled / partial / minimal / bare
 bodyStatus 可選值：normal / flushed / sweaty / injured / exhausted / aroused / poisoned / inner_injured / bleeding / fever / starving / possessed / cursed / drunk / medicated / paralyzed`;
 }
 
-
-// ── 世界觀圖片場景風格提示 ────────────────────────────────────────────────────
+// ── 世界觀圖片場景風格提示 (GBA 綠寶石視覺注入版) ───────────────────────────────────────────────
 
 export const WORLD_IMAGE_STYLE: Record<string, string> = {
-  xian_xia:        "8-bit pixel art, GBA pokemon style, ancient Chinese xianxia cultivation sect, misty mountain peaks, jade pavilions, flying swords, ethereal mist, stone steps",
-  campus:          "8-bit pixel art, GBA pokemon style, japanese high school campus, classroom or schoolyard, modern building, cherry blossoms, sunlight through windows",
-  apocalypse:      "8-bit pixel art, GBA pokemon style, post-apocalyptic ruined city, overgrown with vines, dark stormy sky, collapsed buildings, debris",
-  adult:           "8-bit pixel art, GBA pokemon style, modern urban city, apartment interior or city street, contemporary setting, night or day",
-  wuxia:           "8-bit pixel art, GBA pokemon style, ancient Chinese jianghu, riverside town, red lanterns, wooden tavern, swords, stone bridge",
-  western_fantasy: "8-bit pixel art, GBA pokemon style, medieval fantasy setting, castle courtyard or enchanted forest, glowing magic runes, stone architecture",
-  cyberpunk:       "8-bit pixel art, GBA pokemon style, cyberpunk city alley, neon holographic signs, rainy streets, futuristic technology, dark atmosphere",
-  horror:          "8-bit pixel art, GBA pokemon style, dark haunted location, dense fog, eerie shadows, abandoned building, unsettling atmosphere",
-  palace_intrigue: "8-bit pixel art, GBA pokemon style, ancient Chinese imperial palace, golden ornate court, red pillars, silk curtains, imperial garden",
-  wasteland:       "8-bit pixel art, GBA pokemon style, post-apocalyptic barren wasteland, rusted machinery, red dusty sky, crumbling structures",
-  taiwanese_folk:  "8-bit pixel art, GBA pokemon style, taiwan temple complex, red lanterns, incense smoke rising, urban night streets, folk deity statues",
-  custom:          "8-bit pixel art, GBA pokemon style, mysterious adventure world, dramatic atmosphere",
+  xian_xia:        "8-bit pixel art, GBA pokemon emerald style, ancient Chinese sect, misty mountains, jade buildings, vibrant colors, sharp edges",
+  campus:          "8-bit pixel art, GBA style, japanese high school classroom, cherry blossoms, sunlight through windows, flat vibrant colors, sharp edges",
+  apocalypse:      "8-bit pixel art, GBA style, ruined urban city, vines, rusty metal, 16-bit JRPG background, crisp edges",
+  adult:           "8-bit pixel art, GBA style, modern apartment interior, warm lighting, flat pixel art, saturated colors, sharp edges",
+  wuxia:           "8-bit pixel art, GBA style, ancient tavern, bamboo forest, red lanterns, 16-bit retro RPG background, crisp pixel grid",
+  western_fantasy: "8-bit pixel art, GBA pokemon style, castle courtyard, enchanted forest, flat colors, sharp edges",
+  cyberpunk:       "8-bit pixel art, GBA style, neon city alley, rain, pixel signs, futuristic JRPG aesthetic, sharp edges",
+  horror:          "8-bit pixel art, GBA style, dark abandoned hospital, eerie shadows, limited color palette, 16-bit horror JRPG",
+  palace_intrigue: "8-bit pixel art, GBA style, golden imperial palace, ornate court, vibrant colors, sharp pixel grid",
+  wasteland:       "8-bit pixel art, GBA style, desert ruins, rusted machinery, red sky, sharp pixel grid",
+  taiwanese_folk:  "8-bit pixel art, GBA style, traditional taiwanese temple, night streets, retro JRPG style, sharp edges",
+  custom:          "8-bit pixel art, GBA style, classic JRPG adventure scene, sharp pixels, vibrant colors",
 };
 
 // ── 世界觀狀態更新範例（提示 LLM 使用正確術語） ──────────────────────────────
@@ -415,7 +403,5 @@ function getWorldStatusHint(worldType: string): string {
     adult:           "範例：「職位：副理｜本回合：與【江以晴】關係：微妙升溫｜帳戶：±0元」",
     taiwanese_folk:  "範例：「法力：七成（功德+3）｜神契等級：二階｜天命成就：首次降煞｜法寶：平安符×2、五行法繩×1｜結緣成員：【阿玲】神力共鳴：初啟」",
   };
-
   return hints[worldType] ?? "用1～2行以本世界觀術語記錄主角的核心成長、資源變化或關鍵人際動態。";
-
 }
