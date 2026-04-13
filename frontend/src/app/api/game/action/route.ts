@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
   const stream = new ReadableStream({
     async start(controller) {
       try {
-        // gemini-2.5-flash: current stable model, fast + no forced thinking
+        // gemini-2.5-flash + thinkingBudget:0 → disable thinking mode for fast first token
         const model = genAI.getGenerativeModel({
           model: "gemini-2.5-flash",
           systemInstruction: systemPrompt,
@@ -98,6 +98,8 @@ export async function POST(req: NextRequest) {
           generationConfig: {
             maxOutputTokens: 2500,
             temperature: 0.92,
+            // @ts-expect-error thinkingConfig is valid but not yet in SDK types
+            thinkingConfig: { thinkingBudget: 0 },
           },
         });
 

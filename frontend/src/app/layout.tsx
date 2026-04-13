@@ -58,6 +58,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         backgroundSize: "cover",
         backgroundPosition: "center top",
         backgroundRepeat: "no-repeat",
+        backgroundAttachment: "fixed",
         backgroundColor: "#6EC6F0", // sky blue fallback while image loads
       }}
     >
