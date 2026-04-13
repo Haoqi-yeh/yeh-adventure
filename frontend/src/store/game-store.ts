@@ -1,6 +1,8 @@
 import { create } from "zustand";
-import type { AdventureRow, NarrativeResponse, NPCStateRow, WorldType } from "@/lib/game/types";
+import type { AdventureRow, NarrativeResponse, NPCStateRow, TraitInfo, WorldType } from "@/lib/game/types";
 import { createAdventure } from "@/lib/api";
+import type { Trait } from "@/lib/game/traits";
+import { getTraitName } from "@/lib/game/traits";
 
 interface GameStore {
   adventure: AdventureRow | null;
@@ -16,11 +18,13 @@ interface GameStore {
   writingStyle: string;
   gender: string;
   npcs: NPCStateRow[];
+  pendingTraits: Trait[];
 
   setPlayerName: (name: string) => void;
   setCharacterBio: (bio: string) => void;
   setWritingStyle: (style: string) => void;
   setGender: (gender: string) => void;
+  setPendingTraits: (traits: Trait[]) => void;
   startAdventure: (worldType: WorldType) => Promise<void>;
   makeChoice: (choiceIndex: number) => Promise<void>;
   freeAction: (input: string) => Promise<void>;
@@ -105,35 +109,44 @@ async function streamAction(
 }
 
 export const useGameStore = create<GameStore>((set, get) => ({
-  adventure:    null,
-  narrative:    "",
-  choices:      [],
-  imagePrompt:  "",
-  useSafeImage: true,
-  isLoading:    false,
-  isStreaming:  false,
-  error:        null,
-  playerName:   "",
-  characterBio: "",
-  writingStyle: "九把刀風格",
-  gender:       "不指定",
-  npcs:         [],
+  adventure:     null,
+  narrative:     "",
+  choices:       [],
+  imagePrompt:   "",
+  useSafeImage:  true,
+  isLoading:     false,
+  isStreaming:   false,
+  error:         null,
+  playerName:    "",
+  characterBio:  "",
+  writingStyle:  "九把刀風格",
+  gender:        "不指定",
+  npcs:          [],
+  pendingTraits: [],
 
-  setPlayerName:   (name)  => set({ playerName: name }),
-  setCharacterBio: (bio)   => set({ characterBio: bio }),
-  setWritingStyle: (style) => set({ writingStyle: style }),
-  setGender:       (g)     => set({ gender: g }),
+  setPlayerName:    (name)   => set({ playerName: name }),
+  setCharacterBio:  (bio)    => set({ characterBio: bio }),
+  setWritingStyle:  (style)  => set({ writingStyle: style }),
+  setGender:        (g)      => set({ gender: g }),
+  setPendingTraits: (traits) => set({ pendingTraits: traits }),
 
   startAdventure: async (worldType) => {
-    const { playerName, characterBio, writingStyle, gender } = get();
+    const { playerName, characterBio, writingStyle, gender, pendingTraits } = get();
     if (!playerName.trim()) { set({ error: "請先輸入名字" }); return; }
     set({ isLoading: true, isStreaming: false, narrative: "", error: null });
     try {
+      const traitsPayload: TraitInfo[] = pendingTraits.map(t => ({
+        id: t.id,
+        rarity: t.rarity,
+        name: getTraitName(t, worldType),
+        effect: t.effect,
+      }));
       const adventure = await createAdventure({
         playerName, worldType,
         characterBio: characterBio.trim() || undefined,
         writingStyle:  writingStyle || undefined,
         gender:        gender !== "不指定" ? gender : undefined,
+        traits:        traitsPayload.length > 0 ? traitsPayload : undefined,
       });
       set({ adventure });
       await streamAction({ adventureId: adventure.id, freeInput: "開始冒險" }, set);
@@ -170,6 +183,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
   reset: () => set({
     adventure: null, narrative: "", choices: [], imagePrompt: "",
     isLoading: false, isStreaming: false, error: null,
-    characterBio: "", writingStyle: "九把刀風格", gender: "不指定", npcs: [],
+    characterBio: "", writingStyle: "九把刀風格", gender: "不指定", npcs: [], pendingTraits: [],
   }),
 }));

@@ -85,6 +85,13 @@ export interface SpecialAbility {
 
 // ── API 請求/回應 型別 ────────────────────────────────────────────────────────
 
+export interface TraitInfo {
+  id: string;
+  rarity: string;
+  name: string;
+  effect: string;
+}
+
 export interface StartAdventureRequest {
   playerName: string;
   worldType: WorldType;
@@ -92,6 +99,7 @@ export interface StartAdventureRequest {
   writingStyle?: string;
   gender?: string;
   inheritLegacyId?: string;
+  traits?: TraitInfo[];
 }
 
 export interface PlayerActionRequest {

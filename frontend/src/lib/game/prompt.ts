@@ -210,8 +210,17 @@ export function buildSystemPrompt(params: {
   // Scenario hook — only inject on the very first tick; after that it's in narrative_summary
   const scenarioHook = tick <= 1 ? (worldAttributes.scenario_hook as string | undefined) : undefined;
 
+  // Traits — 逆天改命 system
+  const rawTraits = worldAttributes.traits as Array<{ id: string; rarity: string; name: string; effect: string }> | undefined;
+  const RARITY_ORDER: Record<string, number> = { god: 0, epic: 1, rare: 2, common: 3 };
+  const sortedTraits = rawTraits ? [...rawTraits].sort((a, b) => (RARITY_ORDER[a.rarity] ?? 9) - (RARITY_ORDER[b.rarity] ?? 9)) : [];
+  const RARITY_LABELS: Record<string, string> = { god: "【神級】", epic: "【史詩】", rare: "【優秀】", common: "【普通】" };
+  const traitsBlock = sortedTraits.length
+    ? `\n【逆天改命特質（永久加成，貫穿全局）】\n${sortedTraits.map(t => `• ${RARITY_LABELS[t.rarity] ?? ""}「${t.name}」— ${t.effect}`).join("\n")}\n▶ 以上特質是主角天命的一部分，必須在每回合的敘事、選項、NPC反應、成長方向中自然體現其影響。`
+    : "";
+
   // Filter worldAttrs for display — exclude internal fields
-  const INTERNAL_KEYS = new Set(["world_flavor", "character_bio", "writing_style", "gender", "lust", "willpower", "clothing_state", "body_status", "scenario_hook"]);
+  const INTERNAL_KEYS = new Set(["world_flavor", "character_bio", "writing_style", "gender", "lust", "willpower", "clothing_state", "body_status", "scenario_hook", "traits"]);
   const worldAttrsStr = Object.entries(worldAttributes)
     .filter(([k]) => !INTERNAL_KEYS.has(k))
     .map(([k, v]) => `- ${k}：${v}`)
@@ -251,6 +260,7 @@ ${worldPrompt}
 ${worldTerminology ? `\n【世界觀術語規範（邏輯自洽）】\n${worldTerminology}\n▶ 嚴禁在此世界觀中使用其他世界觀的概念和術語（例如：仙俠中不出現「技能點」，末日中不出現「靈力」）。` : ""}
 
 ${characterBlock}
+${traitsBlock}
 ${scenarioHook ? `\n【本局開場靈感】\n${scenarioHook}\n▶ 以上是這局故事的靈感起點，可依此概念自由延伸，無需逐字照本宣科。NPC 必須是全新的獨特角色。${characterBio ? "開場情境需與主角角色設定自然融合。" : ""}` : ""}
 ${urgencyBlock ? "\n" + urgencyBlock : ""}
 
