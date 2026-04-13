@@ -60,61 +60,70 @@ const GENDERS = [
 ] as const;
 
 // ── Trait Card ────────────────────────────────────────────────────────────────
+// Solid header colors derived from rarity (more opaque than the glow border)
+const RARITY_HEADER: Record<string, string> = {
+  god:    "#dc2626",
+  epic:   "#9333ea",
+  rare:   "#2563eb",
+  common: "#6b7280",
+};
+
 function TraitCard({ trait, worldKey, rolling }: { trait: Trait; worldKey: string; rolling: boolean }) {
   const cfg = RARITY_CONFIG[trait.rarity];
   const name = getTraitName(trait, worldKey);
+  const headerColor = RARITY_HEADER[trait.rarity] ?? "#6b7280";
 
   return (
     <motion.div
       key={trait.id}
-      initial={{ opacity: 0, y: 20, rotateY: -15 }}
-      animate={{ opacity: rolling ? 0.3 : 1, y: 0, rotateY: 0 }}
-      transition={{ duration: 0.35 }}
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: rolling ? 0.25 : 1, y: 0 }}
+      transition={{ duration: 0.3 }}
       style={{
         flex: 1,
         minWidth: 0,
         background: cfg.bg,
         border: `2px solid ${cfg.border}`,
-        borderRadius: "14px",
-        padding: "14px 10px",
+        borderRadius: "12px",
+        overflow: "hidden",
         display: "flex",
         flexDirection: "column",
-        gap: "8px",
-        boxShadow: `0 0 18px ${cfg.border}`,
-        position: "relative",
-        overflow: "hidden",
+        boxShadow: `0 2px 16px ${cfg.border}`,
       }}
     >
-      {/* Rarity label */}
+      {/* Rarity header band */}
       <div style={{
-        position: "absolute", top: 8, right: 8,
-        fontSize: "10px", fontWeight: 700, letterSpacing: "0.1em",
-        color: cfg.color,
-        background: "rgba(0,0,0,0.25)",
-        borderRadius: "6px",
-        padding: "2px 6px",
+        background: headerColor,
+        padding: "5px 8px",
+        textAlign: "center",
+        fontSize: "11px",
+        fontWeight: 800,
+        color: "#ffffff",
+        letterSpacing: "0.15em",
       }}>
         {cfg.label}
       </div>
 
-      {/* Dice icon decoration */}
-      <div style={{ fontSize: "28px", textAlign: "center", lineHeight: 1, marginTop: 4 }}>
-        🎲
-      </div>
-
       {/* Trait name */}
       <div style={{
-        fontWeight: 700, fontSize: "14px", textAlign: "center",
-        color: cfg.color, letterSpacing: "0.05em",
-        lineHeight: 1.3,
+        padding: "12px 8px 6px",
+        fontWeight: 800,
+        fontSize: "15px",
+        textAlign: "center",
+        color: cfg.color,
+        letterSpacing: "0.06em",
+        lineHeight: 1.25,
       }}>
         {name}
       </div>
 
       {/* Effect */}
       <div style={{
-        fontSize: "11px", textAlign: "center", lineHeight: 1.5,
-        color: "rgba(30,30,50,0.75)",
+        padding: "0 10px 12px",
+        fontSize: "11px",
+        textAlign: "center",
+        lineHeight: 1.55,
+        color: "rgba(20,20,40,0.68)",
         flex: 1,
       }}>
         {trait.effect}

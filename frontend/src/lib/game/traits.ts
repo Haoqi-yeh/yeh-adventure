@@ -11,7 +11,7 @@ export const RARITY_CONFIG: Record<TraitRarity, { label: string; color: string; 
   god:    { label: "神級", color: "#ef4444", bg: "rgba(239,68,68,0.15)",    border: "rgba(239,68,68,0.6)" },
   epic:   { label: "史詩", color: "#a855f7", bg: "rgba(168,85,247,0.15)",   border: "rgba(168,85,247,0.6)" },
   rare:   { label: "優秀", color: "#3b82f6", bg: "rgba(59,130,246,0.15)",   border: "rgba(59,130,246,0.6)" },
-  common: { label: "普通", color: "#9ca3af", bg: "rgba(156,163,175,0.08)",  border: "rgba(156,163,175,0.35)" },
+  common: { label: "普通", color: "#374151", bg: "rgba(156,163,175,0.18)",  border: "rgba(107,114,128,0.55)" },
 };
 
 export function getTraitName(trait: Trait, worldKey: string): string {
