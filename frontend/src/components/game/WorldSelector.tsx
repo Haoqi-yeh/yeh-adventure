@@ -41,12 +41,12 @@ function friendlyError(msg: string): { label: string; detail: string } {
 
 const inputStyle: React.CSSProperties = {
   width: "100%",
-  background: "rgba(255, 255, 255, 0.7)",
+  background: "#ffffff",
   border: "1px solid rgba(100, 116, 139, 0.25)",
   borderRadius: "12px",
   padding: "10px 14px",
   fontSize: "14px",
-  color: "#1e293b",
+  color: "#000000",
   outline: "none",
   boxSizing: "border-box",
 };
@@ -171,7 +171,7 @@ export default function WorldSelector() {
             style={{ ...inputStyle, cursor: "pointer" }}
           >
             {WORLDS.map((w) => (
-              <option key={w.type} value={w.type} style={{ background: "#ffffff", color: "#1e293b" }}>
+              <option key={w.type} value={w.type} style={{ background: "#ffffff", color: "#000000" }}>
                 {w.emoji}  {w.name} — {w.desc}
               </option>
             ))}
@@ -189,7 +189,7 @@ export default function WorldSelector() {
             style={{ ...inputStyle, cursor: "pointer" }}
           >
             {WRITING_STYLES.map((s) => (
-              <option key={s.value} value={s.value} style={{ background: "#ffffff", color: "#1e293b" }}>
+              <option key={s.value} value={s.value} style={{ background: "#ffffff", color: "#000000" }}>
                 {s.desc}
               </option>
             ))}
