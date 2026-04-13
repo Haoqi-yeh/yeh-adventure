@@ -171,7 +171,7 @@ export default function WorldSelector() {
             style={{ ...inputStyle, cursor: "pointer" }}
           >
             {WORLDS.map((w) => (
-              <option key={w.type} value={w.type} style={{ background: "#0f172a", color: "#f1f5f9" }}>
+              <option key={w.type} value={w.type} style={{ background: "#ffffff", color: "#1e293b" }}>
                 {w.emoji}  {w.name} — {w.desc}
               </option>
             ))}
@@ -189,7 +189,7 @@ export default function WorldSelector() {
             style={{ ...inputStyle, cursor: "pointer" }}
           >
             {WRITING_STYLES.map((s) => (
-              <option key={s.value} value={s.value} style={{ background: "#0f172a", color: "#f1f5f9" }}>
+              <option key={s.value} value={s.value} style={{ background: "#ffffff", color: "#1e293b" }}>
                 {s.desc}
               </option>
             ))}
