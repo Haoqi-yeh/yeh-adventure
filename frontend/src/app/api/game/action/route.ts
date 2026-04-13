@@ -87,9 +87,9 @@ export async function POST(req: NextRequest) {
   const stream = new ReadableStream({
     async start(controller) {
       try {
-        // gemini-2.0-flash-lite: no thinking mode → sub-1s first token, stable, fast
+        // gemini-2.0-flash: no thinking mode → fast, stable, available
         const model = genAI.getGenerativeModel({
-          model: "gemini-2.0-flash-lite",
+          model: "gemini-2.0-flash",
           systemInstruction: systemPrompt,
         });
 
