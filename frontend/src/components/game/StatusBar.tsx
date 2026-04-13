@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
 import { useGameStore } from "@/store/game-store";
+import type { NPCStateRow } from "@/lib/game/types";
 
 // ── Mobile detection ──────────────────────────────────────────────────────────
 function useIsMobile(): boolean {
@@ -88,6 +89,7 @@ const WORLD_CHAR_DESC: Record<string, string> = {
   horror:          "pale mysterious figure, dark coat",
   palace_intrigue: "ancient chinese noble, elaborate silk robes, headdress",
   wasteland:       "wasteland scavenger, patchwork armor, rugged",
+  taiwanese_folk:  "taiwanese folk religion practitioner, red vest, deity medium, temple",
   custom:          "adventurer",
 };
 
@@ -99,20 +101,18 @@ function hashStr(str: string): number {
   return h % 99999;
 }
 
-// Pixel art RPG sprite portrait — visible pixel grid, black outlines, JRPG style
+// 8-bit pixel art character sprites — flux-schnell for speed
 function getCharPortraitUrl(playerName: string, worldKey: string, gender?: string): string {
   const desc = WORLD_CHAR_DESC[worldKey] ?? WORLD_CHAR_DESC.custom;
   const seed = hashStr(playerName + worldKey + "char" + (gender ?? ""));
-
   const genderToken = gender === "男性" ? "1boy, male, " : gender === "女性" ? "1girl, female, " : "";
-  const prompt = `${genderToken}pixel art, 16-bit RPG character portrait, pixelated anime style, thick black pixel outlines, limited color palette, white background, JRPG sprite, retro game character, head and shoulders, ${desc}, visible pixels, pixel grid`;
-
+  const prompt = `${genderToken}pixel art, 8-bit RPG character sprite, full body standing pose, 16-bit JRPG style, thick black pixel outlines, limited color palette, vibrant colors, simple background, retro game character, ${desc}, visible pixel grid, crisp hard edges`;
   return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=128&height=192&nologo=true&seed=${seed}&model=flux-schnell`;
 }
 
 function getNPCPortraitUrl(npcName: string, worldKey: string): string {
   const seed = hashStr(npcName + worldKey + "npc");
-  const prompt = `pixel art, 16-bit RPG NPC portrait, pixelated anime style, thick black pixel outlines, limited color palette, white background, JRPG sprite, retro game character, head and shoulders, ${npcName}, visible pixels`;
+  const prompt = `pixel art, 8-bit RPG character sprite, full body standing pose, 16-bit JRPG style, thick black pixel outlines, limited color palette, vibrant colors, simple background, retro game character, ${npcName}, visible pixel grid, crisp hard edges`;
   return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=96&height=128&nologo=true&seed=${seed}&model=flux-schnell`;
 }
 
@@ -206,6 +206,88 @@ function PixelPortrait({
           </div>
         )}
       </motion.div>
+    </div>
+  );
+}
+
+// ── NPC Card (trading-card style) ─────────────────────────────────────────────
+function NpcCard({ npc, worldKey, index }: { npc: NPCStateRow; worldKey: string; index: number }) {
+  const [imgLoaded, setImgLoaded] = useState(false);
+  const aff = npc.affection;
+  const relColor = aff > 60 ? "#f472b6" : aff > 20 ? "#22c55e" : aff > -20 ? "#94a3b8" : aff > -60 ? "#f59e0b" : "#ef4444";
+  const relLabel = aff > 60 ? "摯友" : aff > 20 ? "友好" : aff > -20 ? "中立" : aff > -60 ? "警惕" : "仇恨";
+  const src = getNPCPortraitUrl(npc.name, worldKey);
+
+  return (
+    <div style={{
+      width: 88, flexShrink: 0,
+      background: "linear-gradient(180deg, #1c2437 0%, #0d1221 100%)",
+      border: "2px solid rgba(160,130,80,0.55)",
+      borderRadius: 10,
+      overflow: "hidden",
+      boxShadow: "0 6px 20px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.06)",
+    }}>
+      {/* Card header — ID number */}
+      <div style={{
+        padding: "3px 7px",
+        background: "rgba(0,0,0,0.35)",
+        borderBottom: "1px solid rgba(160,130,80,0.28)",
+      }}>
+        <span style={{ fontSize: 8, color: "rgba(210,185,130,0.9)", fontFamily: "monospace", fontWeight: 700, letterSpacing: "0.06em" }}>
+          #{String(index + 1).padStart(4, "0")}
+        </span>
+      </div>
+
+      {/* Portrait area */}
+      <div style={{ width: 88, height: 108, position: "relative", background: "rgba(18,26,48,0.9)" }}>
+        {!imgLoaded && (
+          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <motion.span
+              animate={{ opacity: [0.3, 0.8, 0.3] }}
+              transition={{ repeat: Infinity, duration: 1.5 }}
+              style={{ fontSize: 20 }}
+            >👤</motion.span>
+          </div>
+        )}
+        <img
+          src={src}
+          alt={npc.name}
+          onLoad={() => setImgLoaded(true)}
+          style={{
+            width: "100%", height: "100%",
+            objectFit: "contain", objectPosition: "bottom center",
+            imageRendering: "pixelated",
+            opacity: imgLoaded ? 1 : 0,
+            transition: "opacity 0.35s",
+          }}
+        />
+      </div>
+
+      {/* Footer — name + relation tag */}
+      <div style={{
+        padding: "5px 6px 6px",
+        background: "rgba(0,0,0,0.42)",
+        borderTop: "1px solid rgba(160,130,80,0.2)",
+      }}>
+        <div style={{
+          fontSize: 9, color: "#e8e8f0", fontFamily: "monospace", fontWeight: 700,
+          letterSpacing: "0.04em", marginBottom: 4,
+          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+          textAlign: "center",
+        }}>{npc.name}</div>
+        <div style={{ display: "flex", gap: 3, justifyContent: "center" }}>
+          <span style={{
+            padding: "1px 5px", borderRadius: 3, fontSize: 8,
+            background: `${relColor}28`, border: `1px solid ${relColor}65`,
+            color: relColor, fontFamily: "monospace", fontWeight: 700,
+          }}>{relLabel}</span>
+          <span style={{
+            padding: "1px 5px", borderRadius: 3, fontSize: 8,
+            background: "rgba(100,116,139,0.18)", border: "1px solid rgba(100,116,139,0.35)",
+            color: "rgba(148,163,184,0.8)", fontFamily: "monospace",
+          }}>{aff > 0 ? "+" : ""}{aff}</span>
+        </div>
+      </div>
     </div>
   );
 }
@@ -389,35 +471,18 @@ export default function StatusBar({ accent }: { accent: string }) {
                 </Section>
               )}
 
-              {/* NPC list with portraits */}
+              {/* NPC cards — horizontal scroll row */}
               {npcs.length > 0 && (
                 <Section title="人際關係" small={isMobile}>
-                  {npcs.map(npc => {
-                    const aff = npc.affection;
-                    const pct = Math.abs(aff);
-                    const color = aff > 60 ? "#f472b6" : aff > 20 ? "#22c55e" : aff > -20 ? "#94a3b8" : aff > -60 ? "#f59e0b" : "#ef4444";
-                    const label = aff > 60 ? "摯友" : aff > 20 ? "友好" : aff > -20 ? "中立" : aff > -60 ? "警惕" : "仇恨";
-                    const npcPortrait = getNPCPortraitUrl(npc.name, worldKey);
-                    return (
-                      <div key={npc.id} style={{ marginBottom: s(14), display: "flex", alignItems: "flex-start", gap: s(10) }}>
-                        <PixelPortrait src={npcPortrait} thumbW={s(44)} thumbH={s(60)} accent={color} label={npc.name} />
-                        <div style={{ flex: 1, paddingTop: s(2) }}>
-                          <div style={{ display: "flex", justifyContent: "space-between", fontSize: s(12), marginBottom: s(5) }}>
-                            <span style={{ color: "#cbd5e1", fontFamily: "monospace" }}>{npc.name}</span>
-                            <span style={{ color, fontWeight: 700, fontSize: s(10) }}>{label} {aff > 0 ? "+" : ""}{aff}</span>
-                          </div>
-                          <div style={{ height: s(4), background: "rgba(255,255,255,0.06)", borderRadius: 2, overflow: "hidden" }}>
-                            <motion.div
-                              initial={{ width: 0 }}
-                              animate={{ width: `${pct}%` }}
-                              transition={{ duration: 0.6 }}
-                              style={{ height: "100%", background: color, borderRadius: 2, boxShadow: `0 0 6px ${color}80` }}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
+                  <div style={{
+                    display: "flex", gap: 10, overflowX: "auto",
+                    paddingBottom: 8,
+                    scrollbarWidth: "none",
+                  }}>
+                    {npcs.map((npc, idx) => (
+                      <NpcCard key={npc.id} npc={npc} worldKey={worldKey} index={idx} />
+                    ))}
+                  </div>
                 </Section>
               )}
 

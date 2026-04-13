@@ -28,19 +28,12 @@ function hashSeed(str: string): number {
   return h % 99999;
 }
 
-function getSceneUrl(imagePrompt: string, useSafeImage: boolean, retry = 0): string {
+function getSceneUrl(imagePrompt: string, _useSafeImage: boolean, retry = 0): string {
   if (!imagePrompt) return "";
-  // Add retry offset to seed so each retry hits a different cache slot
+  // flux-schnell: fastest model; 8-bit pixel art for all scenes
   const seed = (hashSeed(imagePrompt) + retry * 17) % 99999;
-  if (useSafeImage) {
-    // flux-schnell: ~2-3s vs ~6-8s for standard flux — big speed win
-    const full = `Aesthetic Anime Style, 90s retro anime pixel art, high contrast, cel-shaded, ${imagePrompt}`;
-    return `https://image.pollinations.ai/prompt/${encodeURIComponent(full)}?width=256&height=256&nologo=true&seed=${seed}&model=flux-schnell`;
-  } else {
-    // Adult scenes: keep flux-anime for quality; 384×384 acceptable
-    const full = `Aesthetic Anime Style, 90s retro anime illustration, adult content, mature, beautiful detailed, cel-shaded, ${imagePrompt}`;
-    return `https://image.pollinations.ai/prompt/${encodeURIComponent(full)}?width=384&height=384&nologo=true&seed=${seed}&model=flux-anime`;
-  }
+  const full = `pixel art, 8-bit retro RPG scene, 16-bit JRPG background, vibrant saturated colors, hard pixel edges, crisp pixel grid, zero blur, zero anti-aliasing, retro game aesthetic, ${imagePrompt}`;
+  return `https://image.pollinations.ai/prompt/${encodeURIComponent(full)}?width=480&height=240&nologo=true&seed=${seed}&model=flux-schnell`;
 }
 
 // ── Event detection ───────────────────────────────────────────────────────────
