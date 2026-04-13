@@ -34,13 +34,18 @@ const STARS = [
   { w: 1, h: 1, t: 95, l: 75, dur: 3.6, delay: 3.2 },
 ];
 
-// Deterministic global background
-// flux-schnell: faster + sharper output than default flux
-// "sharp pixel edges, crisp lines" forces harder cel-shaded look
+// Deterministic global background — pixel art daydream adventure sky
+// flux-schnell: fast + crisp pixel output
 const BG_PROMPT = encodeURIComponent(
-  "pixel art, sharp pixel edges, crisp lines, high contrast, cel-shaded, retro 16-bit game background. Fantastical floating island at dusk, pink and purple pixel clouds, neon-lit. The island has: a Wuxia sword-tower, Japanese school gate with neon signs, western fantasy castle, cyberpunk glowing circuit tree, haunted shrine, palace pavilion, martial arts arena. Deep blue-purple sky, vivid gold highlights. Tiny anime characters on the island edge. Vibrant saturated colors, no blur, no soft glow."
+  "pixel art, 16-bit retro RPG title screen, simple clean composition, lots of open sky. " +
+  "Bright sky blue gradient from top to horizon, three large fluffy white pixel clouds at different heights, " +
+  "green rolling pixel hills filling the bottom quarter, bright pixel wildflowers dotting the grass. " +
+  "Two small dreamy floating pixel islands in the mid-sky with tiny trees. " +
+  "Scattered pixel sparkle stars in the upper sky. Warm golden afternoon light. " +
+  "Style: SNES-era JRPG title screen, vivid saturated colors, crisp pixel grid, hard edges, zero blur, zero glow. " +
+  "No text, no characters, no UI elements. Wide aspect ratio, plenty of sky breathing room."
 );
-const GLOBAL_BG_URL = `https://image.pollinations.ai/prompt/${BG_PROMPT}?width=1920&height=1080&nologo=true&seed=77&model=flux-schnell`;
+const GLOBAL_BG_URL = `https://image.pollinations.ai/prompt/${BG_PROMPT}?width=1920&height=1080&nologo=true&seed=314&model=flux-schnell`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -53,7 +58,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         backgroundSize: "cover",
         backgroundPosition: "center top",
         backgroundRepeat: "no-repeat",
-        backgroundColor: "#050a15", // fallback while image loads
+        backgroundColor: "#6EC6F0", // sky blue fallback while image loads
       }}
     >
       <head>
@@ -65,10 +70,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body>
-        {/* Dark overlay — z-index:0 sits above the <html> background but below stars */}
+        {/* Very light overlay — just enough to keep stars visible, let bright bg show through */}
         <div style={{
           position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none",
-          background: "rgba(5, 10, 21, 0.38)",
+          background: "rgba(5, 10, 21, 0.08)",
         }} />
 
         {STARS.map((s, i) => (

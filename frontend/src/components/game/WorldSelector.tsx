@@ -41,12 +41,12 @@ function friendlyError(msg: string): { label: string; detail: string } {
 
 const inputStyle: React.CSSProperties = {
   width: "100%",
-  background: "rgba(15, 23, 42, 0.75)",
-  border: "1px solid rgba(148, 163, 184, 0.2)",
+  background: "rgba(255, 255, 255, 0.7)",
+  border: "1px solid rgba(100, 116, 139, 0.25)",
   borderRadius: "12px",
   padding: "10px 14px",
   fontSize: "14px",
-  color: "#f1f5f9",
+  color: "#1e293b",
   outline: "none",
   boxSizing: "border-box",
 };
@@ -73,13 +73,6 @@ export default function WorldSelector() {
       display: "flex", alignItems: "center", justifyContent: "center",
       position: "relative",
     }}>
-      {/* Extra dark overlay on top of global bg (gives depth to card) */}
-      <div style={{
-        position: "absolute", inset: 0,
-        background: "radial-gradient(ellipse 80% 80% at 50% 50%, rgba(5,10,21,0.3) 0%, rgba(5,10,21,0.7) 100%)",
-        pointerEvents: "none",
-      }} />
-
       {/* 表單卡片 */}
       <motion.div
         initial={{ opacity: 0, y: 24 }}
@@ -89,13 +82,14 @@ export default function WorldSelector() {
           position: "relative", zIndex: 10,
           width: "100%", maxWidth: "420px",
           padding: "2rem 1.5rem",
-          background: "rgba(8, 12, 26, 0.82)",
-          backdropFilter: "blur(24px)",
-          WebkitBackdropFilter: "blur(24px)",
-          border: "1px solid rgba(148, 163, 184, 0.12)",
+          background: "rgba(255, 255, 255, 0.72)",
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
+          border: "1px solid rgba(255, 255, 255, 0.85)",
           borderRadius: "20px",
           display: "flex", flexDirection: "column", gap: "1.1rem",
           margin: "1rem",
+          boxShadow: "0 8px 40px rgba(0,0,0,0.12)",
         }}
       >
         {/* Logo + 標題 */}
@@ -115,14 +109,14 @@ export default function WorldSelector() {
           }}>
             做個白日夢冒險
           </h1>
-          <p style={{ color: "rgba(148,163,184,0.6)", fontSize: "11px", letterSpacing: "0.2em", margin: 0 }}>
+          <p style={{ color: "rgba(71,85,105,0.7)", fontSize: "11px", letterSpacing: "0.2em", margin: 0 }}>
             ── 點進去，換個世界換一種活法 ──
           </p>
         </div>
 
         {/* 名字 */}
         <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-          <label style={{ color: "rgba(148,163,184,0.7)", fontSize: "11px", letterSpacing: "0.15em", textTransform: "uppercase" }}>
+          <label style={{ color: "rgba(71,85,105,0.8)", fontSize: "11px", letterSpacing: "0.15em", textTransform: "uppercase" }}>
             你的名字
           </label>
           <input
@@ -137,7 +131,7 @@ export default function WorldSelector() {
 
         {/* 性別 */}
         <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-          <label style={{ color: "rgba(148,163,184,0.7)", fontSize: "11px", letterSpacing: "0.15em", textTransform: "uppercase" }}>
+          <label style={{ color: "rgba(71,85,105,0.8)", fontSize: "11px", letterSpacing: "0.15em", textTransform: "uppercase" }}>
             性別
           </label>
           <div style={{ display: "flex", gap: "8px" }}>
@@ -150,9 +144,9 @@ export default function WorldSelector() {
                   onClick={() => setGender(value)}
                   style={{
                     flex: 1, padding: "10px 0", borderRadius: "12px",
-                    border: `1px solid ${active ? "rgba(167,139,250,0.65)" : "rgba(148,163,184,0.2)"}`,
-                    background: active ? "rgba(124,58,237,0.22)" : "rgba(15,23,42,0.6)",
-                    color: active ? "#c084fc" : "rgba(148,163,184,0.65)",
+                    border: `1px solid ${active ? "rgba(124,58,237,0.6)" : "rgba(100,116,139,0.25)"}`,
+                    background: active ? "rgba(124,58,237,0.15)" : "rgba(255,255,255,0.5)",
+                    color: active ? "#7c3aed" : "rgba(71,85,105,0.75)",
                     fontSize: "13px", fontWeight: active ? 700 : 400,
                     cursor: "pointer", letterSpacing: "0.04em",
                     transition: "all 0.15s",
@@ -168,7 +162,7 @@ export default function WorldSelector() {
 
         {/* 世界 */}
         <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-          <label style={{ color: "rgba(148,163,184,0.7)", fontSize: "11px", letterSpacing: "0.15em", textTransform: "uppercase" }}>
+          <label style={{ color: "rgba(71,85,105,0.8)", fontSize: "11px", letterSpacing: "0.15em", textTransform: "uppercase" }}>
             選擇世界觀
           </label>
           <select
@@ -186,7 +180,7 @@ export default function WorldSelector() {
 
         {/* 文筆風格 */}
         <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-          <label style={{ color: "rgba(148,163,184,0.7)", fontSize: "11px", letterSpacing: "0.15em", textTransform: "uppercase" }}>
+          <label style={{ color: "rgba(71,85,105,0.8)", fontSize: "11px", letterSpacing: "0.15em", textTransform: "uppercase" }}>
             選擇文筆風格
           </label>
           <select
@@ -204,8 +198,8 @@ export default function WorldSelector() {
 
         {/* 角色設定 */}
         <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-          <label style={{ color: "rgba(148,163,184,0.7)", fontSize: "11px", letterSpacing: "0.15em", textTransform: "uppercase" }}>
-            角色設定 <span style={{ textTransform: "none", color: "rgba(100,116,139,0.7)", fontWeight: 400 }}>（選填）</span>
+          <label style={{ color: "rgba(71,85,105,0.8)", fontSize: "11px", letterSpacing: "0.15em", textTransform: "uppercase" }}>
+            角色設定 <span style={{ textTransform: "none", color: "rgba(100,116,139,0.6)", fontWeight: 400 }}>（選填）</span>
           </label>
           <textarea
             value={characterBio}

@@ -18,7 +18,7 @@ export default function Home() {
     xian_xia: "#a78bfa", campus: "#f472b6", apocalypse: "#fb923c",
     adult: "#22d3ee", wuxia: "#f87171", western_fantasy: "#34d399",
     cyberpunk: "#06b6d4", horror: "#4ade80", palace_intrigue: "#fbbf24",
-    wasteland: "#d97706", custom: "#a78bfa",
+    wasteland: "#d97706", taiwanese_folk: "#f97316", custom: "#a78bfa",
   };
   const accent = WORLD_ACCENT[worldKey] ?? "#a78bfa";
 
