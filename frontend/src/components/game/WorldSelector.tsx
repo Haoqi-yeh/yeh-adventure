@@ -19,11 +19,11 @@ const WORLDS: { type: WorldType; emoji: string; name: string; desc: string }[] =
 ];
 
 const WRITING_STYLES = [
-  { value: "九把刀風格",   label: "九把刀風格",   desc: "節奏明快、少年熱血、短句衝擊" },
-  { value: "言情小說風格", label: "言情小說風格", desc: "眼神交會、心跳加速、細膩情感張力" },
-  { value: "龍傲天爽文風格", label: "龍傲天爽文風格", desc: "天之驕子、打臉反殺、無敵主宰暢快感" },
-  { value: "日常直白風格", label: "日常直白風格", desc: "親切接地氣、輕鬆無壓力、像在聊天" },
-  { value: "情色成人風格", label: "情色成人風格 🔞", desc: "筆觸大膽、慾望流動、感官張力深度刻畫" },
+  { value: "九把刀風格",    desc: "節奏明快、少年熱血、短句衝擊" },
+  { value: "言情小說風格",  desc: "眼神交會、心跳加速、細膩情感張力" },
+  { value: "龍傲天爽文風格", desc: "天之驕子、打臉反殺、無敵主宰暢快感" },
+  { value: "日常直白風格",  desc: "親切接地氣、輕鬆無壓力、像在聊天" },
+  { value: "情色成人風格",  desc: "🔞 筆觸大膽、慾望流動、感官張力深度刻畫" },
 ];
 
 function friendlyError(msg: string): { label: string; detail: string } {
@@ -195,7 +195,7 @@ export default function WorldSelector() {
           >
             {WRITING_STYLES.map((s) => (
               <option key={s.value} value={s.value} style={{ background: "#0f172a", color: "#f1f5f9" }}>
-                {s.label} — {s.desc}
+                {s.desc}
               </option>
             ))}
           </select>
