@@ -53,7 +53,7 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-/* ── 輸入框（深色背景白字） ──────────────────────── */
+/* ── 輸入框（深色背景白字，套用於遊戲主畫面） ─────── */
 input, textarea, select {
   color: #f1f5f9 !important;
   caret-color: #a78bfa;
@@ -71,6 +71,25 @@ input:-webkit-autofill:focus {
   -webkit-text-fill-color: #f1f5f9 !important;
   -webkit-box-shadow: 0 0 0 1000px #1e293b inset !important;
   transition: background-color 5000s ease-in-out 0s;
+}
+
+/* ── 亮色表單（WorldSelector 卡片內） ─────────────── */
+.light-form input,
+.light-form textarea,
+.light-form select {
+  color: #000000 !important;
+  caret-color: #7c3aed;
+  background-color: #ffffff !important;
+  -webkit-text-fill-color: #000000 !important;
+}
+.light-form input::placeholder,
+.light-form textarea::placeholder {
+  color: rgba(71, 85, 105, 0.45) !important;
+  -webkit-text-fill-color: rgba(71, 85, 105, 0.45) !important;
+}
+.light-form select option {
+  color: #000000 !important;
+  background-color: #ffffff !important;
 }
 
 /* ── 捲軸樣式 ────────────────────────────────────── */
