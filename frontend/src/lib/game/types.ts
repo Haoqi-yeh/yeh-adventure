@@ -1,7 +1,8 @@
 // ── 核心 Enum ──────────────────────────────────────────────────────────────────
 
 export type WorldType     = "xian_xia" | "campus" | "apocalypse" | "adult" | "custom"
-                          | "wuxia" | "western_fantasy" | "cyberpunk" | "horror" | "palace_intrigue" | "wasteland";
+                          | "wuxia" | "western_fantasy" | "cyberpunk" | "horror" | "palace_intrigue" | "wasteland"
+                          | "taiwanese_folk";
 export type WeatherType   = "clear" | "rain" | "fog" | "thunder";
 export type TimeOfDay     = "dawn" | "morning" | "noon" | "dusk" | "night";
 export type NPCRelation   = "neutral" | "friendly" | "romantic" | "hostile" | "vendetta";

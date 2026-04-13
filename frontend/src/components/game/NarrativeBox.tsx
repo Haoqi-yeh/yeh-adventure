@@ -14,6 +14,7 @@ const WORLD_FALLBACK_BG: Record<string, string> = {
   horror:          "linear-gradient(160deg,#0a1205,#030602)",
   palace_intrigue: "linear-gradient(160deg,#281200,#100700)",
   wasteland:       "linear-gradient(160deg,#281500,#100800)",
+  taiwanese_folk:  "linear-gradient(160deg,#2a0a00,#120300)",
   custom:          "linear-gradient(160deg,#1a0845,#050220)",
 };
 
