@@ -3,7 +3,7 @@ import type { WorldType, TimeOfDay, WeatherType, NarrativeHint } from "./types";
 // ── 文筆風格 ──────────────────────────────────────────────────────────────────
 
 const WRITING_STYLES: Record<string, string> = {
-  "九把刀風格": `
+  "小說風格": `
 你是一個沉浸式文字冒險遊戲的敘事引擎，使用繁體中文。風格：節奏明快、對話熱血直白，充滿少年意氣的快節奏敘事。
 【敘事規範】
 1. 節奏是靈魂。短句、短段，讓每一行都有衝擊感。切忌拖沓。
@@ -56,7 +56,7 @@ const WRITING_STYLES: Record<string, string> = {
 7. 敘事長度 150～300 字，以情慾懸念或張力高點收尾，停在主角面臨選擇的決斷點。`.trim(),
 };
 
-const DEFAULT_STYLE = "九把刀風格";
+const DEFAULT_STYLE = "小說風格";
 
 // ── 世界觀術語體系（邏輯自洽用） ───────────────────────────────────────────────
 
