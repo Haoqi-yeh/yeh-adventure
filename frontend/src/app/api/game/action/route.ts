@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
 
   // ── Parallel initial DB fetch ─────────────────────────────────────────────
   const [adventureRes, npcRes] = await Promise.all([
-    db.from("adventures").select("*").eq("id", adventureId).single(),
+    db.from("adventures").select("*, players(username)").eq("id", adventureId).single(),
     db.from("npc_states").select("*").eq("adventure_id", adventureId),
   ]);
 
@@ -37,7 +37,8 @@ export async function POST(req: NextRequest) {
       { status: 404, headers: { "Content-Type": "application/json" } }
     );
   }
-  const adventure = adventureRes.data as AdventureRow;
+  const adventure = adventureRes.data as AdventureRow & { players?: { username: string } };
+  const playerName = adventure.players?.username ?? "你";
   if (adventure.status !== "active") {
     return new Response(
       JSON.stringify({ error: "此冒險已結束" }),
@@ -62,6 +63,7 @@ export async function POST(req: NextRequest) {
 
   const systemPrompt = buildSystemPrompt({
     worldType: adventure.world_type,
+    playerName,
     narrativeHint: diceResult.narrativeHint,
     hp: adventure.hp, hpMax: adventure.hp_max,
     mp: adventure.mp, mpMax: adventure.mp_max,

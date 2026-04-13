@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useGameStore } from "@/store/game-store";
+import { WORLD_IMAGE_STYLE } from "@/lib/game/prompt";
 
 const WORLD_FALLBACK_BG: Record<string, string> = {
   xian_xia:        "linear-gradient(160deg,#1a0845,#050220)",
@@ -28,11 +29,12 @@ function hashSeed(str: string): number {
   return h % 99999;
 }
 
-function getSceneUrl(imagePrompt: string, _useSafeImage: boolean, retry = 0): string {
+function getSceneUrl(imagePrompt: string, worldKey: string, retry = 0): string {
   if (!imagePrompt) return "";
-  // flux-schnell: fastest model; 8-bit pixel art for all scenes
-  const seed = (hashSeed(imagePrompt) + retry * 17) % 99999;
-  const full = `pixel art, 8-bit retro RPG scene, 16-bit JRPG background, vibrant saturated colors, hard pixel edges, crisp pixel grid, zero blur, zero anti-aliasing, retro game aesthetic, ${imagePrompt}`;
+  // flux-schnell: fastest model; 8-bit pixel art + world-specific style lock
+  const seed = (hashSeed(imagePrompt + worldKey) + retry * 17) % 99999;
+  const worldStyle = WORLD_IMAGE_STYLE[worldKey] ?? WORLD_IMAGE_STYLE.custom;
+  const full = `pixel art, 8-bit retro RPG scene, 16-bit JRPG background, vibrant saturated colors, hard pixel edges, crisp pixel grid, zero blur, ${worldStyle}, ${imagePrompt}`;
   return `https://image.pollinations.ai/prompt/${encodeURIComponent(full)}?width=480&height=240&nologo=true&seed=${seed}&model=flux-schnell`;
 }
 
@@ -229,7 +231,7 @@ export default function NarrativeBox({ accent }: { accent: string }) {
   // Update URL whenever prompt or retry count changes
   useEffect(() => {
     if (!imagePrompt) return;
-    const newUrl = getSceneUrl(imagePrompt, useSafeImage, retryCount);
+    const newUrl = getSceneUrl(imagePrompt, worldKey, retryCount);
     // On retry (retryCount > 0) always refresh; on first load skip if same URL
     if (newUrl === sceneUrl && retryCount === 0) return;
     if (retryCount === 0) {

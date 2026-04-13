@@ -147,6 +147,7 @@ const BODY_LABELS: Record<string, string> = {
 
 export function buildSystemPrompt(params: {
   worldType: WorldType;
+  playerName: string;
   narrativeHint: NarrativeHint;
   hp: number; hpMax: number;
   mp: number; mpMax: number;
@@ -166,7 +167,7 @@ export function buildSystemPrompt(params: {
   generation: number;
 }): string {
   const {
-    worldType, narrativeHint, hp, hpMax, mp, mpMax, stress, charisma,
+    worldType, playerName, narrativeHint, hp, hpMax, mp, mpMax, stress, charisma,
     tick, timeOfDay, weather, location, envDesc, npcContext,
     personalityTags, skills, worldAttributes, legacyModifiers,
     narrativeSummary, generation,
@@ -226,16 +227,19 @@ export function buildSystemPrompt(params: {
   // World terminology block
   const worldTerminology = WORLD_TERMINOLOGY[effectiveWorldType] ?? "";
 
-  // Character block: strict bio or auto-protagonist
+  // Character block: strict bio or auto-protagonist — always inject playerName
   const characterBlock = characterBio
     ? `【玩家角色設定（最高優先級）】
+主角姓名：${playerName}（全程固定，任何情況下不可更改或遺忘）
 ${characterBio}
 ▶ 上述設定是本故事的絕對核心，不可偏離或替換。
-▶ 主角的姓名、出身、性格缺陷、過去事件必須完整體現在每一回合的敘事語氣、行為動機、內心獨白中。
+▶ 主角的姓名必須是「${playerName}」，出身、性格缺陷、過去事件必須完整體現在每一回合的敘事語氣、行為動機、內心獨白中。
 ▶ 若開場情境與角色設定有任何潛在矛盾，必須以能讓兩者自然融合的方式處理，而非忽略其中一個。`
-    : `【自動主角生成指令】
+    : `【玩家角色設定】
+主角姓名：${playerName}（全程固定，整個故事中必須以此名稱稱呼主角）
+【自動主角生成指令】
 使用者未提供角色背景。請根據本世界觀，在此次首回合敘事中生成一個具有強烈個人色彩的主角，並在後續每局保持一致性：
-• 賦予一個符合世界觀的具體姓名
+• 主角名字固定為「${playerName}」
 • 設定一個有缺陷的鮮明性格（避免完美無缺的英雄形象）
 • 確立一個具體且急迫的核心動機（復仇／生存／守護／追求）
 • 埋下一個尚未解決的核心衝突或秘密作為故事引擎
@@ -318,7 +322,7 @@ ${getWorldStatusHint(effectiveWorldType)}）
 {
   "narrative": "【情境演繹】的完整文字 + 換行 + 【當前資訊更新】的完整文字（含模組標題行）",
   "choices": ["【標題】細節描述", "【標題】細節 | ⚠ 慾望+15", "【標題】細節描述"],
-  "imagePrompt": "16-bit pixel art, retro gaming, vibrant colors, [英文場景描述，不超過20字]",
+  "imagePrompt": "8-bit pixel art, ${WORLD_IMAGE_STYLE[effectiveWorldType] ?? "adventure scene"}, [本回合具體場景的英文描述，不超過15字，必須符合世界觀、禁止出現現代室內或不相關元素]",
   "useSafeImage": true,
   "npcUpdates": [{"name": "NPC名", "affectionDelta": 0, "reactionText": "NPC反應"}],
   "stateChanges": {
@@ -335,6 +339,23 @@ useSafeImage 規則：含暴力/血腥/成人內容設 false，否則設 true。
 clothingState 可選值：normal / disheveled / partial / minimal / bare
 bodyStatus 可選值：normal / flushed / sweaty / injured / exhausted / aroused / poisoned / inner_injured / bleeding / fever / starving / possessed / cursed / drunk / medicated / paralyzed`;
 }
+
+// ── 世界觀圖片場景風格提示 ────────────────────────────────────────────────────
+
+export const WORLD_IMAGE_STYLE: Record<string, string> = {
+  xian_xia:        "ancient Chinese xianxia cultivation sect, misty mountain peaks, jade pavilions, flying swords, ethereal mist, stone steps",
+  campus:          "japanese high school campus, classroom or schoolyard, modern building, cherry blossoms, sunlight through windows",
+  apocalypse:      "post-apocalyptic ruined city, overgrown with vines, dark stormy sky, collapsed buildings, debris",
+  adult:           "modern urban city, apartment interior or city street, contemporary setting, night or day",
+  wuxia:           "ancient Chinese jianghu, riverside town, red lanterns, wooden tavern, swords, stone bridge",
+  western_fantasy: "medieval fantasy setting, castle courtyard or enchanted forest, glowing magic runes, stone architecture",
+  cyberpunk:       "cyberpunk city alley, neon holographic signs, rainy streets, futuristic technology, dark atmosphere",
+  horror:          "dark haunted location, dense fog, eerie shadows, abandoned building, unsettling atmosphere",
+  palace_intrigue: "ancient Chinese imperial palace, golden ornate court, red pillars, silk curtains, imperial garden",
+  wasteland:       "post-apocalyptic barren wasteland, rusted machinery, red dusty sky, crumbling structures",
+  taiwanese_folk:  "taiwan temple complex, red lanterns, incense smoke rising, urban night streets, folk deity statues",
+  custom:          "mysterious adventure world, dramatic atmosphere",
+};
 
 // ── 世界觀狀態更新範例（提示 LLM 使用正確術語） ──────────────────────────────
 
