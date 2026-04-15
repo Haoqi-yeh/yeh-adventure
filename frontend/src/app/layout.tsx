@@ -34,34 +34,26 @@ const STARS = [
   { w: 1, h: 1, t: 95, l: 75, dur: 3.6, delay: 3.2 },
 ];
 
-// Deterministic global background — pixel art daydream adventure sky
-// flux-schnell: fast + crisp pixel output
+// Deterministic global background — HD pixel art GBA-style top-down overworld map
+// Portrait-oriented (9:16), pixelated rendering keeps it crisp on all screen sizes
 const BG_PROMPT = encodeURIComponent(
-  "pixel art, 16-bit retro RPG title screen, simple clean composition, lots of open sky. " +
-  "Bright sky blue gradient from top to horizon, three large fluffy white pixel clouds at different heights, " +
-  "green rolling pixel hills filling the bottom quarter, bright pixel wildflowers dotting the grass. " +
-  "Two small dreamy floating pixel islands in the mid-sky with tiny trees. " +
-  "Scattered pixel sparkle stars in the upper sky. Warm golden afternoon light. " +
-  "Style: SNES-era JRPG title screen, vivid saturated colors, crisp pixel grid, hard edges, zero blur, zero glow. " +
-  "No text, no characters, no UI elements. Wide aspect ratio, plenty of sky breathing room."
+  "8-bit pixel art, GBA Pokemon Emerald overworld map, top-down view, HD high resolution. " +
+  "Bright vivid lime green grass tiles with subtle darker green checker dot texture pattern. " +
+  "Rectangular flower garden plots: rows of red white yellow pink blue pixel flowers, " +
+  "each plot bordered by gray stone fence tiles. " +
+  "Sandy tan dirt path cutting diagonally through the map. " +
+  "Dark green tree clusters with round layered canopy tops in corners and edges. " +
+  "Small blue water pond tiles in bottom right corner with light blue ripple pixels. " +
+  "Crisp hard pixel edges, zero anti-aliasing, zero blur, zero glow, zero gradients. " +
+  "Ultra vivid saturated GBA color palette, clean tile grid aesthetic. " +
+  "No characters, no text, no UI, no HUD."
 );
-const GLOBAL_BG_URL = `https://image.pollinations.ai/prompt/${BG_PROMPT}?width=1920&height=1080&nologo=true&seed=314&model=flux-schnell`;
+const GLOBAL_BG_URL = `https://image.pollinations.ai/prompt/${BG_PROMPT}?width=720&height=1280&nologo=true&seed=777&model=flux-schnell`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    // The background image lives on <html> so it sits at the root canvas level,
-    // guaranteed to show beneath everything (stars, overlays, content).
-    <html
-      lang="zh-TW"
-      style={{
-        backgroundImage: `url("${GLOBAL_BG_URL}")`,
-        backgroundSize: "cover",
-        backgroundPosition: "center top",
-        backgroundRepeat: "no-repeat",
-        backgroundAttachment: "fixed",
-        backgroundColor: "#6EC6F0", // sky blue fallback while image loads
-      }}
-    >
+    // backgroundColor on <html> is the darkest fallback (no flash of bright colour)
+    <html lang="zh-TW" style={{ backgroundColor: "#0a1a0e" }}>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
@@ -71,7 +63,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body>
-        {/* Very light overlay — just enough to keep stars visible, let bright bg show through */}
+        {/* ── Fixed pixel-art background ── position:fixed works on iOS/Android unlike backgroundAttachment:fixed */}
+        <div
+          className="bg-pixel-art"
+          style={{
+            position: "fixed", inset: 0, zIndex: -2,
+            backgroundImage: `url("${GLOBAL_BG_URL}")`,
+            backgroundSize: "cover",
+            backgroundPosition: "center center",
+            backgroundRepeat: "no-repeat",
+          }}
+        />
+
+        {/* Very light overlay — lets bg show through clearly */}
         <div style={{
           position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none",
           background: "rgba(5, 10, 21, 0.08)",
