@@ -116,7 +116,7 @@ export async function POST(req: NextRequest) {
         const geminiStream = await model.generateContentStream({
           contents: [{ role: "user", parts: [{ text: userMsg }] }],
           generationConfig: {
-            maxOutputTokens: 2500,
+            maxOutputTokens: 2000,
             temperature: 0.92,
             // @ts-expect-error thinkingConfig is valid but not yet in SDK types
             thinkingConfig: { thinkingBudget: 0 },
@@ -127,10 +127,12 @@ export async function POST(req: NextRequest) {
         let accumulated = "";
         let sentUpTo = 0;
         let inJson = false;
+        let lastEnqueueMs = Date.now();
 
         for await (const chk of geminiStream.stream) {
           const text = chk.text();
           accumulated += text;
+          const now = Date.now();
 
           if (!inJson) {
             const jsonIdx = accumulated.indexOf("```json");
@@ -139,14 +141,22 @@ export async function POST(req: NextRequest) {
               const remaining = accumulated.slice(sentUpTo, jsonIdx).trimEnd();
               if (remaining) {
                 controller.enqueue(chunk({ t: "n", v: remaining }));
+                lastEnqueueMs = now;
               }
             } else {
               const unsent = accumulated.slice(sentUpTo);
               if (unsent) {
                 controller.enqueue(chunk({ t: "n", v: unsent }));
                 sentUpTo = accumulated.length;
+                lastEnqueueMs = now;
               }
             }
+          }
+
+          // Heartbeat every 5 s during JSON phase to prevent idle-connection timeout
+          if (now - lastEnqueueMs > 5_000) {
+            controller.enqueue(chunk({ t: "ping" }));
+            lastEnqueueMs = now;
           }
         }
 

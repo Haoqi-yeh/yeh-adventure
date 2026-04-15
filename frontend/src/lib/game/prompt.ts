@@ -220,9 +220,6 @@ export function buildSystemPrompt(params: {
   Object.entries(skillBonus).forEach(([s, v]) => legacyHints.push(`前世留下的【${s}】殘留記憶（加成 ${v > 0 ? "+" : ""}${v}）`));
   const legacyStr = legacyHints.length ? legacyHints.join("；") : "無前世傳承";
 
-  // Scenario hook — only inject on the very first tick; after that it's in narrative_summary
-  const scenarioHook = tick <= 1 ? (worldAttributes.scenario_hook as string | undefined) : undefined;
-
   // Traits — 逆天改命 system
   const rawTraits = worldAttributes.traits as Array<{ id: string; rarity: string; name: string; effect: string }> | undefined;
   const RARITY_ORDER: Record<string, number> = { god: 0, epic: 1, rare: 2, common: 3 };
@@ -252,21 +249,21 @@ export function buildSystemPrompt(params: {
 
   // Character block: strict bio or auto-protagonist — always inject playerName
   const characterBlock = characterBio
-    ? `【玩家角色設定（最高優先級）】
-主角姓名：${playerName}（全程固定，任何情況下不可更改或遺忘）
+    ? `【玩家角色設定（最高優先級，凌駕一切）】
+主角姓名：${playerName}（全程固定，任何情況下不可更改）
 ${characterBio}
-▶ 上述設定是本故事的絕對核心，不可偏離或替換。
-▶ 主角的姓名必須是「${playerName}」，出身、性格缺陷、過去事件必須完整體現在每一回合的敘事語氣、行為動機、內心獨白中。
-▶ 若開場情境與角色設定有任何潛在矛盾，必須以能讓兩者自然融合的方式處理，而非忽略其中一個。`
+▶ 上述是本故事唯一的核心設定。所有開場情境、NPC、衝突都必須從這個角色的背景出發，量身打造。
+▶ 嚴禁套用任何通用故事模板或預設劇情鉤子。每次開局都是基於這個角色設定的全新故事。
+▶ 首回合敘事必須直接從主角的既有處境切入，讓這個特定角色的矛盾與動機在第一幕就清晰呈現。`
     : `【玩家角色設定】
-主角姓名：${playerName}（全程固定，整個故事中必須以此名稱稱呼主角）
-【自動主角生成指令】
-使用者未提供角色背景。請根據本世界觀，在此次首回合敘事中生成一個具有強烈個人色彩的主角，並在後續每局保持一致性：
-• 主角名字固定為「${playerName}」
-• 設定一個有缺陷的鮮明性格（避免完美無缺的英雄形象）
-• 確立一個具體且急迫的核心動機（復仇／生存／守護／追求）
-• 埋下一個尚未解決的核心衝突或秘密作為故事引擎
-在首回合中用敘事自然帶出這個主角的身份與處境，不需另作說明。`;
+主角姓名：${playerName}（全程固定）
+▶ 使用者未填寫角色背景，請完全自由原創一個適合此世界觀的主角：
+• 姓名固定為「${playerName}」
+• 設定有明確缺陷的鮮明性格（非完美英雄）
+• 一個具體且急迫的核心動機（復仇／生存／守護／追求）
+• 埋下未解決的核心矛盾作為故事引擎
+▶ 每次開局都必須是全新獨特的開場情境，嚴禁重複同樣的起點套路。
+▶ 在首回合用敘事自然帶出主角身份與處境，不另作說明。`;
 
   return `${styleBase}
 
@@ -274,7 +271,6 @@ ${worldPrompt}
 ${worldTerminology ? `\n【世界觀術語規範（邏輯自洽）】\n${worldTerminology}\n▶ 嚴禁在此世界觀中使用其他世界觀的概念和術語（例如：仙俠中不出現「技能點」，末日中不出現「靈力」）。` : ""}
 ${characterBlock}
 ${traitsBlock}
-${scenarioHook ? `\n【本局開場靈感】\n${scenarioHook}\n▶ 以上是這局故事的靈感起點，可依此概念自由延伸，無需逐字照本宣科。NPC 必須是全新的獨特角色。${characterBio ? "開場情境需與主角角色設定自然融合。" : ""}` : ""}
 ${urgencyBlock ? "\n" + urgencyBlock : ""}
 
 ═══════════════ 當前狀態快照 ═══════════════
