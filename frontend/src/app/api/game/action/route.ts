@@ -208,12 +208,20 @@ export async function POST(req: NextRequest) {
             ? progressionStage + 1
             : progressionStage;
 
+        // Apply worldAttrUpdates — merge non-null values only
+        const worldAttrUpdates = (sc.worldAttrUpdates ?? {}) as Record<string, string | number | null>;
+        const appliedWorldAttrs: Record<string, unknown> = {};
+        for (const [k, v] of Object.entries(worldAttrUpdates)) {
+          if (v !== null && v !== undefined) appliedWorldAttrs[k] = v;
+        }
+
         const updatedWorldAttrs = {
           ...worldAttrs,
           lust:             Math.max(0, Math.min(100, currentLust     + (sc.lustDelta ?? 0))),
           willpower:        Math.max(0, Math.min(100, currentWillpower + (sc.willpowerDelta ?? 0))),
           ...(sc.clothingState ? { clothing_state: sc.clothingState } : {}),
           ...(sc.bodyStatus    ? { body_status: sc.bodyStatus }       : {}),
+          ...appliedWorldAttrs,
           causality_tags:   updatedCausality,
           progression_stage: newProgressionStage,
         };
@@ -301,6 +309,7 @@ function parseLLMResponse(raw: string) {
       lustDelta?: number; willpowerDelta?: number;
       clothingState?: string; bodyStatus?: string;
       location?: string; ticksConsumed?: number;
+      worldAttrUpdates?: Record<string, string | number | null>;
     }) ?? {},
     causalityEvents: (data.causalityEvents as {
       type: "kill" | "save" | "promise" | "betray" | "humiliate" | "ally";
