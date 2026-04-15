@@ -5,6 +5,8 @@ import { rollDice } from "@/lib/game/dice";
 import { advanceTick, rollWeather, shouldChangeWeather, getEnvDescription } from "@/lib/game/time";
 import { buildNPCContext, applyAffectionDelta } from "@/lib/game/npc";
 import { buildSystemPrompt } from "@/lib/game/prompt";
+import { getActiveGate, causalityTriggerTick } from "@/lib/game/progression";
+import type { CausalityTag } from "@/lib/game/progression";
 import type {
   PlayerActionRequest, NarrativeResponse, AdventureRow, NPCStateRow, NPCUpdate,
 } from "@/lib/game/types";
@@ -61,6 +63,20 @@ export async function POST(req: NextRequest) {
   const weather = shouldChangeWeather(newTick) ? rollWeather(adventure.weather) : adventure.weather;
   const envDesc = getEnvDescription(timeOfDay, weather);
 
+  // ── Causality & Progression ───────────────────────────────────────────────
+  const worldAttrs = (adventure.world_attributes ?? {}) as Record<string, unknown>;
+  const effectiveWorldType = (worldAttrs.world_flavor as string) ?? adventure.world_type;
+  const causalityTags = (worldAttrs.causality_tags ?? []) as CausalityTag[];
+  const progressionStage = (worldAttrs.progression_stage as number) ?? 0;
+
+  // Find causality events that should now fire
+  const nowTriggered = causalityTags.filter(
+    (t) => !t.triggered && newTick >= t.triggerAtTick
+  );
+
+  // Check if a progression gate is currently active
+  const activeGate = getActiveGate(effectiveWorldType, progressionStage, newTick);
+
   const systemPrompt = buildSystemPrompt({
     worldType: adventure.world_type,
     playerName,
@@ -76,6 +92,8 @@ export async function POST(req: NextRequest) {
     legacyModifiers: adventure.legacy_modifiers ?? {},
     narrativeSummary: adventure.narrative_summary ?? "",
     generation: adventure.generation,
+    triggeredCausality: nowTriggered,
+    activeGate,
   });
 
   let userMsg = "開始這段冒險。";
@@ -162,15 +180,42 @@ export async function POST(req: NextRequest) {
         const newSummary = ((adventure.narrative_summary ?? "") + "\n" + parsed.narrative).slice(-500);
         const newStatus = newHp <= 0 ? "dead" : "active";
 
-        const currentWorldAttrs = (adventure.world_attributes ?? {}) as Record<string, unknown>;
-        const currentLust     = (currentWorldAttrs.lust as number) ?? 50;
-        const currentWillpower = (currentWorldAttrs.willpower as number) ?? 70;
+        const currentLust      = (worldAttrs.lust as number) ?? 50;
+        const currentWillpower = (worldAttrs.willpower as number) ?? 70;
+
+        // ── Causality: mark triggered tags + add new events from AI ──────────
+        const newCausalityEvents = parsed.causalityEvents;
+        const updatedCausality: CausalityTag[] = [
+          // Mark already-triggered ones
+          ...causalityTags.map((t) =>
+            nowTriggered.some((nt) => nt.id === t.id) ? { ...t, triggered: true } : t
+          ),
+          // Add new causality seeds from this turn
+          ...newCausalityEvents.map((e, i) => ({
+            id: `${newTick}-${i}-${e.npcName}`,
+            tick: newTick,
+            type: e.type,
+            npcName: e.npcName,
+            detail: e.detail,
+            triggered: false,
+            triggerAtTick: causalityTriggerTick(newTick),
+          })),
+        ];
+
+        // ── Progression: advance stage if gate completed ──────────────────────
+        const newProgressionStage =
+          parsed.progressionGateComplete && activeGate
+            ? progressionStage + 1
+            : progressionStage;
+
         const updatedWorldAttrs = {
-          ...currentWorldAttrs,
-          lust:      Math.max(0, Math.min(100, currentLust     + (sc.lustDelta ?? 0))),
-          willpower: Math.max(0, Math.min(100, currentWillpower + (sc.willpowerDelta ?? 0))),
+          ...worldAttrs,
+          lust:             Math.max(0, Math.min(100, currentLust     + (sc.lustDelta ?? 0))),
+          willpower:        Math.max(0, Math.min(100, currentWillpower + (sc.willpowerDelta ?? 0))),
           ...(sc.clothingState ? { clothing_state: sc.clothingState } : {}),
           ...(sc.bodyStatus    ? { body_status: sc.bodyStatus }       : {}),
+          causality_tags:   updatedCausality,
+          progression_stage: newProgressionStage,
         };
 
         const newLocation = sc.location ?? adventure.location;
@@ -257,6 +302,12 @@ function parseLLMResponse(raw: string) {
       clothingState?: string; bodyStatus?: string;
       location?: string; ticksConsumed?: number;
     }) ?? {},
+    causalityEvents: (data.causalityEvents as {
+      type: "kill" | "save" | "promise" | "betray" | "humiliate" | "ally";
+      npcName: string;
+      detail: string;
+    }[]) ?? [],
+    progressionGateComplete: (data.progressionGateComplete as boolean) ?? false,
   };
 }
 
