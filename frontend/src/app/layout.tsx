@@ -34,21 +34,21 @@ const STARS = [
   { w: 1, h: 1, t: 95, l: 75, dur: 3.6, delay: 3.2 },
 ];
 
-// Deterministic global background — HD pixel art GBA-style top-down overworld map
-// Portrait-oriented (9:16), pixelated rendering keeps it crisp on all screen sizes
+// Deterministic global background — simple clean pixel art landscape (side view)
+// Portrait 9:16. Flat color zones: sky → clouds → mountains → yellow field → green grass
 const BG_PROMPT = encodeURIComponent(
-  "8-bit pixel art, GBA Pokemon Emerald overworld map, top-down view, HD high resolution. " +
-  "Bright vivid lime green grass tiles with subtle darker green checker dot texture pattern. " +
-  "Rectangular flower garden plots: rows of red white yellow pink blue pixel flowers, " +
-  "each plot bordered by gray stone fence tiles. " +
-  "Sandy tan dirt path cutting diagonally through the map. " +
-  "Dark green tree clusters with round layered canopy tops in corners and edges. " +
-  "Small blue water pond tiles in bottom right corner with light blue ripple pixels. " +
-  "Crisp hard pixel edges, zero anti-aliasing, zero blur, zero glow, zero gradients. " +
-  "Ultra vivid saturated GBA color palette, clean tile grid aesthetic. " +
-  "No characters, no text, no UI, no HUD."
+  "pixel art landscape wallpaper, portrait format, simple clean scenic illustration. " +
+  "Upper 45 percent: bright cerulean blue sky, flat solid color. " +
+  "Two large fluffy white pixel cumulus clouds with rounded tops and flat bottoms, soft purple shadow edges. " +
+  "A few tiny square white pixel stars scattered in the upper sky. " +
+  "Middle band: layered mountain silhouette, front range deep navy blue, back range soft lavender purple, flat color no texture. " +
+  "Below mountains: bright golden yellow flower meadow strip. " +
+  "Lower third: rich green grass foreground, small scattered square pixel flowers in yellow pink white. " +
+  "Flat bold color areas separated by clean pixel edges, zero anti-aliasing, zero blur, zero glow. " +
+  "Style: minimal pixel art scenic, cheerful warm daylight, limited flat palette. " +
+  "No characters, no text, no UI."
 );
-const GLOBAL_BG_URL = `https://image.pollinations.ai/prompt/${BG_PROMPT}?width=720&height=1280&nologo=true&seed=777&model=flux-schnell`;
+const GLOBAL_BG_URL = `https://image.pollinations.ai/prompt/${BG_PROMPT}?width=720&height=1280&nologo=true&seed=2025&model=flux-schnell`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
