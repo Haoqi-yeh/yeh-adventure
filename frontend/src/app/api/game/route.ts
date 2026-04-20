@@ -76,8 +76,8 @@ export async function POST(req: NextRequest) {
   }
 
   // ── 在 handler 內部建立 client，強制走 v1 正式版（非 v1beta）────────────
-  const genAI = new GoogleGenerativeAI(apiKey, { apiVersion: "v1" });
-  console.log("DEBUG: Using API version v1");
+  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY as string);
+  console.log("DEBUG: Using default SDK API version");
   const model = genAI.getGenerativeModel({
     model: "gemini-1.5-flash",
     systemInstruction: `你是一個武俠修仙文字 RPG 的遊戲主持人（GM）。
