@@ -274,12 +274,14 @@ export default function Page() {
   };
 
   return (
-    /* 最外層：桌面底色，強制置中 */
-    <div className="w-full h-screen bg-slate-300 flex items-center justify-center p-4">
-
-      {/* 遊戲主面板 */}
-      <div className="w-full max-w-md h-[90vh] bg-slate-950 rounded-2xl shadow-2xl border-4 border-slate-800 flex flex-col overflow-hidden relative">
-
+    <div 
+      className="w-full h-screen flex items-center justify-center p-4" 
+      style={{ backgroundColor: '#cbd5e1', margin: 0 }}
+    >
+     <div 
+        className="w-full max-w-md h-[90vh] rounded-2xl shadow-2xl border-4 border-slate-800 flex flex-col overflow-hidden relative"
+        style={{ backgroundColor: '#020617', color: 'white' }}
+      >
         {/* 靈氣漣漪特效（覆蓋整個面板中心） */}
         <AnimatePresence>
           {rippleKey !== null && (
