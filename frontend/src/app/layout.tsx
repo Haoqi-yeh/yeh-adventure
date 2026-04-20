@@ -154,7 +154,7 @@ function RouteMapBackground() {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="zh-TW" style={{ backgroundColor: "#98ddd7" }}>
+    <html lang="zh-TW" style={{ backgroundColor: "#0c0a09" }}>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
@@ -164,12 +164,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body>
-        <RouteMapBackground />
-
-        <div style={{
-          position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none",
-          background: "rgba(255, 255, 255, 0.05)",
-        }} />
 
         <div style={{ position: "relative", zIndex: 10, width: "100%", minHeight: "100vh" }}>
           {children}
