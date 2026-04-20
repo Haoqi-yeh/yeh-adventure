@@ -272,7 +272,8 @@ export default function Page() {
     setRippleKey(Date.now());
     triggerDejaVu(key);
   };
- return (
+  
+return (
     /* 最外層：強制固定視窗，禁止任何方向的捲動 */
     <div 
       style={{
