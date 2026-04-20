@@ -6,7 +6,7 @@ import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? "");
 
 const model = genAI.getGenerativeModel({
-  model: "gemini-1.5-flash",
+  model: "gemini-1.5-pro",
   systemInstruction: `你是一個武俠修仙文字 RPG 的遊戲主持人（GM）。
 
 核心規則：
@@ -103,12 +103,18 @@ ${req.userInput}
 
 // ── POST handler ──────────────────────────────────────────────────────────────
 
+/** 清除 AI 可能加上的 Markdown 包裝，例如 ```json ... ``` */
+function stripMarkdown(raw: string): string {
+  return raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
+}
+
 export async function POST(req: NextRequest) {
-  if (!process.env.GEMINI_API_KEY) {
-    return NextResponse.json(
-      { error: "GEMINI_API_KEY 未設定" },
-      { status: 500 }
-    );
+  // ── 金鑰載入確認（只 log 前四碼）──────────────────────────────────────────
+  const apiKey = process.env.GEMINI_API_KEY ?? "";
+  console.log("[/api/game] GEMINI_API_KEY prefix:", apiKey.slice(0, 4) || "(empty)");
+
+  if (!apiKey) {
+    return NextResponse.json({ error: "GEMINI_API_KEY 未設定" }, { status: 500 });
   }
 
   let body: GameRequest;
@@ -124,21 +130,27 @@ export async function POST(req: NextRequest) {
 
   try {
     const prompt = buildPrompt(body);
-    const result = await model.generateContent(prompt);
-    const text = result.response.text();
-    const data = JSON.parse(text);
+    console.log("[/api/game] Sending prompt (first 120 chars):", prompt.slice(0, 120));
 
-    // 基本結構驗證
+    const result = await model.generateContent(prompt);
+    const rawText = result.response.text();
+    console.log("[/api/game] AI raw response:", rawText.slice(0, 300));
+
+    // 清除 Markdown 包裝再解析
+    const cleaned = stripMarkdown(rawText);
+    const data = JSON.parse(cleaned);
+
     if (!data.narrative || !Array.isArray(data.options)) {
-      throw new Error("AI 回傳格式不符");
+      console.error("[/api/game] Bad schema:", JSON.stringify(data).slice(0, 200));
+      throw new Error("AI 回傳格式不符預期 schema");
     }
 
     return NextResponse.json(data);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    console.error("[/api/game] Gemini error:", message);
+    console.error("[/api/game] Error:", message);
     return NextResponse.json(
-      { error: "靈氣混亂，請重試" },
+      { error: "靈氣混亂，請重試", detail: message },
       { status: 500 }
     );
   }
