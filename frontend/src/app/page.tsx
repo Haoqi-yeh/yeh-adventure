@@ -274,25 +274,61 @@ export default function Page() {
   };
 
   return (
+    /* 最外層：強制全螢幕灰色背景並置中 */
     <div 
-      className="w-full h-screen flex items-center justify-center p-4" 
-      style={{ backgroundColor: '#cbd5e1', margin: 0 }}
+      style={{
+        width: '100vw',
+        height: '100vh',
+        backgroundColor: '#cbd5e1', // slate-300
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        margin: 0,
+        padding: '20px',
+        overflow: 'hidden'
+      }}
     >
-     <div 
-        className="w-full max-w-md h-[90vh] rounded-2xl shadow-2xl border-4 border-slate-800 flex flex-col overflow-hidden relative"
-        style={{ backgroundColor: '#020617', color: 'white' }}
+      {/* 遊戲主面板：強制深黑背景、白色文字 */}
+      <div 
+        style={{
+          width: '100%',
+          maxWidth: '400px',
+          height: '90vh',
+          backgroundColor: '#020617', // slate-950
+          borderRadius: '24px',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+          border: '4px solid #1e293b', // slate-800
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          position: 'relative',
+          color: '#f8fafc' // 強制文字白色
+        }}
       >
-        {/* 靈氣漣漪特效（覆蓋整個面板中心） */}
+        {/* 靈氣漣漪特效 */}
         <AnimatePresence>
           {rippleKey !== null && (
             <motion.div
               key={rippleKey}
-              className="absolute inset-0 flex items-center justify-center pointer-events-none z-20"
+              style={{
+                position: 'absolute',
+                inset: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                pointerEvents: 'none',
+                zIndex: 20
+              }}
               initial={false}
             >
               <motion.div
-                className="rounded-full border border-cyan-400/30 bg-cyan-400/5"
-                style={{ width: 80, height: 80 }}
+                style={{
+                  width: 80,
+                  height: 80,
+                  borderRadius: '9999px',
+                  border: '1px solid rgba(34, 211, 238, 0.3)',
+                  backgroundColor: 'rgba(34, 211, 238, 0.05)'
+                }}
                 initial={{ scale: 0.3, opacity: 0.6 }}
                 animate={{ scale: 6, opacity: 0 }}
                 transition={{ duration: 0.65, ease: "easeOut" }}
@@ -303,67 +339,69 @@ export default function Page() {
         </AnimatePresence>
 
         {/* ── HEADER：修為與狀態列 ───────────────────────── */}
-        <header className="shrink-0 bg-slate-900/80 px-4 pt-4 pb-3 border-b border-slate-700 space-y-3">
-          {/* 境界 + 壽元 + 回合 */}
-          <div className="flex items-center justify-between">
-            <span className="text-amber-400 text-base font-semibold tracking-widest">
+        <header style={{ 
+          flexShrink: 0, 
+          backgroundColor: 'rgba(15, 23, 42, 0.9)', 
+          padding: '20px 16px 12px 16px', 
+          borderBottom: '1px solid #334155' 
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+            <span style={{ color: '#fbbf24', fontSize: '18px', fontWeight: 'bold', letterSpacing: '0.1em' }}>
               {state.cultivation}
             </span>
-            <div className="flex items-center gap-2 text-xs text-slate-400">
+            <div style={{ fontSize: '12px', color: '#94a3b8', display: 'flex', gap: '8px' }}>
               {state.turn > 0 && <span>第 {state.turn} 回</span>}
               <span>·</span>
-              <span>
-                壽元 <span className="text-emerald-400 font-mono">{state.shouYuan}</span> 年
-              </span>
+              <span>壽元 <span style={{ color: '#34d399' }}>{state.shouYuan}</span> 年</span>
             </div>
           </div>
 
-          {/* 氣血 / 靈力進度條（呼吸燈） */}
-          <div className="space-y-2">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <BreathBar label="氣血" value={state.qiXue}  barColor="bg-red-600" />
             <BreathBar label="靈力" value={state.lingLi} barColor="bg-cyan-500" />
           </div>
 
-          {/* 名聲 / 罪惡 */}
-          <div className="flex items-center gap-4 text-xs text-slate-400">
-            <span>名聲 <span className="text-amber-400 font-mono">{state.mingSheng}</span></span>
-            <span>罪惡 <span className="text-rose-400 font-mono">{state.zuiE}</span></span>
+          <div style={{ display: 'flex', gap: '16px', fontSize: '12px', color: '#94a3b8', marginTop: '12px' }}>
+            <span>名聲 <span style={{ color: '#fbbf24' }}>{state.mingSheng}</span></span>
+            <span>罪惡 <span style={{ color: '#fb7185' }}>{state.zuiE}</span></span>
           </div>
-
-          {/* 因果標記 */}
-          {state.karmaHistory.length > 0 && (
-            <div className="flex flex-wrap gap-1">
-              {state.karmaHistory.map((tag) => (
-                <span
-                  key={tag}
-                  className="px-1.5 py-0.5 text-[10px] rounded-md bg-slate-800 text-slate-400 border border-slate-700"
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
-          )}
         </header>
 
-        {/* ── CONTENT：劇情敘事區（面板內部捲動）─────────── */}
-        <div className="flex-1 overflow-y-auto p-6 min-h-0">
-          <p className="text-slate-100 text-sm leading-relaxed tracking-wide">
+        {/* ── CONTENT：劇情敘事區 ────────────────────────── */}
+        <div style={{ 
+          flex: 1, 
+          overflowY: 'auto', 
+          padding: '24px', 
+          minHeight: 0 
+        }}>
+          <p style={{ color: '#f1f5f9', fontSize: '16px', lineHeight: '1.8', letterSpacing: '0.025em' }}>
             {state.displayedNarrative}
             {state.isTyping && (
-              <span className="inline-block w-[2px] h-[1em] bg-amber-400 ml-0.5 align-middle animate-pulse" />
+              <span style={{ 
+                display: 'inline-block', 
+                width: '2px', 
+                height: '1em', 
+                backgroundColor: '#fbbf24', 
+                marginLeft: '4px', 
+                verticalAlign: 'middle' 
+              }} />
             )}
           </p>
 
-          {/* 既視感隱藏按鈕 */}
           {!state.isTyping && activeDejaVuKeys.length > 0 && (
-            <div className="mt-6 pt-4 border-t border-slate-700/50 space-y-2">
-              <p className="text-[11px] text-slate-500 italic tracking-widest">〔因果共鳴·既視感〕</p>
+            <div style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px solid rgba(51, 65, 85, 0.5)' }}>
+              <p style={{ fontSize: '11px', color: '#64748b', fontStyle: 'italic', marginBottom: '8px' }}>〔因果共鳴·既視感〕</p>
               {activeDejaVuKeys.map((key) => (
                 <motion.button
                   key={key}
                   onClick={() => handleDejaVu(key)}
                   whileTap={{ scale: 0.97 }}
-                  className="w-full text-left text-sm text-amber-300 border border-amber-800/40 rounded-xl px-4 py-3 bg-amber-950/30 hover:bg-amber-950/50 transition-colors"
+                  style={{
+                    width: '100%', textAlign: 'left', fontSize: '14px', color: '#fcd34d',
+                    border: '1px solid rgba(120, 53, 15, 0.4)', borderRadius: '12px',
+                    padding: '12px 16px', backgroundColor: 'rgba(69, 26, 3, 0.3)',
+                    marginBottom: '8px', cursor: 'pointer'
+                  }}
                 >
                   {DEJA_VU_TRIGGERS[key].label}
                 </motion.button>
@@ -372,28 +410,30 @@ export default function Page() {
           )}
         </div>
 
-        {/* ── FOOTER：3×4 動作按鈕矩陣 ─────────────────── */}
-        <footer className="shrink-0 p-4 bg-slate-900/50 border-t border-slate-700">
-          <div className="grid grid-cols-4 gap-2">
+        {/* ── FOOTER：按鈕區 ────────────────────────────── */}
+        <footer style={{ 
+          flexShrink: 0, 
+          padding: '16px', 
+          backgroundColor: 'rgba(15, 23, 42, 0.5)', 
+          borderTop: '1px solid #334155' 
+        }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
             {ACTION_GRID.map((action, i) => (
               <motion.button
                 key={action.label}
                 onClick={() => handleAction(i)}
                 disabled={state.isTyping}
                 whileTap={{ scale: 0.93 }}
-                className="flex flex-col items-center justify-center gap-1 rounded-xl
-                           bg-gradient-to-b from-slate-800 to-slate-900
-                           border-t border-t-slate-600
-                           border-b-2 border-b-black
-                           border-l border-l-slate-700
-                           border-r border-r-slate-700
-                           py-3 px-1
-                           hover:from-slate-700 hover:to-slate-800
-                           transition-colors
-                           disabled:opacity-30 disabled:cursor-not-allowed"
+                style={{
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                  gap: '4px', borderRadius: '12px', padding: '12px 4px',
+                  backgroundColor: '#1e293b', border: '1px solid #334155',
+                  color: 'white', cursor: state.isTyping ? 'not-allowed' : 'pointer',
+                  opacity: state.isTyping ? 0.3 : 1
+                }}
               >
-                <span className="text-xl leading-none">{action.icon}</span>
-                <span className="text-[10px] text-slate-100 leading-tight text-center whitespace-nowrap">
+                <span style={{ fontSize: '20px' }}>{action.icon}</span>
+                <span style={{ fontSize: '10px', color: '#f8fafc', textAlign: 'center' }}>
                   {action.label}
                 </span>
               </motion.button>
