@@ -6,7 +6,7 @@ import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? "");
 
 const model = genAI.getGenerativeModel({
-  model: "gemini-2.0-flash",
+  model: "gemini-1.5-flash",
   systemInstruction: `你是一個武俠修仙文字 RPG 的遊戲主持人（GM）。
 
 核心規則：
@@ -138,7 +138,7 @@ export async function POST(req: NextRequest) {
     const message = err instanceof Error ? err.message : String(err);
     console.error("[/api/game] Gemini error:", message);
     return NextResponse.json(
-      { error: `AI 生成失敗：${message}` },
+      { error: "靈氣混亂，請重試" },
       { status: 500 }
     );
   }
