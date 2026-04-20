@@ -53,6 +53,19 @@ const inputStyle: React.CSSProperties = {
   boxSizing: "border-box",
 };
 
+const pixelPanelStyle: React.CSSProperties = {
+  position: "relative",
+  zIndex: 10,
+  width: "100%",
+  background: "rgba(255, 252, 245, 0.92)",
+  border: "3px solid rgba(37, 99, 235, 0.2)",
+  borderRadius: "18px",
+  display: "flex",
+  flexDirection: "column",
+  margin: "1rem",
+  boxShadow: "0 18px 0 rgba(15, 23, 42, 0.12), 0 24px 40px rgba(15, 23, 42, 0.18)",
+};
+
 const GENDERS = [
   { value: "不指定", icon: "🎭" },
   { value: "男性",   icon: "♂" },
@@ -183,17 +196,10 @@ export default function WorldSelector() {
             exit={{ opacity: 0, x: -40 }}
             transition={{ duration: 0.4 }}
             style={{
-              position: "relative", zIndex: 10,
-              width: "100%", maxWidth: "420px",
+              ...pixelPanelStyle,
+              maxWidth: "420px",
               padding: "2rem 1.5rem",
-              background: "rgba(255, 255, 255, 0.72)",
-              backdropFilter: "blur(20px)",
-              WebkitBackdropFilter: "blur(20px)",
-              border: "1px solid rgba(255, 255, 255, 0.85)",
-              borderRadius: "20px",
-              display: "flex", flexDirection: "column", gap: "1.1rem",
-              margin: "1rem",
-              boxShadow: "0 8px 40px rgba(0,0,0,0.12)",
+              gap: "1.1rem",
             }}
           >
             {/* Logo + 標題 */}
@@ -371,17 +377,10 @@ export default function WorldSelector() {
             exit={{ opacity: 0, x: 40 }}
             transition={{ duration: 0.4 }}
             style={{
-              position: "relative", zIndex: 10,
-              width: "100%", maxWidth: "480px",
+              ...pixelPanelStyle,
+              maxWidth: "480px",
               padding: "2rem 1.5rem",
-              background: "rgba(255, 255, 255, 0.72)",
-              backdropFilter: "blur(20px)",
-              WebkitBackdropFilter: "blur(20px)",
-              border: "1px solid rgba(255, 255, 255, 0.85)",
-              borderRadius: "20px",
-              display: "flex", flexDirection: "column", gap: "1.2rem",
-              margin: "1rem",
-              boxShadow: "0 8px 40px rgba(0,0,0,0.12)",
+              gap: "1.2rem",
             }}
           >
             {/* 標題 */}

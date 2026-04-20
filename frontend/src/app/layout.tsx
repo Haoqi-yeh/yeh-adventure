@@ -34,22 +34,6 @@ const STARS = [
   { w: 1, h: 1, t: 95, l: 75, dur: 3.6, delay: 3.2 },
 ];
 
-// Deterministic global background — classic 8-bit side-scrolling game sky
-// Landscape 16:9. Huge flat sky, small clouds, thin ocean horizon, pixel grass strip.
-const BG_PROMPT = encodeURIComponent(
-  "8-bit pixel art retro game background, landscape 16:9, extremely simple clean composition. " +
-  "Top 65 percent: large flat solid bright sky blue, nearly empty. " +
-  "Six small white fluffy pixel clouds scattered at different heights and horizontal positions, " +
-  "each cloud built from 3 to 5 rounded pixel blobs, light blue-gray shadow on the bottom edge. " +
-  "Thin horizontal ocean strip in the middle: flat cobalt blue, one shade darker than sky, perfectly straight edge. " +
-  "Bottom 15 percent: bright lime green pixel grass silhouette with jagged irregular pixel tops, " +
-  "solid darker green fill below. " +
-  "Completely flat bold colors, hard crisp pixel edges, zero anti-aliasing, zero blur, zero glow, zero gradients. " +
-  "Style: classic NES Super Mario Bros world 1 sky background, mostly open empty sky, minimal detail. " +
-  "No mountains, no flowers, no characters, no text, no UI."
-);
-const GLOBAL_BG_URL = `https://image.pollinations.ai/prompt/${BG_PROMPT}?width=1920&height=1080&nologo=true&seed=8bit&model=flux-schnell`;
-
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     // backgroundColor on <html> is the darkest fallback (no flash of bright colour)
@@ -65,13 +49,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         {/* ── Fixed pixel-art background ── position:fixed works on iOS/Android unlike backgroundAttachment:fixed */}
         <div
-          className="bg-pixel-art"
+          className="bg-pixel-art pixel-world-bg"
           style={{
             position: "fixed", inset: 0, zIndex: -2,
-            backgroundImage: `url("${GLOBAL_BG_URL}")`,
-            backgroundSize: "cover",
-            backgroundPosition: "center bottom",
-            backgroundRepeat: "no-repeat",
           }}
         />
 

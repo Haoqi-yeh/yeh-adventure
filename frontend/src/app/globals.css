@@ -103,3 +103,35 @@ input:-webkit-autofill:focus {
   image-rendering: -moz-crisp-edges;
   image-rendering: crisp-edges;
 }
+
+.pixel-world-bg {
+  background-color: #74c7ff;
+  background-image:
+    linear-gradient(to bottom, transparent 0 64%, #4d8fe5 64% 69%, #5ac85a 69% 74%, #3b9d3b 74% 100%),
+    linear-gradient(to bottom, transparent 0 13.2%, #f8fbff 13.2% 16.2%, #c9dcff 16.2% 17.4%, transparent 17.4% 100%),
+    linear-gradient(to bottom, transparent 0 10.5%, #f8fbff 10.5% 13.5%, #c9dcff 13.5% 14.7%, transparent 14.7% 100%),
+    linear-gradient(to bottom, transparent 0 21%, #f8fbff 21% 24%, #c9dcff 24% 25.2%, transparent 25.2% 100%),
+    linear-gradient(to bottom, transparent 0 24.5%, #f8fbff 24.5% 27.5%, #c9dcff 27.5% 28.6%, transparent 28.6% 100%),
+    linear-gradient(to bottom, transparent 0 17.5%, #f8fbff 17.5% 20.5%, #c9dcff 20.5% 21.8%, transparent 21.8% 100%);
+  background-size:
+    100% 100%,
+    112px 112px,
+    92px 92px,
+    132px 132px,
+    104px 104px,
+    120px 120px;
+  background-position:
+    center center,
+    8% 11%,
+    27% 8%,
+    52% 18%,
+    74% 22%,
+    88% 14%;
+  background-repeat:
+    no-repeat,
+    no-repeat,
+    no-repeat,
+    no-repeat,
+    no-repeat,
+    no-repeat;
+}
