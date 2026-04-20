@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 
 // ── Request 型別 ──────────────────────────────────────────────────────────────
 
@@ -19,11 +18,6 @@ interface GameRequest {
 }
 
 // ── 工具函式 ──────────────────────────────────────────────────────────────────
-
-/** 清除 AI 可能加上的 Markdown 包裝 (```json ... ```) */
-function stripMarkdown(raw: string): string {
-  return raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
-}
 
 function buildPrompt(req: GameRequest): string {
   if (req.isStart) {
@@ -52,14 +46,77 @@ ${req.userInput}
 請以 GM 身份描述行動後發生的事，再給出3個接下來的選項。`;
 }
 
+// ── Gemini REST API v1（直接 fetch，繞過 SDK 的 v1beta 預設）────────────────
+
+const SYSTEM_INSTRUCTION = `你是一個武俠修仙文字 RPG 的遊戲主持人（GM）。
+永遠以第二人稱「你」描述玩家角色的遭遇。
+不要逐字重複玩家輸入，直接描述行動後發生的事。
+劇情使用繁體中文，100-200字。
+嚴格回傳 JSON，不含任何 Markdown 包裝。`;
+
+const RESPONSE_SCHEMA = {
+  type: "OBJECT",
+  properties: {
+    narrative: { type: "STRING" },
+    options: {
+      type: "ARRAY",
+      items: {
+        type: "OBJECT",
+        properties: {
+          label:  { type: "STRING" },
+          action: { type: "STRING" },
+        },
+        required: ["label", "action"],
+      },
+    },
+    statChanges: {
+      type: "OBJECT",
+      properties: {
+        qiXue:     { type: "NUMBER" },
+        lingLi:    { type: "NUMBER" },
+        shouYuan:  { type: "NUMBER" },
+        mingSheng: { type: "NUMBER" },
+        zuiE:      { type: "NUMBER" },
+        karmaTag:  { type: "STRING" },
+      },
+    },
+  },
+  required: ["narrative", "options", "statChanges"],
+};
+
+async function callGemini(apiKey: string, prompt: string): Promise<string> {
+  const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION }] },
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      generationConfig: {
+        responseMimeType: "application/json",
+        responseSchema: RESPONSE_SCHEMA,
+      },
+    }),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Gemini API ${res.status}: ${errText.slice(0, 400)}`);
+  }
+
+  const result = await res.json();
+  const text: string = result?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+  if (!text) throw new Error("Gemini 回傳空內容");
+  return text;
+}
+
 // ── POST handler ──────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
-  // ── 暴力 Debug：確認金鑰是否有被 Vercel 注入 ─────────────────────────────
-  console.log("DEBUG: Key exists?", !!process.env.GEMINI_API_KEY);
-  console.log("DEBUG: Key prefix:", (process.env.GEMINI_API_KEY ?? "").slice(0, 4) || "(empty)");
-
   const apiKey = process.env.GEMINI_API_KEY ?? "";
+  console.log("DEBUG: Key exists?", !!apiKey);
+
   if (!apiKey) {
     return NextResponse.json({ error: "GEMINI_API_KEY 未設定" }, { status: 500 });
   }
@@ -75,66 +132,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "userInput 不可空白" }, { status: 400 });
   }
 
-  // ── 在 handler 內部建立 client，強制走 v1 正式版（非 v1beta）────────────
-  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY as string);
-  console.log("DEBUG: Using default SDK API version");
-  const model = genAI.getGenerativeModel({
-    model: "gemini-1.5-flash",
-    systemInstruction: `你是一個武俠修仙文字 RPG 的遊戲主持人（GM）。
-永遠以第二人稱「你」描述玩家角色的遭遇。
-不要逐字重複玩家輸入，直接描述行動後發生的事。
-劇情使用繁體中文，100-200字。
-嚴格回傳 JSON，不含任何 Markdown 包裝。`,
-
-    generationConfig: {
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: SchemaType.OBJECT,
-        properties: {
-          narrative: { type: SchemaType.STRING },
-          options: {
-            type: SchemaType.ARRAY,
-            items: {
-              type: SchemaType.OBJECT,
-              properties: {
-                label:  { type: SchemaType.STRING },
-                action: { type: SchemaType.STRING },
-              },
-              required: ["label", "action"],
-            },
-          },
-          statChanges: {
-            type: SchemaType.OBJECT,
-            properties: {
-              qiXue:     { type: SchemaType.NUMBER },
-              lingLi:    { type: SchemaType.NUMBER },
-              shouYuan:  { type: SchemaType.NUMBER },
-              mingSheng: { type: SchemaType.NUMBER },
-              zuiE:      { type: SchemaType.NUMBER },
-              karmaTag:  { type: SchemaType.STRING },
-            },
-          },
-        },
-        required: ["narrative", "options", "statChanges"],
-      },
-    },
-  });
-
   try {
-    // ── 簡化測試：先用 "你好" 確認連線，再換回完整 prompt ─────────────────
-    // const result = await model.generateContent("你好");   // ← 測試用，確認後刪除
     const prompt = buildPrompt(body);
-    console.log("DEBUG: Prompt sent (first 100):", prompt.slice(0, 100));
+    console.log("DEBUG: Prompt (first 100):", prompt.slice(0, 100));
 
-    const result = await model.generateContent(prompt);
-    const rawText = result.response.text();
-    console.log("DEBUG: AI raw response (first 300):", rawText.slice(0, 300));
+    const rawText = await callGemini(apiKey, prompt);
+    console.log("DEBUG: AI response (first 300):", rawText.slice(0, 300));
 
-    const cleaned = stripMarkdown(rawText);
-    const data = JSON.parse(cleaned);
+    const data = JSON.parse(rawText);
 
     if (!data.narrative || !Array.isArray(data.options)) {
-      console.error("DEBUG: Bad schema received:", JSON.stringify(data).slice(0, 200));
       throw new Error("schema 不符");
     }
 
