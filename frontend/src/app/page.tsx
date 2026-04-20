@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -19,7 +20,6 @@ interface GameState {
   karmaHistory: KarmaTag[];
   cultivation: string;
   cultivationLevel: number;
-  narrative: string;
   displayedNarrative: string;
   isTyping: boolean;
   turn: number;
@@ -141,7 +141,6 @@ const INITIAL_NARRATIVE =
 function clamp(v: number, lo = 0, hi = 100) {
   return Math.max(lo, Math.min(hi, v));
 }
-
 function pick<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
@@ -158,7 +157,6 @@ function useGameState() {
     karmaHistory: [],
     cultivation: CULTIVATION_STAGES[0],
     cultivationLevel: 0,
-    narrative: INITIAL_NARRATIVE,
     displayedNarrative: "",
     isTyping: false,
     turn: 0,
@@ -170,113 +168,87 @@ function useGameState() {
     if (intervalRef.current) clearInterval(intervalRef.current);
     let i = 0;
     setState((s) => ({ ...s, displayedNarrative: "", isTyping: true }));
-
     intervalRef.current = setInterval(() => {
       i++;
       const done = i >= text.length;
-      setState((s) => ({
-        ...s,
-        displayedNarrative: text.slice(0, i),
-        isTyping: !done,
-      }));
+      setState((s) => ({ ...s, displayedNarrative: text.slice(0, i), isTyping: !done }));
       if (done) clearInterval(intervalRef.current!);
-    }, 38);
+    }, 40);
   }, []);
 
   useEffect(() => {
     runTypewriter(INITIAL_NARRATIVE);
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const makeAction = useCallback(
-    (index: number) => {
-      const action = ACTION_GRID[index];
-      if (!action) return;
-      const text = pick(NARRATIVES[action.tag] ?? ["你沉默地行動著。"]);
+  const makeAction = useCallback((index: number) => {
+    const action = ACTION_GRID[index];
+    if (!action) return;
+    const text = pick(NARRATIVES[action.tag] ?? ["你沉默地行動著。"]);
 
-      setState((prev) => {
-        const rawLingLi = prev.lingLi + (action.effect.lingLi ?? 0);
-        const newLingLi = clamp(rawLingLi);
-        let newLevel = prev.cultivationLevel;
-
-        if (rawLingLi >= 100 && prev.cultivationLevel < CULTIVATION_STAGES.length - 1) {
-          newLevel = prev.cultivationLevel + 1;
-        }
-
-        return {
-          ...prev,
-          qiXue: clamp(prev.qiXue + (action.effect.qiXue ?? 0)),
-          lingLi: newLevel > prev.cultivationLevel ? 20 : newLingLi,
-          shouYuan: Math.max(0, prev.shouYuan + (action.effect.shouYuan ?? 0)),
-          mingSheng: clamp(prev.mingSheng + (action.effect.mingSheng ?? 0)),
-          zuiE: clamp(prev.zuiE + (action.effect.zuiE ?? 0)),
-          karmaHistory: prev.karmaHistory.includes(action.tag)
-            ? prev.karmaHistory
-            : ([...prev.karmaHistory, action.tag] as KarmaTag[]),
-          cultivation: CULTIVATION_STAGES[newLevel],
-          cultivationLevel: newLevel,
-          narrative: text,
-          turn: prev.turn + 1,
-        };
-      });
-
-      runTypewriter(text);
-    },
-    [runTypewriter]
-  );
-
-  const triggerDejaVu = useCallback(
-    (key: string) => {
-      const trigger = DEJA_VU_TRIGGERS[key];
-      if (!trigger) return;
-
-      setState((prev) => ({
+    setState((prev) => {
+      const rawLingLi = prev.lingLi + (action.effect.lingLi ?? 0);
+      let newLevel = prev.cultivationLevel;
+      if (rawLingLi >= 100 && prev.cultivationLevel < CULTIVATION_STAGES.length - 1) {
+        newLevel = prev.cultivationLevel + 1;
+      }
+      return {
         ...prev,
-        karmaHistory: prev.karmaHistory.includes(trigger.karmaGain)
+        qiXue: clamp(prev.qiXue + (action.effect.qiXue ?? 0)),
+        lingLi: newLevel > prev.cultivationLevel ? 20 : clamp(rawLingLi),
+        shouYuan: Math.max(0, prev.shouYuan + (action.effect.shouYuan ?? 0)),
+        mingSheng: clamp(prev.mingSheng + (action.effect.mingSheng ?? 0)),
+        zuiE: clamp(prev.zuiE + (action.effect.zuiE ?? 0)),
+        karmaHistory: prev.karmaHistory.includes(action.tag)
           ? prev.karmaHistory
-          : ([...prev.karmaHistory, trigger.karmaGain] as KarmaTag[]),
-        lingLi: clamp(prev.lingLi + 20),
-        narrative: trigger.narrative,
+          : ([...prev.karmaHistory, action.tag] as KarmaTag[]),
+        cultivation: CULTIVATION_STAGES[newLevel],
+        cultivationLevel: newLevel,
         turn: prev.turn + 1,
-      }));
+      };
+    });
 
-      runTypewriter(trigger.narrative);
-    },
-    [runTypewriter]
-  );
+    runTypewriter(text);
+  }, [runTypewriter]);
+
+  const triggerDejaVu = useCallback((key: string) => {
+    const trigger = DEJA_VU_TRIGGERS[key];
+    if (!trigger) return;
+    setState((prev) => ({
+      ...prev,
+      karmaHistory: prev.karmaHistory.includes(trigger.karmaGain)
+        ? prev.karmaHistory
+        : ([...prev.karmaHistory, trigger.karmaGain] as KarmaTag[]),
+      lingLi: clamp(prev.lingLi + 20),
+      turn: prev.turn + 1,
+    }));
+    runTypewriter(trigger.narrative);
+  }, [runTypewriter]);
 
   return { state, makeAction, triggerDejaVu };
 }
 
-// ─── StatBar ──────────────────────────────────────────────────────────────────
+// ─── BreathBar: 帶呼吸燈效果的進度條 ─────────────────────────────────────────
 
-function StatBar({
-  label,
-  value,
-  max,
-  color,
-}: {
-  label: string;
-  value: number;
-  max: number;
-  color: string;
-}) {
-  const pct = Math.round((Math.max(0, value) / max) * 100);
+function BreathBar({ label, value, color }: { label: string; value: number; color: string }) {
   return (
-    <div className="flex items-center gap-1.5">
-      <span className="text-stone-500 text-[11px] w-7 shrink-0">{label}</span>
-      <div className="flex-1 h-1.5 bg-stone-800 rounded-full overflow-hidden">
-        <div
-          className={`h-full rounded-full transition-all duration-500 ${color}`}
-          style={{ width: `${pct}%` }}
+    <div className="flex items-center gap-2">
+      <span className="text-slate-500 text-[10px] w-6 shrink-0">{label}</span>
+      <div className="flex-1 h-2 bg-slate-800 rounded-full overflow-hidden">
+        <motion.div
+          className={`h-full rounded-full ${color}`}
+          animate={{
+            width: `${Math.max(0, value)}%`,
+            opacity: [0.7, 1, 0.7],
+          }}
+          transition={{
+            width: { duration: 0.5, ease: "easeOut" },
+            opacity: { duration: 2.4, repeat: Infinity, ease: "easeInOut" },
+          }}
         />
       </div>
-      <span className="text-stone-400 font-mono text-[11px] w-7 text-right shrink-0">
-        {value}
-      </span>
+      <span className="text-slate-400 font-mono text-[10px] w-6 text-right shrink-0">{value}</span>
     </div>
   );
 }
@@ -285,99 +257,160 @@ function StatBar({
 
 export default function Page() {
   const { state, makeAction, triggerDejaVu } = useGameState();
+  const [rippleKey, setRippleKey] = useState<number | null>(null);
 
   const activeDejaVuKeys = Object.keys(DEJA_VU_TRIGGERS).filter((key) =>
     state.karmaHistory.includes(key as KarmaTag)
   );
 
-  return (
-    <main className="flex flex-col h-screen bg-stone-950 text-stone-100 overflow-hidden">
+  const handleAction = (i: number) => {
+    setRippleKey(Date.now());
+    makeAction(i);
+  };
 
-      {/* ── 頂部：修為與狀態列 ─────────────────────────── */}
-      <header className="shrink-0 px-3 pt-3 pb-2.5 border-b border-stone-800/70 space-y-2.5">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-amber-400 text-sm font-medium tracking-widest">
+  const handleDejaVu = (key: string) => {
+    setRippleKey(Date.now());
+    triggerDejaVu(key);
+  };
+
+  return (
+    /* 桌面底層背景 */
+    <div className="fixed inset-0 bg-slate-200 flex items-center justify-center">
+
+      {/* 遊戲面板 */}
+      <div className="relative h-[90vh] max-w-md w-full bg-slate-950 border-4 border-slate-800 shadow-2xl rounded-2xl flex flex-col overflow-hidden">
+
+        {/* 靈氣漣漪特效 */}
+        <AnimatePresence>
+          {rippleKey !== null && (
+            <motion.div
+              key={rippleKey}
+              className="absolute inset-0 flex items-center justify-center pointer-events-none z-20"
+              initial={false}
+            >
+              <motion.div
+                className="rounded-full border border-cyan-400/25 bg-cyan-400/5"
+                style={{ width: 100, height: 100 }}
+                initial={{ scale: 0.3, opacity: 0.5 }}
+                animate={{ scale: 5.5, opacity: 0 }}
+                transition={{ duration: 0.7, ease: "easeOut" }}
+                onAnimationComplete={() => setRippleKey(null)}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* ── 頂部：修為與狀態列 ──────────────────────── */}
+        <header className="shrink-0 px-3 pt-3 pb-2.5 border-b border-slate-800 space-y-2">
+          {/* 境界 + 壽元 + 回合 */}
+          <div className="flex items-center justify-between">
+            <span className="text-amber-400 text-sm font-semibold tracking-widest">
               {state.cultivation}
             </span>
-            {state.turn > 0 && (
-              <span className="text-stone-600 text-[11px]">第 {state.turn} 回</span>
-            )}
+            <div className="flex items-center gap-1.5 text-[10px]">
+              {state.turn > 0 && (
+                <span className="text-slate-700">第 {state.turn} 回</span>
+              )}
+              <span className="text-slate-600">·</span>
+              <span className="text-slate-600">壽元</span>
+              <span className="text-emerald-400 font-mono">{state.shouYuan}</span>
+              <span className="text-slate-600">年</span>
+            </div>
           </div>
-          <div className="flex items-center gap-1 text-[11px]">
-            <span className="text-stone-600">壽元</span>
-            <span className="text-emerald-400 font-mono">{state.shouYuan}</span>
-            <span className="text-stone-600">年</span>
+
+          {/* 氣血 + 靈力 橫向進度條（呼吸燈）*/}
+          <div className="space-y-1.5">
+            <BreathBar label="氣血" value={state.qiXue}  color="bg-red-600" />
+            <BreathBar label="靈力" value={state.lingLi} color="bg-cyan-500" />
           </div>
-        </div>
 
-        <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
-          <StatBar label="氣血" value={state.qiXue}     max={100} color="bg-red-500" />
-          <StatBar label="靈力" value={state.lingLi}    max={100} color="bg-violet-500" />
-          <StatBar label="名聲" value={state.mingSheng}  max={100} color="bg-amber-500" />
-          <StatBar label="罪惡" value={state.zuiE}      max={100} color="bg-rose-800" />
-        </div>
-
-        {state.karmaHistory.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {state.karmaHistory.map((tag) => (
-              <span
-                key={tag}
-                className="px-1.5 py-0.5 text-[10px] rounded bg-stone-800/80 text-stone-500 border border-stone-700/60 tracking-wide"
-              >
-                {tag}
-              </span>
-            ))}
+          {/* 名聲 / 罪惡 文字列 */}
+          <div className="flex items-center gap-4 text-[10px]">
+            <span className="text-slate-600">
+              名聲 <span className="text-amber-500 font-mono">{state.mingSheng}</span>
+            </span>
+            <span className="text-slate-600">
+              罪惡 <span className="text-rose-500 font-mono">{state.zuiE}</span>
+            </span>
           </div>
-        )}
-      </header>
 
-      {/* ── 中間：打字機敘事區 ────────────────────────── */}
-      <section className="flex-1 overflow-y-auto px-3 py-3 min-h-0">
-        <div className="h-full rounded-2xl bg-stone-900/70 border border-stone-800/80 p-4 flex flex-col">
-          <p className="flex-1 text-stone-200 text-sm leading-[1.9] tracking-wide">
-            {state.displayedNarrative}
-            {state.isTyping && (
-              <span className="inline-block w-[2px] h-[1em] bg-amber-400 ml-0.5 align-middle animate-pulse" />
-            )}
-          </p>
-
-          {/* 既視感隱藏按鈕 */}
-          {!state.isTyping && activeDejaVuKeys.length > 0 && (
-            <div className="mt-4 pt-3 border-t border-stone-700/40 space-y-2">
-              <p className="text-[10px] text-stone-600 italic tracking-widest">〔因果共鳴·既視感〕</p>
-              {activeDejaVuKeys.map((key) => (
-                <button
-                  key={key}
-                  onClick={() => triggerDejaVu(key)}
-                  className="w-full text-left text-xs text-amber-400/80 border border-amber-900/30 rounded-xl px-3 py-2.5 bg-amber-950/20 hover:bg-amber-950/40 active:scale-[0.98] transition-all"
+          {/* 因果標記 */}
+          {state.karmaHistory.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {state.karmaHistory.map((tag) => (
+                <span
+                  key={tag}
+                  className="px-1.5 py-0.5 text-[9px] rounded bg-slate-800 text-slate-500 border border-slate-700/50 tracking-wide"
                 >
-                  {DEJA_VU_TRIGGERS[key].label}
-                </button>
+                  {tag}
+                </span>
               ))}
             </div>
           )}
-        </div>
-      </section>
+        </header>
 
-      {/* ── 底部：固定 3×4 動作按鈕矩陣 ─────────────── */}
-      <footer className="shrink-0 px-2 pt-2 pb-3 border-t border-stone-800/70">
-        <div className="grid grid-cols-4 gap-1.5">
-          {ACTION_GRID.map((action, i) => (
-            <button
-              key={action.label}
-              onClick={() => makeAction(i)}
-              disabled={state.isTyping}
-              className="flex flex-col items-center justify-center gap-1 rounded-xl bg-stone-900 border border-stone-700/50 py-3 px-1 hover:bg-stone-800 hover:border-stone-600 active:scale-95 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-            >
-              <span className="text-xl leading-none">{action.icon}</span>
-              <span className="text-[10px] text-stone-400 leading-tight text-center whitespace-nowrap">
-                {action.label}
-              </span>
-            </button>
-          ))}
-        </div>
-      </footer>
-    </main>
+        {/* ── 中間：打字機敘事區 ──────────────────────── */}
+        <section className="flex-1 overflow-y-auto px-3 py-3 min-h-0">
+          <div
+            className="h-full rounded-xl bg-slate-900 border border-slate-800 p-4 flex flex-col"
+            style={{ boxShadow: "inset 0 2px 10px rgba(0,0,0,0.5)" }}
+          >
+            <p className="flex-1 text-slate-200 text-sm leading-relaxed tracking-wide">
+              {state.displayedNarrative}
+              {state.isTyping && (
+                <span className="inline-block w-[2px] h-[1em] bg-amber-400 ml-0.5 align-middle animate-pulse" />
+              )}
+            </p>
+
+            {/* 既視感隱藏按鈕 */}
+            {!state.isTyping && activeDejaVuKeys.length > 0 && (
+              <div className="mt-4 pt-3 border-t border-slate-700/40 space-y-2">
+                <p className="text-[10px] text-slate-600 italic tracking-widest">〔因果共鳴·既視感〕</p>
+                {activeDejaVuKeys.map((key) => (
+                  <motion.button
+                    key={key}
+                    onClick={() => handleDejaVu(key)}
+                    whileTap={{ scale: 0.97 }}
+                    className="w-full text-left text-xs text-amber-400/80 border border-amber-900/30 rounded-xl px-3 py-2.5 bg-amber-950/20 hover:bg-amber-950/40 transition-colors"
+                  >
+                    {DEJA_VU_TRIGGERS[key].label}
+                  </motion.button>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* ── 底部：固定 3×4 動作按鈕矩陣 ────────────── */}
+        <footer className="shrink-0 px-2 pt-2 pb-3 border-t border-slate-800">
+          <div className="grid grid-cols-4 gap-1.5">
+            {ACTION_GRID.map((action, i) => (
+              <motion.button
+                key={action.label}
+                onClick={() => handleAction(i)}
+                disabled={state.isTyping}
+                whileTap={{ scale: 0.93 }}
+                className="flex flex-col items-center justify-center gap-1 rounded-xl
+                           bg-gradient-to-b from-slate-800 to-slate-900
+                           border-t border-t-slate-700
+                           border-b-2 border-b-black
+                           border-l border-l-slate-700/50
+                           border-r border-r-slate-700/50
+                           py-3 px-1
+                           hover:from-slate-700 hover:to-slate-800
+                           active:from-slate-900 active:to-slate-950
+                           transition-colors
+                           disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                <span className="text-xl leading-none">{action.icon}</span>
+                <span className="text-[10px] text-slate-400 leading-tight text-center whitespace-nowrap">
+                  {action.label}
+                </span>
+              </motion.button>
+            ))}
+          </div>
+        </footer>
+      </div>
+    </div>
   );
 }
