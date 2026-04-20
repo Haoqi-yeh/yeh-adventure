@@ -229,26 +229,26 @@ function useGameState() {
   return { state, makeAction, triggerDejaVu };
 }
 
-// ─── BreathBar: 帶呼吸燈效果的進度條 ─────────────────────────────────────────
+// ─── BreathBar ────────────────────────────────────────────────────────────────
 
-function BreathBar({ label, value, color }: { label: string; value: number; color: string }) {
+function BreathBar({ label, value, barColor }: { label: string; value: number; barColor: string }) {
   return (
     <div className="flex items-center gap-2">
-      <span className="text-slate-500 text-[10px] w-6 shrink-0">{label}</span>
-      <div className="flex-1 h-2 bg-slate-800 rounded-full overflow-hidden">
+      <span className="text-slate-400 text-xs w-7 shrink-0">{label}</span>
+      <div className="flex-1 h-2.5 bg-slate-800 rounded-full overflow-hidden">
         <motion.div
-          className={`h-full rounded-full ${color}`}
+          className={`h-full rounded-full ${barColor}`}
           animate={{
             width: `${Math.max(0, value)}%`,
             opacity: [0.7, 1, 0.7],
           }}
           transition={{
             width: { duration: 0.5, ease: "easeOut" },
-            opacity: { duration: 2.4, repeat: Infinity, ease: "easeInOut" },
+            opacity: { duration: 2.5, repeat: Infinity, ease: "easeInOut" },
           }}
         />
       </div>
-      <span className="text-slate-400 font-mono text-[10px] w-6 text-right shrink-0">{value}</span>
+      <span className="text-slate-300 font-mono text-xs w-7 text-right shrink-0">{value}</span>
     </div>
   );
 }
@@ -274,13 +274,13 @@ export default function Page() {
   };
 
   return (
-    /* 桌面底層背景 */
-    <div className="fixed inset-0 bg-slate-200 flex items-center justify-center">
+    /* 最外層：桌面底色，強制置中 */
+    <div className="w-full h-screen bg-slate-300 flex items-center justify-center p-4">
 
-      {/* 遊戲面板 */}
-      <div className="relative h-[90vh] max-w-md w-full bg-slate-950 border-4 border-slate-800 shadow-2xl rounded-2xl flex flex-col overflow-hidden">
+      {/* 遊戲主面板 */}
+      <div className="w-full max-w-md h-[90vh] bg-slate-950 rounded-2xl shadow-2xl border-4 border-slate-800 flex flex-col overflow-hidden relative">
 
-        {/* 靈氣漣漪特效 */}
+        {/* 靈氣漣漪特效（覆蓋整個面板中心） */}
         <AnimatePresence>
           {rippleKey !== null && (
             <motion.div
@@ -289,49 +289,43 @@ export default function Page() {
               initial={false}
             >
               <motion.div
-                className="rounded-full border border-cyan-400/25 bg-cyan-400/5"
-                style={{ width: 100, height: 100 }}
-                initial={{ scale: 0.3, opacity: 0.5 }}
-                animate={{ scale: 5.5, opacity: 0 }}
-                transition={{ duration: 0.7, ease: "easeOut" }}
+                className="rounded-full border border-cyan-400/30 bg-cyan-400/5"
+                style={{ width: 80, height: 80 }}
+                initial={{ scale: 0.3, opacity: 0.6 }}
+                animate={{ scale: 6, opacity: 0 }}
+                transition={{ duration: 0.65, ease: "easeOut" }}
                 onAnimationComplete={() => setRippleKey(null)}
               />
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* ── 頂部：修為與狀態列 ──────────────────────── */}
-        <header className="shrink-0 px-3 pt-3 pb-2.5 border-b border-slate-800 space-y-2">
+        {/* ── HEADER：修為與狀態列 ───────────────────────── */}
+        <header className="shrink-0 bg-slate-900/80 px-4 pt-4 pb-3 border-b border-slate-700 space-y-3">
           {/* 境界 + 壽元 + 回合 */}
           <div className="flex items-center justify-between">
-            <span className="text-amber-400 text-sm font-semibold tracking-widest">
+            <span className="text-amber-400 text-base font-semibold tracking-widest">
               {state.cultivation}
             </span>
-            <div className="flex items-center gap-1.5 text-[10px]">
-              {state.turn > 0 && (
-                <span className="text-slate-700">第 {state.turn} 回</span>
-              )}
-              <span className="text-slate-600">·</span>
-              <span className="text-slate-600">壽元</span>
-              <span className="text-emerald-400 font-mono">{state.shouYuan}</span>
-              <span className="text-slate-600">年</span>
+            <div className="flex items-center gap-2 text-xs text-slate-400">
+              {state.turn > 0 && <span>第 {state.turn} 回</span>}
+              <span>·</span>
+              <span>
+                壽元 <span className="text-emerald-400 font-mono">{state.shouYuan}</span> 年
+              </span>
             </div>
           </div>
 
-          {/* 氣血 + 靈力 橫向進度條（呼吸燈）*/}
-          <div className="space-y-1.5">
-            <BreathBar label="氣血" value={state.qiXue}  color="bg-red-600" />
-            <BreathBar label="靈力" value={state.lingLi} color="bg-cyan-500" />
+          {/* 氣血 / 靈力進度條（呼吸燈） */}
+          <div className="space-y-2">
+            <BreathBar label="氣血" value={state.qiXue}  barColor="bg-red-600" />
+            <BreathBar label="靈力" value={state.lingLi} barColor="bg-cyan-500" />
           </div>
 
-          {/* 名聲 / 罪惡 文字列 */}
-          <div className="flex items-center gap-4 text-[10px]">
-            <span className="text-slate-600">
-              名聲 <span className="text-amber-500 font-mono">{state.mingSheng}</span>
-            </span>
-            <span className="text-slate-600">
-              罪惡 <span className="text-rose-500 font-mono">{state.zuiE}</span>
-            </span>
+          {/* 名聲 / 罪惡 */}
+          <div className="flex items-center gap-4 text-xs text-slate-400">
+            <span>名聲 <span className="text-amber-400 font-mono">{state.mingSheng}</span></span>
+            <span>罪惡 <span className="text-rose-400 font-mono">{state.zuiE}</span></span>
           </div>
 
           {/* 因果標記 */}
@@ -340,7 +334,7 @@ export default function Page() {
               {state.karmaHistory.map((tag) => (
                 <span
                   key={tag}
-                  className="px-1.5 py-0.5 text-[9px] rounded bg-slate-800 text-slate-500 border border-slate-700/50 tracking-wide"
+                  className="px-1.5 py-0.5 text-[10px] rounded-md bg-slate-800 text-slate-400 border border-slate-700"
                 >
                   {tag}
                 </span>
@@ -349,41 +343,36 @@ export default function Page() {
           )}
         </header>
 
-        {/* ── 中間：打字機敘事區 ──────────────────────── */}
-        <section className="flex-1 overflow-y-auto px-3 py-3 min-h-0">
-          <div
-            className="h-full rounded-xl bg-slate-900 border border-slate-800 p-4 flex flex-col"
-            style={{ boxShadow: "inset 0 2px 10px rgba(0,0,0,0.5)" }}
-          >
-            <p className="flex-1 text-slate-200 text-sm leading-relaxed tracking-wide">
-              {state.displayedNarrative}
-              {state.isTyping && (
-                <span className="inline-block w-[2px] h-[1em] bg-amber-400 ml-0.5 align-middle animate-pulse" />
-              )}
-            </p>
-
-            {/* 既視感隱藏按鈕 */}
-            {!state.isTyping && activeDejaVuKeys.length > 0 && (
-              <div className="mt-4 pt-3 border-t border-slate-700/40 space-y-2">
-                <p className="text-[10px] text-slate-600 italic tracking-widest">〔因果共鳴·既視感〕</p>
-                {activeDejaVuKeys.map((key) => (
-                  <motion.button
-                    key={key}
-                    onClick={() => handleDejaVu(key)}
-                    whileTap={{ scale: 0.97 }}
-                    className="w-full text-left text-xs text-amber-400/80 border border-amber-900/30 rounded-xl px-3 py-2.5 bg-amber-950/20 hover:bg-amber-950/40 transition-colors"
-                  >
-                    {DEJA_VU_TRIGGERS[key].label}
-                  </motion.button>
-                ))}
-              </div>
+        {/* ── CONTENT：劇情敘事區（面板內部捲動）─────────── */}
+        <div className="flex-1 overflow-y-auto p-6 min-h-0">
+          <p className="text-slate-100 text-sm leading-relaxed tracking-wide">
+            {state.displayedNarrative}
+            {state.isTyping && (
+              <span className="inline-block w-[2px] h-[1em] bg-amber-400 ml-0.5 align-middle animate-pulse" />
             )}
-          </div>
-        </section>
+          </p>
 
-        {/* ── 底部：固定 3×4 動作按鈕矩陣 ────────────── */}
-        <footer className="shrink-0 px-2 pt-2 pb-3 border-t border-slate-800">
-          <div className="grid grid-cols-4 gap-1.5">
+          {/* 既視感隱藏按鈕 */}
+          {!state.isTyping && activeDejaVuKeys.length > 0 && (
+            <div className="mt-6 pt-4 border-t border-slate-700/50 space-y-2">
+              <p className="text-[11px] text-slate-500 italic tracking-widest">〔因果共鳴·既視感〕</p>
+              {activeDejaVuKeys.map((key) => (
+                <motion.button
+                  key={key}
+                  onClick={() => handleDejaVu(key)}
+                  whileTap={{ scale: 0.97 }}
+                  className="w-full text-left text-sm text-amber-300 border border-amber-800/40 rounded-xl px-4 py-3 bg-amber-950/30 hover:bg-amber-950/50 transition-colors"
+                >
+                  {DEJA_VU_TRIGGERS[key].label}
+                </motion.button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* ── FOOTER：3×4 動作按鈕矩陣 ─────────────────── */}
+        <footer className="shrink-0 p-4 bg-slate-900/50 border-t border-slate-700">
+          <div className="grid grid-cols-4 gap-2">
             {ACTION_GRID.map((action, i) => (
               <motion.button
                 key={action.label}
@@ -392,18 +381,17 @@ export default function Page() {
                 whileTap={{ scale: 0.93 }}
                 className="flex flex-col items-center justify-center gap-1 rounded-xl
                            bg-gradient-to-b from-slate-800 to-slate-900
-                           border-t border-t-slate-700
+                           border-t border-t-slate-600
                            border-b-2 border-b-black
-                           border-l border-l-slate-700/50
-                           border-r border-r-slate-700/50
+                           border-l border-l-slate-700
+                           border-r border-r-slate-700
                            py-3 px-1
                            hover:from-slate-700 hover:to-slate-800
-                           active:from-slate-900 active:to-slate-950
                            transition-colors
                            disabled:opacity-30 disabled:cursor-not-allowed"
               >
                 <span className="text-xl leading-none">{action.icon}</span>
-                <span className="text-[10px] text-slate-400 leading-tight text-center whitespace-nowrap">
+                <span className="text-[10px] text-slate-100 leading-tight text-center whitespace-nowrap">
                   {action.label}
                 </span>
               </motion.button>
