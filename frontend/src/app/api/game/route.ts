@@ -2,17 +2,25 @@ import { NextRequest, NextResponse } from "next/server";
 
 // ── Request 型別 ──────────────────────────────────────────────────────────────
 
+interface NPC {
+  name: string;
+  relation: string;
+  favor: number;
+}
+
 interface GameRequest {
   isStart?: boolean;
   userInput?: string;
   stats?: {
     qiXue: number;
     lingLi: number;
+    age: number;
     shouYuan: number;
     mingSheng: number;
     zuiE: number;
     cultivation: string;
     karmaHistory: string[];
+    characters: NPC[];
     turn: number;
   };
 }
@@ -22,36 +30,45 @@ interface GameRequest {
 function buildPrompt(req: GameRequest): string {
   if (req.isStart) {
     return `請隨機生成一個武俠修仙世界的開局場景。
-主角剛剛甦醒，失去了所有記憶，不知道自己是誰或為何在此。
+主角剛剛甦醒，失去了所有記憶，不知道自己是誰或為何在此，年紀約莫十八歲。
 場景必須是以下之一（隨機選擇，每次不同）：
 - 深山竹林、雲霧繚繞的山頂、熱鬧的江湖城鎮、廢棄的古老宗門遺址、
   海上漂浮的孤島、地下洞窟的靈穴、邊境沙漠的廢墟、懸崖邊的茅屋
 
 用生動筆觸描述主角甦醒後看到的一切，讓讀者立刻感受到世界的氛圍。
+若場景中有 NPC，請在 newCharacters 欄位中加入其資訊。
 提供3個初始行動選項，讓玩家決定如何開始探索。`;
   }
 
   const s = req.stats!;
   const karma = s.karmaHistory.length > 0 ? s.karmaHistory.join("、") : "無";
+  const chars = s.characters.length > 0
+    ? s.characters.map(c => `${c.name}（${c.relation}，好感 ${c.favor}）`).join("、")
+    : "無";
 
   return `【當前遊戲狀態】
 修為境界：${s.cultivation}（第 ${s.turn} 回合）
-氣血：${s.qiXue}/100　靈力：${s.lingLi}/100　壽元：${s.shouYuan} 年
+年齡：${s.age} 歲　壽元上限：${s.shouYuan} 年
+氣血：${s.qiXue}/100　靈力：${s.lingLi}/100
 名聲：${s.mingSheng}　罪惡：${s.zuiE}
 因果標記：${karma}
+已知人物：${chars}
 
 【玩家行動】
 ${req.userInput}
 
-請以 GM 身份描述行動後發生的事，再給出3個接下來的選項。`;
+請以 GM 身份描述行動後發生的事，再給出3個接下來的選項。
+若劇情遇到新角色，請填入 newCharacters；若已有角色好感變化，填入 characterUpdates。`;
 }
 
-// ── Gemini REST API v1（直接 fetch，繞過 SDK 的 v1beta 預設）────────────────
+// ── Gemini REST API v1beta ────────────────────────────────────────────────────
 
 const SYSTEM_INSTRUCTION = `你是一個武俠修仙文字 RPG 的遊戲主持人（GM）。
 永遠以第二人稱「你」描述玩家角色的遭遇。
 不要逐字重複玩家輸入，直接描述行動後發生的事。
 劇情使用繁體中文，100-200字。
+若劇情中出現新角色，必須在 newCharacters 填入完整資訊。
+若已知角色的關係或好感改變，在 characterUpdates 填入姓名與好感變化量（正負整數）。
 嚴格回傳 JSON，不含任何 Markdown 包裝。`;
 
 const RESPONSE_SCHEMA = {
@@ -74,10 +91,33 @@ const RESPONSE_SCHEMA = {
       properties: {
         qiXue:     { type: "NUMBER" },
         lingLi:    { type: "NUMBER" },
-        shouYuan:  { type: "NUMBER" },
+        ageAdd:    { type: "NUMBER" },
         mingSheng: { type: "NUMBER" },
         zuiE:      { type: "NUMBER" },
         karmaTag:  { type: "STRING" },
+      },
+    },
+    newCharacters: {
+      type: "ARRAY",
+      items: {
+        type: "OBJECT",
+        properties: {
+          name:     { type: "STRING" },
+          relation: { type: "STRING" },
+          favor:    { type: "NUMBER" },
+        },
+        required: ["name", "relation", "favor"],
+      },
+    },
+    characterUpdates: {
+      type: "ARRAY",
+      items: {
+        type: "OBJECT",
+        properties: {
+          name:       { type: "STRING" },
+          favorDelta: { type: "NUMBER" },
+        },
+        required: ["name", "favorDelta"],
       },
     },
   },
@@ -115,8 +155,6 @@ async function callGemini(apiKey: string, prompt: string): Promise<string> {
 
 export async function POST(req: NextRequest) {
   const apiKey = process.env.GEMINI_API_KEY ?? "";
-  console.log("DEBUG: Key exists?", !!apiKey);
-
   if (!apiKey) {
     return NextResponse.json({ error: "GEMINI_API_KEY 未設定" }, { status: 500 });
   }
@@ -134,11 +172,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const prompt = buildPrompt(body);
-    console.log("DEBUG: Prompt (first 100):", prompt.slice(0, 100));
-
     const rawText = await callGemini(apiKey, prompt);
-    console.log("DEBUG: AI response (first 300):", rawText.slice(0, 300));
-
     const data = JSON.parse(rawText);
 
     if (!data.narrative || !Array.isArray(data.options)) {
@@ -148,7 +182,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(data);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    console.error("DEBUG: Error detail:", message);
+    console.error("Game API error:", message);
     return NextResponse.json(
       { error: "靈氣混亂，請重試", detail: message },
       { status: 500 }

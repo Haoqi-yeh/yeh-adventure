@@ -11,6 +11,12 @@ type KarmaTag =
   | "殺業" | "御器" | "神通" | "逃遁"
   | "血債" | "天道感應" | "業火" | "渡劫";
 
+interface NPC {
+  name: string;
+  relation: string;
+  favor: number; // -100 ~ 100
+}
+
 interface StoryOption {
   label: string;
   action: string;
@@ -22,20 +28,24 @@ interface AIGameResponse {
   statChanges: {
     qiXue?: number;
     lingLi?: number;
-    shouYuan?: number;
+    ageAdd?: number;
     mingSheng?: number;
     zuiE?: number;
     karmaTag?: KarmaTag;
   };
+  newCharacters?: NPC[];
+  characterUpdates?: { name: string; favorDelta: number }[];
 }
 
 interface GameState {
   qiXue: number;
   lingLi: number;
+  age: number;
   shouYuan: number;
   mingSheng: number;
   zuiE: number;
   karmaHistory: KarmaTag[];
+  characters: NPC[];
   cultivation: string;
   cultivationLevel: number;
   displayedNarrative: string;
@@ -55,6 +65,8 @@ const CULTIVATION_STAGES = [
   "化神境",
 ];
 
+const CULTIVATION_SHOUYUAN = [100, 100, 100, 500, 500, 500, 2000, 2000, 5000, 50000];
+
 const DEJA_VU_TRIGGERS: Record<string, { label: string; action: string }> = {
   殺業:     { label: "【血債血還·既視感】", action: "我感應到體內殺念凝聚，試圖引導這股力量化為神通" },
   悟道:     { label: "【大道至簡·既視感】", action: "那些感悟碎片驟然聚合，我嘗試抓住這一瞬間的頓悟" },
@@ -62,7 +74,7 @@ const DEJA_VU_TRIGGERS: Record<string, { label: string; action: string }> = {
   天道感應: { label: "【天道回響·既視感】", action: "我感受到天道的回望，試圖借助這股共鳴突破當前境界" },
 };
 
-const CJK_FONT = "'PingFang TC', 'Microsoft JhengHei', 'Noto Sans TC', sans-serif";
+const CJK = "'PingFang TC', 'Microsoft JhengHei', 'Noto Sans TC', sans-serif";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -70,67 +82,83 @@ function clamp(v: number, lo = 0, hi = 100) {
   return Math.max(lo, Math.min(hi, v));
 }
 
-// ─── useGameState Hook ────────────────────────────────────────────────────────
+// ─── useGameState ─────────────────────────────────────────────────────────────
 
 function useGameState() {
   const [state, setState] = useState<GameState>({
-    qiXue: 80, lingLi: 60, shouYuan: 500,
+    qiXue: 80, lingLi: 60,
+    age: 18, shouYuan: 100,
     mingSheng: 10, zuiE: 0,
-    karmaHistory: [],
-    cultivation: CULTIVATION_STAGES[0],
-    cultivationLevel: 0,
-    displayedNarrative: "",
-    isTyping: false,
-    isLoading: true,
-    turn: 0,
-    options: [],
-    error: null,
+    karmaHistory: [], characters: [],
+    cultivation: CULTIVATION_STAGES[0], cultivationLevel: 0,
+    displayedNarrative: "", isTyping: false, isLoading: true,
+    turn: 0, options: [], error: null,
   });
 
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const stateRef = useRef(state);
   stateRef.current = state;
 
   const runTypewriter = useCallback((text: string) => {
-    if (intervalRef.current) clearInterval(intervalRef.current);
+    if (timerRef.current) clearInterval(timerRef.current);
     let i = 0;
     setState(s => ({ ...s, displayedNarrative: "", isTyping: true }));
-    intervalRef.current = setInterval(() => {
+    timerRef.current = setInterval(() => {
       i++;
       const done = i >= text.length;
       setState(s => ({ ...s, displayedNarrative: text.slice(0, i), isTyping: !done }));
-      if (done) clearInterval(intervalRef.current!);
+      if (done) clearInterval(timerRef.current!);
     }, 38);
   }, []);
 
-  const applyResponse = useCallback((response: AIGameResponse, isStart = false) => {
+  const applyResponse = useCallback((res: AIGameResponse, isStart = false) => {
     setState(prev => {
-      const c = response.statChanges ?? {};
+      const c = res.statChanges ?? {};
+
+      // cultivation
       const rawLingLi = isStart ? prev.lingLi : prev.lingLi + (c.lingLi ?? 0);
       let newLevel = prev.cultivationLevel;
       if (rawLingLi >= 100 && prev.cultivationLevel < CULTIVATION_STAGES.length - 1) {
         newLevel = prev.cultivationLevel + 1;
       }
+
+      // karma
       const newKarma = c.karmaTag && !prev.karmaHistory.includes(c.karmaTag)
         ? ([...prev.karmaHistory, c.karmaTag] as KarmaTag[])
         : prev.karmaHistory;
+
+      // NPCs
+      let chars = [...prev.characters];
+      if (res.newCharacters) {
+        res.newCharacters.forEach(npc => {
+          if (!chars.find(ch => ch.name === npc.name)) chars.push(npc);
+        });
+      }
+      if (res.characterUpdates) {
+        res.characterUpdates.forEach(upd => {
+          const idx = chars.findIndex(ch => ch.name === upd.name);
+          if (idx >= 0) chars[idx] = { ...chars[idx], favor: clamp(chars[idx].favor + upd.favorDelta, -100, 100) };
+        });
+      }
+
       return {
         ...prev,
         qiXue:     isStart ? prev.qiXue     : clamp(prev.qiXue     + (c.qiXue     ?? 0)),
         lingLi:    newLevel > prev.cultivationLevel ? 20 : clamp(rawLingLi),
-        shouYuan:  isStart ? prev.shouYuan  : Math.max(0, prev.shouYuan + (c.shouYuan ?? 0)),
-        mingSheng: isStart ? prev.mingSheng : clamp(prev.mingSheng  + (c.mingSheng ?? 0)),
-        zuiE:      isStart ? prev.zuiE      : clamp(prev.zuiE       + (c.zuiE      ?? 0)),
+        age:       isStart ? prev.age        : prev.age + (c.ageAdd  ?? 0),
+        shouYuan:  CULTIVATION_SHOUYUAN[newLevel],
+        mingSheng: isStart ? prev.mingSheng  : clamp(prev.mingSheng + (c.mingSheng ?? 0)),
+        zuiE:      isStart ? prev.zuiE       : clamp(prev.zuiE      + (c.zuiE      ?? 0)),
         karmaHistory: newKarma,
-        cultivation:  CULTIVATION_STAGES[newLevel],
+        characters: chars,
+        cultivation:     CULTIVATION_STAGES[newLevel],
         cultivationLevel: newLevel,
         turn:    isStart ? 0 : prev.turn + 1,
-        options:   response.options ?? [],
-        isLoading: false,
-        error:     null,
+        options: res.options ?? [],
+        isLoading: false, error: null,
       };
     });
-    runTypewriter(response.narrative);
+    runTypewriter(res.narrative);
   }, [runTypewriter]);
 
   const callAPI = useCallback(async (userInput: string | null): Promise<AIGameResponse> => {
@@ -140,14 +168,13 @@ function useGameState() {
       : {
           userInput,
           stats: {
-            qiXue:        s.qiXue,
-            lingLi:       s.lingLi,
-            shouYuan:     s.shouYuan,
-            mingSheng:    s.mingSheng,
-            zuiE:         s.zuiE,
-            cultivation:  s.cultivation,
+            qiXue: s.qiXue, lingLi: s.lingLi,
+            age: s.age, shouYuan: s.shouYuan,
+            mingSheng: s.mingSheng, zuiE: s.zuiE,
+            cultivation: s.cultivation,
             karmaHistory: s.karmaHistory,
-            turn:         s.turn,
+            characters: s.characters,
+            turn: s.turn,
           },
         };
 
@@ -156,10 +183,9 @@ function useGameState() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
-
     if (!res.ok) {
-      const errData = await res.json().catch(() => ({}));
-      throw new Error((errData as { error?: string }).error ?? `HTTP ${res.status}`);
+      const err = await res.json().catch(() => ({}));
+      throw new Error((err as { error?: string }).error ?? `HTTP ${res.status}`);
     }
     return res.json() as Promise<AIGameResponse>;
   }, []);
@@ -167,30 +193,25 @@ function useGameState() {
   useEffect(() => {
     callAPI(null)
       .then(r => applyResponse(r, true))
-      .catch(err => {
-        setState(s => ({
-          ...s,
-          isLoading: false,
-          displayedNarrative: "",
-          error: `開局失敗：${err instanceof Error ? err.message : err}`,
-        }));
-      });
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+      .catch(err => setState(s => ({
+        ...s, isLoading: false, displayedNarrative: "",
+        error: `開局失敗：${err instanceof Error ? err.message : err}`,
+      })));
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleSendMessage = useCallback(async (userInput: string) => {
     const s = stateRef.current;
     if (!userInput.trim() || s.isLoading || s.isTyping) return;
-    setState(prev => ({ ...prev, isLoading: true, options: [], error: null }));
+    setState(p => ({ ...p, isLoading: true, options: [], error: null }));
     try {
-      const response = await callAPI(userInput);
-      applyResponse(response);
+      const r = await callAPI(userInput);
+      applyResponse(r);
     } catch (err) {
-      setState(prev => ({
-        ...prev,
-        isLoading: false,
-        options: stateRef.current.options.length > 0 ? stateRef.current.options : [],
+      setState(p => ({
+        ...p, isLoading: false,
+        options: stateRef.current.options,
         error: `AI 生成失敗：${err instanceof Error ? err.message : err}`,
       }));
     }
@@ -201,44 +222,100 @@ function useGameState() {
 
 // ─── StatBar ──────────────────────────────────────────────────────────────────
 
-function StatBar({
-  label, value, maxVal = 100, gradientFrom, gradientTo,
-}: {
-  label: string; value: number; maxVal?: number; gradientFrom: string; gradientTo: string;
+function StatBar({ label, value, maxVal = 100, from, to }: {
+  label: string; value: number; maxVal?: number; from: string; to: string;
 }) {
   const pct = Math.max(0, Math.min(100, (value / maxVal) * 100));
   return (
     <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-      <span style={{
-        color: "#94a3b8", fontSize: "11px", fontWeight: 700,
-        width: "22px", flexShrink: 0, letterSpacing: "0.04em",
-        fontFamily: CJK_FONT,
-      }}>
+      <span style={{ color: "#94a3b8", fontSize: "11px", fontWeight: 700, width: "22px", flexShrink: 0, fontFamily: CJK }}>
         {label}
       </span>
-      <div style={{
-        flex: 1, height: "6px", backgroundColor: "#1e293b",
-        borderRadius: "3px", overflow: "hidden",
-      }}>
+      <div style={{ flex: 1, height: "6px", backgroundColor: "#1e293b", borderRadius: "3px", overflow: "hidden" }}>
         <motion.div
-          style={{
-            height: "100%", borderRadius: "3px",
-            background: `linear-gradient(90deg, ${gradientFrom} 0%, ${gradientTo} 100%)`,
-          }}
+          style={{ height: "100%", borderRadius: "3px", background: `linear-gradient(90deg, ${from} 0%, ${to} 100%)` }}
           animate={{ width: `${pct}%`, opacity: [0.8, 1, 0.8] }}
-          transition={{
-            width:   { duration: 0.5, ease: "easeOut" },
-            opacity: { duration: 2.5, repeat: Infinity, ease: "easeInOut" },
-          }}
+          transition={{ width: { duration: 0.5, ease: "easeOut" }, opacity: { duration: 2.5, repeat: Infinity, ease: "easeInOut" } }}
         />
       </div>
-      <span style={{
-        color: "#e2e8f0", fontFamily: "monospace", fontSize: "11px",
-        width: "54px", textAlign: "right", flexShrink: 0,
-      }}>
+      <span style={{ color: "#e2e8f0", fontFamily: "monospace", fontSize: "11px", width: "54px", textAlign: "right", flexShrink: 0 }}>
         {value}&nbsp;/&nbsp;{maxVal}
       </span>
     </div>
+  );
+}
+
+// ─── FavorBar ─────────────────────────────────────────────────────────────────
+
+function FavorBar({ favor }: { favor: number }) {
+  const pct = Math.abs(favor);
+  const isPos = favor >= 0;
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: "6px", flex: 1 }}>
+      <div style={{ flex: 1, height: "4px", backgroundColor: "#1e293b", borderRadius: "2px", overflow: "hidden", position: "relative" }}>
+        <motion.div
+          style={{
+            position: "absolute", top: 0, height: "100%", borderRadius: "2px",
+            left: isPos ? "50%" : `${50 - pct / 2}%`,
+            background: isPos ? "#34d399" : "#f87171",
+          }}
+          animate={{ width: `${pct / 2}%` }}
+          transition={{ duration: 0.4, ease: "easeOut" }}
+        />
+        <div style={{ position: "absolute", left: "50%", top: 0, width: "1px", height: "100%", backgroundColor: "#334155" }} />
+      </div>
+      <span style={{ color: isPos ? "#34d399" : "#f87171", fontFamily: "monospace", fontSize: "10px", width: "28px", textAlign: "right", flexShrink: 0 }}>
+        {favor > 0 ? "+" : ""}{favor}
+      </span>
+    </div>
+  );
+}
+
+// ─── Modal wrapper ────────────────────────────────────────────────────────────
+
+function Modal({ onClose, title, children }: {
+  onClose: () => void; title: string; children: React.ReactNode;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.15 }}
+      style={{
+        position: "absolute", inset: 0, backgroundColor: "rgba(0,0,0,0.72)",
+        backdropFilter: "blur(4px)", zIndex: 50,
+        display: "flex", alignItems: "center", justifyContent: "center", padding: "20px",
+      }}
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.98 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.98 }}
+        transition={{ duration: 0.18, ease: "easeOut" }}
+        style={{
+          backgroundColor: "#0f172a", borderRadius: "16px",
+          border: "1px solid #1e293b", padding: "22px", width: "100%",
+          boxShadow: "0 20px 40px rgba(0,0,0,0.5)", fontFamily: CJK,
+          maxHeight: "80vh", overflowY: "auto",
+        }}
+        onClick={e => e.stopPropagation()}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "18px" }}>
+          <span style={{ color: "#fbbf24", fontSize: "13px", fontWeight: 700, letterSpacing: "0.2em" }}>
+            {title}
+          </span>
+          <button
+            onClick={onClose}
+            style={{ background: "none", border: "none", color: "#475569", cursor: "pointer", fontSize: "18px", lineHeight: 1, padding: "2px 6px" }}
+          >
+            ✕
+          </button>
+        </div>
+        {children}
+      </motion.div>
+    </motion.div>
   );
 }
 
@@ -246,100 +323,137 @@ function StatBar({
 
 function DetailPanel({ state, onClose }: { state: GameState; onClose: () => void }) {
   const basicRows = [
-    { label: "氣血",   value: `${state.qiXue} / 100`,  color: "#ef4444" },
-    { label: "靈力",   value: `${state.lingLi} / 100`,  color: "#06b6d4" },
-    { label: "壽元",   value: `${state.shouYuan} 年`,   color: "#34d399" },
-    { label: "修為",   value: state.cultivation,         color: "#fbbf24" },
+    { label: "氣血", value: `${state.qiXue} / 100`, color: "#ef4444" },
+    { label: "靈力", value: `${state.lingLi} / 100`, color: "#06b6d4" },
+    { label: "壽元", value: `${state.age} / ${state.shouYuan}`, color: "#34d399" },
   ];
   const worldRows = [
-    { label: "名聲",   value: `${state.mingSheng}`,  color: "#fbbf24" },
-    { label: "罪惡",   value: `${state.zuiE}`,        color: "#f87171" },
-    { label: "魅力",   value: "—",                    color: "#a78bfa" },
-    { label: "意志",   value: "—",                    color: "#60a5fa" },
+    { label: "名聲", value: `${state.mingSheng}`, color: "#fbbf24" },
+    { label: "罪惡", value: `${state.zuiE}`,      color: "#f87171" },
+    { label: "魅力", value: "—",                   color: "#a78bfa" },
+    { label: "意志", value: "—",                   color: "#60a5fa" },
   ];
-
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.15 }}
-      style={{
-        position: "absolute", inset: 0, backgroundColor: "rgba(0,0,0,0.72)",
-        backdropFilter: "blur(4px)", zIndex: 50,
-        display: "flex", alignItems: "center", justifyContent: "center", padding: "20px",
-      }}
-      onClick={onClose}
-    >
-      <motion.div
-        initial={{ opacity: 0, scale: 0.98 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.98 }}
-        transition={{ duration: 0.18, ease: "easeOut" }}
-        style={{
-          backgroundColor: "#0f172a", borderRadius: "16px",
-          border: "1px solid #1e293b", padding: "24px", width: "100%",
-          boxShadow: "0 20px 40px rgba(0,0,0,0.5)",
-          fontFamily: CJK_FONT,
-        }}
-        onClick={e => e.stopPropagation()}
-      >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-          <span style={{ color: "#fbbf24", fontSize: "13px", fontWeight: 700, letterSpacing: "0.2em" }}>
-            ⟨ 人 物 詳 細 ⟩
+    <Modal onClose={onClose} title="⟨ 人 物 詳 細 ⟩">
+      {/* 境界 */}
+      <div style={{ textAlign: "center", marginBottom: "18px", padding: "12px 0", borderBottom: "1px solid #1e293b" }}>
+        <p style={{ color: "#475569", fontSize: "10px", letterSpacing: "0.18em", marginBottom: "6px" }}>[ 修為境界 ]</p>
+        <span style={{ color: "#fbbf24", fontSize: "18px", fontWeight: 700, letterSpacing: "0.12em" }}>
+          {state.cultivation}
+        </span>
+        {state.turn > 0 && (
+          <span style={{ color: "#334155", fontSize: "11px", marginLeft: "10px", fontFamily: "monospace" }}>
+            第 {state.turn} 回合
           </span>
-          <button
-            onClick={onClose}
-            style={{ background: "none", border: "none", color: "#475569", cursor: "pointer", fontSize: "18px", lineHeight: 1, padding: "2px 6px" }}
-          >
-            ✕
-          </button>
-        </div>
-
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
-          <div>
-            <p style={{ color: "#334155", fontSize: "10px", letterSpacing: "0.18em", marginBottom: "14px", fontWeight: 700 }}>
-              [ 基本屬性 ]
-            </p>
-            {basicRows.map(row => (
-              <div key={row.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "13px" }}>
-                <span style={{ color: "#94a3b8", fontSize: "12px" }}>{row.label}</span>
-                <span style={{ color: row.color, fontFamily: "monospace", fontSize: "13px", fontWeight: 700 }}>{row.value}</span>
-              </div>
-            ))}
-          </div>
-          <div>
-            <p style={{ color: "#334155", fontSize: "10px", letterSpacing: "0.18em", marginBottom: "14px", fontWeight: 700 }}>
-              [ 世界屬性 ]
-            </p>
-            {worldRows.map(row => (
-              <div key={row.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "13px" }}>
-                <span style={{ color: "#94a3b8", fontSize: "12px" }}>{row.label}</span>
-                <span style={{ color: row.color, fontFamily: "monospace", fontSize: "13px", fontWeight: 700 }}>{row.value}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {state.karmaHistory.length > 0 && (
-          <div style={{ marginTop: "16px", paddingTop: "16px", borderTop: "1px solid #1e293b" }}>
-            <p style={{ color: "#334155", fontSize: "10px", letterSpacing: "0.18em", marginBottom: "10px", fontWeight: 700 }}>
-              [ 因果印記 ]
-            </p>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
-              {state.karmaHistory.map(tag => (
-                <span key={tag} style={{
-                  padding: "3px 10px", fontSize: "11px", borderRadius: "6px",
-                  backgroundColor: "#1e293b", color: "#94a3b8", border: "1px solid #334155",
-                }}>
-                  {tag}
-                </span>
-              ))}
-            </div>
-          </div>
         )}
-      </motion.div>
-    </motion.div>
+      </div>
+
+      {/* 兩欄屬性 */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "16px" }}>
+        <div>
+          <p style={{ color: "#334155", fontSize: "10px", letterSpacing: "0.18em", marginBottom: "12px", fontWeight: 700 }}>[ 基本屬性 ]</p>
+          {basicRows.map(row => (
+            <div key={row.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "12px" }}>
+              <span style={{ color: "#94a3b8", fontSize: "12px" }}>{row.label}</span>
+              <span style={{ color: row.color, fontFamily: "monospace", fontSize: "12px", fontWeight: 700 }}>{row.value}</span>
+            </div>
+          ))}
+        </div>
+        <div>
+          <p style={{ color: "#334155", fontSize: "10px", letterSpacing: "0.18em", marginBottom: "12px", fontWeight: 700 }}>[ 世界屬性 ]</p>
+          {worldRows.map(row => (
+            <div key={row.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "12px" }}>
+              <span style={{ color: "#94a3b8", fontSize: "12px" }}>{row.label}</span>
+              <span style={{ color: row.color, fontFamily: "monospace", fontSize: "12px", fontWeight: 700 }}>{row.value}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* 因果 */}
+      {state.karmaHistory.length > 0 && (
+        <div style={{ paddingTop: "14px", borderTop: "1px solid #1e293b" }}>
+          <p style={{ color: "#334155", fontSize: "10px", letterSpacing: "0.18em", marginBottom: "10px", fontWeight: 700 }}>[ 因果印記 ]</p>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+            {state.karmaHistory.map(tag => (
+              <span key={tag} style={{ padding: "3px 10px", fontSize: "11px", borderRadius: "6px", backgroundColor: "#1e293b", color: "#94a3b8", border: "1px solid #334155" }}>
+                {tag}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+    </Modal>
+  );
+}
+
+// ─── CharactersPanel ──────────────────────────────────────────────────────────
+
+function CharactersPanel({ state, onClose }: { state: GameState; onClose: () => void }) {
+  return (
+    <Modal onClose={onClose} title="⟨ 人 物 關 係 ⟩">
+      {state.characters.length === 0 ? (
+        <div style={{ display: "flex", justifyContent: "center", padding: "32px 0", color: "#334155", fontSize: "13px", letterSpacing: "0.12em" }}>
+          〔 尚未結識任何人 〕
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+          {state.characters.map(npc => (
+            <div key={npc.name} style={{ padding: "12px 14px", backgroundColor: "#0f1929", borderRadius: "10px", border: "1px solid #1e293b" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                <span style={{ color: "#f1f5f9", fontSize: "13px", fontWeight: 700 }}>{npc.name}</span>
+                <span style={{ color: "#64748b", fontSize: "11px", backgroundColor: "#1e293b", padding: "2px 8px", borderRadius: "4px" }}>
+                  {npc.relation}
+                </span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <span style={{ color: "#475569", fontSize: "10px", flexShrink: 0 }}>好感</span>
+                <FavorBar favor={npc.favor} />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </Modal>
+  );
+}
+
+// ─── LandscapePanel ───────────────────────────────────────────────────────────
+
+function LandscapePanel({ narrative, onClose }: { narrative: string; onClose: () => void }) {
+  return (
+    <Modal onClose={onClose} title="⟨ 眼 前 的 風 景 ⟩">
+      {/* 圖片預留區 */}
+      <div style={{
+        width: "100%", aspectRatio: "16/9",
+        backgroundColor: "#020617",
+        borderRadius: "10px",
+        border: "1px solid #1e293b",
+        display: "flex", flexDirection: "column",
+        alignItems: "center", justifyContent: "center",
+        gap: "10px", marginBottom: "16px",
+        background: "linear-gradient(135deg, #020617 0%, #0c1a35 50%, #020617 100%)",
+      }}>
+        <motion.div
+          animate={{ opacity: [0.3, 0.7, 0.3] }}
+          transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+          style={{ fontSize: "32px" }}
+        >
+          ✦
+        </motion.div>
+        <span style={{ color: "#334155", fontSize: "11px", letterSpacing: "0.18em" }}>靈境感知尚未開啟</span>
+      </div>
+
+      {/* 當前場景描述 */}
+      {narrative && (
+        <div style={{ padding: "12px 14px", backgroundColor: "#080e1c", borderRadius: "10px", border: "1px solid #1e293b" }}>
+          <p style={{ color: "#475569", fontSize: "10px", letterSpacing: "0.15em", marginBottom: "8px" }}>[ 當前場景 ]</p>
+          <p style={{ color: "#94a3b8", fontSize: "12px", lineHeight: 1.8, letterSpacing: "0.04em", margin: 0 }}>
+            {narrative.slice(0, 120)}{narrative.length > 120 ? "…" : ""}
+          </p>
+        </div>
+      )}
+    </Modal>
   );
 }
 
@@ -347,92 +461,45 @@ function DetailPanel({ state, onClose }: { state: GameState; onClose: () => void
 
 function BagPanel({ state, onClose }: { state: GameState; onClose: () => void }) {
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.15 }}
-      style={{
-        position: "absolute", inset: 0, backgroundColor: "rgba(0,0,0,0.72)",
-        backdropFilter: "blur(4px)", zIndex: 50,
-        display: "flex", alignItems: "center", justifyContent: "center", padding: "20px",
-      }}
-      onClick={onClose}
-    >
-      <motion.div
-        initial={{ opacity: 0, scale: 0.98 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.98 }}
-        transition={{ duration: 0.18, ease: "easeOut" }}
-        style={{
-          backgroundColor: "#0f172a", borderRadius: "16px",
-          border: "1px solid #1e293b", padding: "24px", width: "100%",
-          boxShadow: "0 20px 40px rgba(0,0,0,0.5)",
-          fontFamily: CJK_FONT,
-        }}
-        onClick={e => e.stopPropagation()}
-      >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-          <span style={{ color: "#fbbf24", fontSize: "13px", fontWeight: 700, letterSpacing: "0.2em" }}>
-            ⟨ 背 包 ⟩
-          </span>
-          <button
-            onClick={onClose}
-            style={{ background: "none", border: "none", color: "#475569", cursor: "pointer", fontSize: "18px", lineHeight: 1, padding: "2px 6px" }}
-          >
-            ✕
-          </button>
+    <Modal onClose={onClose} title="⟨ 背 包 ⟩">
+      {state.karmaHistory.length === 0 ? (
+        <div style={{ display: "flex", justifyContent: "center", padding: "32px 0", color: "#334155", fontSize: "13px", letterSpacing: "0.12em" }}>
+          〔 空空如也 〕
         </div>
-
-        {state.karmaHistory.length === 0 ? (
-          <div style={{ display: "flex", justifyContent: "center", padding: "32px 0", color: "#334155", fontSize: "13px", letterSpacing: "0.12em" }}>
-            〔 空空如也 〕
+      ) : (
+        <div>
+          <p style={{ color: "#334155", fontSize: "10px", letterSpacing: "0.18em", marginBottom: "12px", fontWeight: 700 }}>[ 因果印記 ]</p>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+            {state.karmaHistory.map(tag => (
+              <span key={tag} style={{ padding: "6px 14px", fontSize: "12px", borderRadius: "8px", backgroundColor: "#1e293b", color: "#94a3b8", border: "1px solid #334155" }}>
+                {tag}
+              </span>
+            ))}
           </div>
-        ) : (
-          <div>
-            <p style={{ color: "#334155", fontSize: "10px", letterSpacing: "0.18em", marginBottom: "12px", fontWeight: 700 }}>
-              [ 因果印記 ]
-            </p>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-              {state.karmaHistory.map(tag => (
-                <span key={tag} style={{
-                  padding: "6px 14px", fontSize: "12px", borderRadius: "8px",
-                  backgroundColor: "#1e293b", color: "#94a3b8", border: "1px solid #334155",
-                }}>
-                  {tag}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-      </motion.div>
-    </motion.div>
+        </div>
+      )}
+    </Modal>
   );
 }
 
 // ─── HUD button style ─────────────────────────────────────────────────────────
 
-const hudBtnStyle: React.CSSProperties = {
-  background: "none",
-  border: "1px solid #334155",
-  borderRadius: "6px",
-  color: "#94a3b8",
-  fontSize: "10px",
-  letterSpacing: "0.22em",
-  padding: "5px 10px",
-  cursor: "pointer",
-  fontFamily: CJK_FONT,
-  lineHeight: 1,
+const hudBtn: React.CSSProperties = {
+  background: "none", border: "1px solid #334155", borderRadius: "6px",
+  color: "#94a3b8", fontSize: "10px", letterSpacing: "0.18em",
+  padding: "4px 8px", cursor: "pointer", fontFamily: CJK, lineHeight: 1,
 };
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function Page() {
   const { state, handleSendMessage } = useGameState();
-  const [inputValue, setInputValue]  = useState("");
-  const [rippleKey, setRippleKey]    = useState<number | null>(null);
-  const [showDetail, setShowDetail]  = useState(false);
-  const [showBag, setShowBag]        = useState(false);
+  const [inputValue, setInputValue]     = useState("");
+  const [rippleKey, setRippleKey]       = useState<number | null>(null);
+  const [showDetail, setShowDetail]     = useState(false);
+  const [showChars, setShowChars]       = useState(false);
+  const [showLandscape, setShowLandscape] = useState(false);
+  const [showBag, setShowBag]           = useState(false);
 
   const activeDejaVuKeys = Object.keys(DEJA_VU_TRIGGERS).filter(k =>
     state.karmaHistory.includes(k as KarmaTag)
@@ -454,29 +521,22 @@ export default function Page() {
 
   return (
     <div style={{
-      position: "fixed", inset: 0,
-      backgroundColor: "#cbd5e1",
+      position: "fixed", inset: 0, backgroundColor: "#cbd5e1",
       display: "flex", alignItems: "center", justifyContent: "center",
-      padding: "16px",
-      fontFamily: CJK_FONT,
+      padding: "16px", fontFamily: CJK,
     }}>
       <div style={{
         position: "relative", width: "100%", maxWidth: "448px",
         height: "90vh", maxHeight: "90vh",
-        backgroundColor: "#020617",
-        borderRadius: "16px",
+        backgroundColor: "#020617", borderRadius: "16px",
         boxShadow: "0 25px 50px -12px rgba(0,0,0,0.6), 0 0 0 4px #1e293b",
         display: "flex", flexDirection: "column", overflow: "hidden",
       }}>
 
-        {/* ── 靈氣漣漪 ─────────────────────────────────────────── */}
+        {/* 靈氣漣漪 */}
         <AnimatePresence>
           {rippleKey !== null && (
-            <motion.div key={rippleKey} style={{
-              position: "absolute", inset: 0,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              pointerEvents: "none", zIndex: 20,
-            }}>
+            <motion.div key={rippleKey} style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none", zIndex: 20 }}>
               <motion.div
                 style={{ width: 80, height: 80, borderRadius: "50%", border: "1px solid rgba(34,211,238,0.3)", backgroundColor: "rgba(34,211,238,0.06)" }}
                 initial={{ scale: 0.3, opacity: 0.6 }}
@@ -490,39 +550,36 @@ export default function Page() {
 
         {/* ── HUD ──────────────────────────────────────────────── */}
         <div style={{
-          flexShrink: 0,
-          backgroundColor: "rgba(2, 6, 23, 0.80)",
-          backdropFilter: "blur(12px)",
-          padding: "12px 14px 10px",
+          flexShrink: 0, backgroundColor: "rgba(2,6,23,0.80)",
+          backdropFilter: "blur(12px)", padding: "12px 14px 10px",
           borderBottom: "1px solid rgba(30,41,59,0.8)",
         }}>
-          {/* 修為 + 壽元 */}
+          {/* Row 1: 修為 + 眼前的風景 */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
             <span style={{ color: "#fbbf24", fontSize: "13px", fontWeight: 700, letterSpacing: "0.1em" }}>
               {state.cultivation}
             </span>
-            <span style={{ color: "#475569", fontSize: "11px" }}>
-              {state.turn > 0 ? `第 ${state.turn} 回 · ` : ""}
-              壽元&nbsp;
-              <span style={{ color: "#34d399", fontFamily: "monospace" }}>{state.shouYuan}</span> 年
-            </span>
+            <button style={{ ...hudBtn, color: "#7dd3fc", borderColor: "#1e3a5f", letterSpacing: "0.15em" }} onClick={() => setShowLandscape(true)}>
+              〔 眼前的風景 〕
+            </button>
           </div>
 
-          {/* HP bar */}
-          <StatBar label="HP" value={state.qiXue} gradientFrom="#dc2626" gradientTo="#ef4444" />
+          {/* HP / MP */}
+          <StatBar label="HP" value={state.qiXue}  from="#dc2626" to="#ef4444" />
           <div style={{ marginTop: "6px" }}>
-            <StatBar label="MP" value={state.lingLi} gradientFrom="#0ea5e9" gradientTo="#06b6d4" />
+            <StatBar label="MP" value={state.lingLi} from="#0ea5e9" to="#06b6d4" />
           </div>
 
-          {/* 名聲 / 罪惡 + 功能鍵 */}
+          {/* Row 4: 名聲/罪惡 + 功能鍵 */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "10px" }}>
             <div style={{ display: "flex", gap: "14px", fontSize: "11px", color: "#475569" }}>
               <span>名聲&nbsp;<span style={{ color: "#fbbf24", fontFamily: "monospace" }}>{state.mingSheng}</span></span>
               <span>罪惡&nbsp;<span style={{ color: "#f87171", fontFamily: "monospace" }}>{state.zuiE}</span></span>
             </div>
-            <div style={{ display: "flex", gap: "6px" }}>
-              <button style={hudBtnStyle} onClick={() => setShowDetail(true)}>〔 詳 細 〕</button>
-              <button style={hudBtnStyle} onClick={() => setShowBag(true)}>〔 背 包 〕</button>
+            <div style={{ display: "flex", gap: "5px" }}>
+              <button style={hudBtn} onClick={() => setShowDetail(true)}>〔 詳細 〕</button>
+              <button style={hudBtn} onClick={() => setShowChars(true)}>〔 人物 〕</button>
+              <button style={hudBtn} onClick={() => setShowBag(true)}>〔 背包 〕</button>
             </div>
           </div>
         </div>
@@ -530,7 +587,6 @@ export default function Page() {
         {/* ── CONTENT ──────────────────────────────────────────── */}
         <div style={{ flex: 1, overflowY: "auto", padding: "20px 20px 12px", minHeight: 0 }}>
 
-          {/* 開局 loading */}
           {state.isLoading && state.turn === 0 && !state.displayedNarrative && (
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", gap: "16px" }}>
               <motion.div
@@ -542,7 +598,6 @@ export default function Page() {
             </div>
           )}
 
-          {/* 敘事文字 */}
           {(state.displayedNarrative || (!state.isLoading && !state.displayedNarrative)) && (
             <p style={{ color: "#f1f5f9", fontSize: "14px", lineHeight: 1.9, letterSpacing: "0.04em", margin: 0 }}>
               {state.displayedNarrative}
@@ -556,25 +611,18 @@ export default function Page() {
             </p>
           )}
 
-          {/* 既視感 */}
           {!isBusy && activeDejaVuKeys.length > 0 && (
             <div style={{ marginTop: "20px", paddingTop: "14px", borderTop: "1px solid rgba(30,41,59,0.8)" }}>
-              <p style={{ fontSize: "10px", color: "#475569", fontStyle: "italic", letterSpacing: "0.12em", marginBottom: "8px" }}>
-                〔因果共鳴·既視感〕
-              </p>
+              <p style={{ fontSize: "10px", color: "#475569", fontStyle: "italic", letterSpacing: "0.12em", marginBottom: "8px" }}>〔因果共鳴·既視感〕</p>
               {activeDejaVuKeys.map(key => (
-                <motion.button key={key}
-                  onClick={() => fire(DEJA_VU_TRIGGERS[key].action)}
-                  whileTap={{ scale: 0.97 }}
-                  style={{ display: "block", width: "100%", textAlign: "left", fontSize: "12px", color: "rgba(251,191,36,0.85)", border: "1px solid rgba(120,53,15,0.35)", borderRadius: "10px", padding: "10px 14px", backgroundColor: "rgba(69,26,3,0.25)", cursor: "pointer", marginBottom: "6px", fontFamily: CJK_FONT }}
-                >
+                <motion.button key={key} onClick={() => fire(DEJA_VU_TRIGGERS[key].action)} whileTap={{ scale: 0.97 }}
+                  style={{ display: "block", width: "100%", textAlign: "left", fontSize: "12px", color: "rgba(251,191,36,0.85)", border: "1px solid rgba(120,53,15,0.35)", borderRadius: "10px", padding: "10px 14px", backgroundColor: "rgba(69,26,3,0.25)", cursor: "pointer", marginBottom: "6px", fontFamily: CJK }}>
                   {DEJA_VU_TRIGGERS[key].label}
                 </motion.button>
               ))}
             </div>
           )}
 
-          {/* 錯誤 */}
           {state.error && (
             <p style={{ color: "#f87171", fontSize: "12px", marginTop: "12px", padding: "10px", backgroundColor: "rgba(239,68,68,0.1)", borderRadius: "8px", border: "1px solid rgba(239,68,68,0.2)" }}>
               {state.error}
@@ -585,7 +633,6 @@ export default function Page() {
         {/* ── FOOTER ───────────────────────────────────────────── */}
         <div style={{ flexShrink: 0, backgroundColor: "rgba(15,23,42,0.9)", borderTop: "1px solid #1e293b", padding: "12px" }}>
 
-          {/* 輸入列 */}
           <div style={{ display: "flex", gap: "8px", marginBottom: "10px" }}>
             <input
               value={inputValue}
@@ -594,14 +641,11 @@ export default function Page() {
               disabled={isBusy}
               placeholder={isBusy ? "思考中…" : "輸入自定義行動或對話…"}
               style={{
-                flex: 1,
-                backgroundColor: isBusy ? "#080e1c" : "#0f172a",
+                flex: 1, backgroundColor: isBusy ? "#080e1c" : "#0f172a",
                 border: "1px solid #334155", borderRadius: "10px",
                 padding: "9px 12px", fontSize: "13px", color: "#f1f5f9",
-                outline: "none",
-                opacity: isBusy ? 0.55 : 1,
-                transition: "background-color 0.3s, opacity 0.3s",
-                fontFamily: CJK_FONT,
+                outline: "none", opacity: isBusy ? 0.55 : 1,
+                transition: "background-color 0.3s, opacity 0.3s", fontFamily: CJK,
               }}
             />
             <motion.button
@@ -610,12 +654,10 @@ export default function Page() {
               whileTap={!isBusy && !!inputValue.trim() ? { scale: 0.93 } : {}}
               style={{
                 backgroundColor: isBusy || !inputValue.trim() ? "#1e293b" : "#0ea5e9",
-                border: "none", borderRadius: "10px",
-                padding: "9px 0", fontSize: "13px",
+                border: "none", borderRadius: "10px", padding: "9px 0",
                 color: isBusy ? "#475569" : "#f1f5f9",
                 cursor: isBusy || !inputValue.trim() ? "not-allowed" : "pointer",
-                flexShrink: 0, width: "64px",
-                transition: "background-color 0.2s",
+                flexShrink: 0, width: "64px", transition: "background-color 0.2s",
                 display: "flex", alignItems: "center", justifyContent: "center",
               }}
             >
@@ -629,7 +671,6 @@ export default function Page() {
             </motion.button>
           </div>
 
-          {/* 選項列表 / 等待動畫 */}
           {state.isLoading && state.turn > 0 ? (
             <div style={{ display: "flex", alignItems: "center", gap: "6px", padding: "10px 14px" }}>
               {[0, 0.18, 0.36].map((delay, i) => (
@@ -639,31 +680,20 @@ export default function Page() {
                   transition={{ duration: 0.8, repeat: Infinity, delay }}
                 />
               ))}
-              <span style={{ color: "#475569", fontSize: "12px", marginLeft: "4px", letterSpacing: "0.06em" }}>思考中…</span>
+              <span style={{ color: "#475569", fontSize: "12px", marginLeft: "4px" }}>思考中…</span>
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
               {state.options.map((opt, i) => (
-                <motion.button key={i}
-                  onClick={() => fire(opt.action)}
-                  disabled={isBusy}
-                  whileTap={{ scale: 0.97 }}
+                <motion.button key={i} onClick={() => fire(opt.action)} disabled={isBusy} whileTap={{ scale: 0.97 }}
                   style={{
-                    width: "100%", textAlign: "left",
-                    backgroundColor: "#0f172a",
-                    border: "1px solid #1e293b",
-                    borderTop: "1px solid #334155",
-                    borderBottom: "2px solid #000",
-                    borderRadius: "10px", padding: "10px 14px",
-                    fontSize: "13px", color: "#cbd5e1",
-                    cursor: isBusy ? "not-allowed" : "pointer",
-                    opacity: isBusy ? 0.4 : 1, lineHeight: 1.55,
-                    fontFamily: CJK_FONT,
-                  }}
-                >
-                  <span style={{ color: "#334155", marginRight: "8px", fontFamily: "monospace", fontSize: "11px" }}>
-                    {i + 1}
-                  </span>
+                    width: "100%", textAlign: "left", backgroundColor: "#0f172a",
+                    border: "1px solid #1e293b", borderTop: "1px solid #334155", borderBottom: "2px solid #000",
+                    borderRadius: "10px", padding: "10px 14px", fontSize: "13px", color: "#cbd5e1",
+                    cursor: isBusy ? "not-allowed" : "pointer", opacity: isBusy ? 0.4 : 1,
+                    lineHeight: 1.55, fontFamily: CJK,
+                  }}>
+                  <span style={{ color: "#334155", marginRight: "8px", fontFamily: "monospace", fontSize: "11px" }}>{i + 1}</span>
                   {opt.label}
                 </motion.button>
               ))}
@@ -673,10 +703,10 @@ export default function Page() {
 
         {/* ── 彈窗 ─────────────────────────────────────────────── */}
         <AnimatePresence>
-          {showDetail && <DetailPanel state={state} onClose={() => setShowDetail(false)} />}
-        </AnimatePresence>
-        <AnimatePresence>
-          {showBag && <BagPanel state={state} onClose={() => setShowBag(false)} />}
+          {showDetail    && <DetailPanel     state={state} onClose={() => setShowDetail(false)} />}
+          {showChars     && <CharactersPanel state={state} onClose={() => setShowChars(false)} />}
+          {showLandscape && <LandscapePanel  narrative={state.displayedNarrative} onClose={() => setShowLandscape(false)} />}
+          {showBag       && <BagPanel        state={state} onClose={() => setShowBag(false)} />}
         </AnimatePresence>
 
       </div>
