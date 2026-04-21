@@ -431,8 +431,8 @@ function NpcPortrait({ npc }: { npc: NPC }) {
   const [err, setErr] = useState(false);
   if (!npc.physicalDescription) return null;
   const genderTag = npc.gender === "female"
-    ? ", voluptuous body, alluring pose, masterpiece portrait, wuxia cultivation fantasy"
-    : ", strong masculine features, wuxia warrior, masterpiece portrait, wuxia cultivation fantasy";
+    ? ", voluptuous body, alluring pose, pixel art sprite, retro 16-bit, masterpiece portrait, wuxia cultivation fantasy"
+    : ", strong masculine features, wuxia warrior, pixel art sprite, retro 16-bit, masterpiece portrait, wuxia cultivation fantasy";
   const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(npc.physicalDescription + genderTag)}?width=128&height=192&nologo=true&model=flux`;
   return (
     <div style={{
@@ -500,8 +500,8 @@ function CharactersPanel({ state, onClose }: { state: GameState; onClose: () => 
 
 // ─── LandscapePanel ───────────────────────────────────────────────────────────
 
-function LandscapePanel({ narrative, imagePrompt, onClose }: {
-  narrative: string; imagePrompt: string; onClose: () => void;
+function LandscapePanel({ imagePrompt, onClose }: {
+  imagePrompt: string; onClose: () => void;
 }) {
   const [loaded, setLoaded] = useState(false);
   const [imgError, setImgError] = useState(false);
@@ -546,15 +546,6 @@ function LandscapePanel({ narrative, imagePrompt, onClose }: {
         )}
       </div>
 
-      {/* 場景描述 */}
-      {narrative && (
-        <div style={{ padding: "12px 14px", backgroundColor: "#080e1c", borderRadius: "10px", border: "1px solid #1e293b" }}>
-          <p style={{ color: "#475569", fontSize: "10px", letterSpacing: "0.15em", marginBottom: "8px" }}>[ 當前場景 ]</p>
-          <p style={{ color: "#94a3b8", fontSize: "12px", lineHeight: 1.8, letterSpacing: "0.04em", margin: 0 }}>
-            {narrative.slice(0, 120)}{narrative.length > 120 ? "…" : ""}
-          </p>
-        </div>
-      )}
     </Modal>
   );
 }
@@ -743,11 +734,16 @@ export default function Page() {
           backdropFilter: "blur(12px)", padding: "12px 14px 10px",
           borderBottom: "1px solid rgba(30,41,59,0.8)",
         }}>
-          {/* Row 1: 玩家名 + 眼前的風景 */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
-            <span style={{ color: "#cbd5e1", fontSize: "13px", fontWeight: 700, letterSpacing: "0.15em" }}>
+          {/* Row 1: 玩家名居中 + 眼前的風景右側 */}
+          <div style={{ display: "flex", alignItems: "center", marginBottom: "10px", position: "relative" }}>
+            <span style={{
+              position: "absolute", left: "50%", transform: "translateX(-50%)",
+              color: "#cbd5e1", fontSize: "13px", fontWeight: 700, letterSpacing: "0.15em",
+              whiteSpace: "nowrap",
+            }}>
               〔&nbsp;{state.playerName}&nbsp;〕
             </span>
+            <div style={{ flex: 1 }} />
             <button style={{ ...hudBtn, color: "#7dd3fc", borderColor: "#1e3a5f", letterSpacing: "0.15em" }} onClick={() => setShowLandscape(true)}>
               〔 眼前的風景 〕
             </button>
@@ -865,7 +861,7 @@ export default function Page() {
         {/* ── FOOTER ───────────────────────────────────────────── */}
         <div style={{ flexShrink: 0, backgroundColor: "rgba(15,23,42,0.9)", borderTop: "1px solid #1e293b", padding: "12px" }}>
 
-          <div style={{ display: "flex", gap: "8px", marginBottom: "10px", alignItems: "flex-start" }}>
+          <div style={{ display: "flex", gap: "8px", marginBottom: "10px" }}>
             <input
               value={inputValue}
               onChange={e => setInputValue(e.target.value)}
@@ -873,9 +869,10 @@ export default function Page() {
               disabled={isBusy}
               placeholder={isBusy ? "思考中…" : "輸入自定義行動或對話…"}
               style={{
-                flex: 1, backgroundColor: isBusy ? "#080e1c" : "#0f172a",
+                flex: 1, height: "42px",
+                backgroundColor: isBusy ? "#080e1c" : "#0f172a",
                 border: "1px solid #334155", borderRadius: "10px",
-                padding: "9px 12px", fontSize: "13px", color: "#f1f5f9",
+                padding: "0 12px", fontSize: "13px", color: "#f1f5f9",
                 outline: "none", opacity: isBusy ? 0.55 : 1,
                 transition: "background-color 0.3s, opacity 0.3s", fontFamily: CJK,
               }}
@@ -886,11 +883,12 @@ export default function Page() {
               whileTap={!isBusy && !!inputValue.trim() ? { scale: 0.93 } : {}}
               style={{
                 backgroundColor: isBusy || !inputValue.trim() ? "#1e293b" : "#0ea5e9",
-                border: "none", borderRadius: "10px", padding: "9px 0",
+                border: "none", borderRadius: "10px",
                 color: isBusy ? "#475569" : "#f1f5f9",
                 cursor: isBusy || !inputValue.trim() ? "not-allowed" : "pointer",
                 flexShrink: 0, width: "56px", transition: "background-color 0.2s",
                 display: "flex", alignItems: "center", justifyContent: "center",
+                alignSelf: "stretch",
               }}
             >
               {isBusy ? (
@@ -903,7 +901,7 @@ export default function Page() {
             </motion.button>
 
             {/* 修煉中心 */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "3px", flexShrink: 0 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "3px", flexShrink: 0, alignSelf: "stretch" }}>
               {([
                 { label: "打坐", color: "#94a3b8", border: "#334155", onClick: () => fire("我盤膝打坐，引氣入體，調息吐納，運轉功法修煉") },
                 { label: "洞府", color: "#94a3b8", border: "#334155", onClick: () => setShowCave(true) },
@@ -914,9 +912,10 @@ export default function Page() {
                   disabled={isBusy}
                   whileTap={!isBusy ? { scale: 0.88 } : {}}
                   style={{
+                    flex: 1,
                     background: "none", border: `1px solid ${isBusy ? "#1e293b" : btn.border}`,
                     borderRadius: "6px", color: isBusy ? "#334155" : btn.color,
-                    fontSize: "10px", letterSpacing: "0.1em", padding: "5px 0",
+                    fontSize: "9px", letterSpacing: "0.08em",
                     cursor: isBusy ? "not-allowed" : "pointer",
                     fontFamily: CJK, lineHeight: 1, width: "34px", textAlign: "center",
                     boxShadow: (!isBusy && btn.label === "突破") ? "0 0 7px rgba(251,191,36,0.22)" : "none",
@@ -962,7 +961,7 @@ export default function Page() {
         <AnimatePresence>
           {showDetail    && <DetailPanel     state={state} onClose={() => setShowDetail(false)} />}
           {showChars     && <CharactersPanel state={state} onClose={() => setShowChars(false)} />}
-          {showLandscape && <LandscapePanel narrative={state.displayedNarrative} imagePrompt={state.imagePrompt} onClose={() => setShowLandscape(false)} />}
+          {showLandscape && <LandscapePanel imagePrompt={state.imagePrompt} onClose={() => setShowLandscape(false)} />}
           {showBag       && <BagPanel        state={state} onClose={() => setShowBag(false)} />}
           {showCave      && <CavePanel       state={state} onClose={() => setShowCave(false)} />}
         </AnimatePresence>
