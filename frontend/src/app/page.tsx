@@ -17,6 +17,7 @@ interface NPC {
   favor: number; // -100 ~ 100
   gender?: string;
   physicalDescription?: string;
+  alias?: string;
 }
 
 interface CaveState {
@@ -156,12 +157,29 @@ function useGameState() {
       let chars = [...prev.characters];
       if (res.newCharacters) {
         res.newCharacters.forEach(npc => {
-          if (!chars.find(ch => ch.name === npc.name)) chars.push(npc);
+          // alias reveal: "神秘老人" → "青雲長老"
+          const aliasIdx = npc.alias
+            ? chars.findIndex(ch => ch.name === npc.alias || ch.alias === npc.alias)
+            : -1;
+          if (aliasIdx >= 0) {
+            // merge: update identity, preserve favor and portrait if not re-supplied
+            chars[aliasIdx] = {
+              ...chars[aliasIdx],
+              name:                npc.name,
+              relation:            npc.relation,
+              alias:               npc.alias,
+              gender:              npc.gender              ?? chars[aliasIdx].gender,
+              physicalDescription: npc.physicalDescription ?? chars[aliasIdx].physicalDescription,
+            };
+          } else if (!chars.find(ch => ch.name === npc.name)) {
+            chars.push(npc);
+          }
         });
       }
       if (res.characterUpdates) {
         res.characterUpdates.forEach(upd => {
-          const idx = chars.findIndex(ch => ch.name === upd.name);
+          // support lookup by current name or alias
+          const idx = chars.findIndex(ch => ch.name === upd.name || ch.alias === upd.name);
           if (idx >= 0) chars[idx] = { ...chars[idx], favor: clamp(chars[idx].favor + upd.favorDelta, -100, 100) };
         });
       }
