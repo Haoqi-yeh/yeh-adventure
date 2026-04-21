@@ -81,6 +81,13 @@ const DEJA_VU_TRIGGERS: Record<string, { label: string; action: string }> = {
 
 const CJK = "'PingFang TC', 'Microsoft JhengHei', 'Noto Sans TC', sans-serif";
 
+const LOG_COLORS: Record<string, string> = {
+  "屬性": "#fbbf24",
+  "獲取": "#34d399",
+  "世界": "#818cf8",
+  "戰況": "#f87171",
+};
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function clamp(v: number, lo = 0, hi = 100) {
@@ -537,6 +544,11 @@ export default function Page() {
   const [showChars, setShowChars]       = useState(false);
   const [showLandscape, setShowLandscape] = useState(false);
   const [showBag, setShowBag]           = useState(false);
+  const logRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
+  }, [state.eventLog.length]);
 
   const activeDejaVuKeys = Object.keys(DEJA_VU_TRIGGERS).filter(k =>
     state.karmaHistory.includes(k as KarmaTag)
@@ -621,50 +633,93 @@ export default function Page() {
           </div>
         </div>
 
-        {/* ── CONTENT ──────────────────────────────────────────── */}
-        <div style={{ flex: 1, overflowY: "auto", padding: "20px 20px 12px", minHeight: 0 }}>
+        {/* ── CONTENT 70/30 ────────────────────────────────────── */}
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minHeight: 0 }}>
 
-          {state.isLoading && state.turn === 0 && !state.displayedNarrative && (
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", gap: "16px" }}>
-              <motion.div
-                style={{ width: 40, height: 40, borderRadius: "50%", border: "2px solid #06b6d4", borderTopColor: "transparent" }}
-                animate={{ rotate: 360 }}
-                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-              />
-              <span style={{ color: "#475569", fontSize: "13px", letterSpacing: "0.1em" }}>天道推演中…</span>
-            </div>
-          )}
+          {/* 沉浸故事區 70% */}
+          <div style={{ flex: 7, overflowY: "auto", padding: "20px 20px 12px", minHeight: 0 }}>
 
-          {(state.displayedNarrative || (!state.isLoading && !state.displayedNarrative)) && (
-            <p style={{ color: "#f1f5f9", fontSize: "14px", lineHeight: 1.9, letterSpacing: "0.04em", margin: 0 }}>
-              {state.displayedNarrative}
-              {state.isTyping && (
-                <motion.span
-                  style={{ display: "inline-block", width: "2px", height: "14px", backgroundColor: "#fbbf24", marginLeft: "2px", verticalAlign: "middle" }}
-                  animate={{ opacity: [1, 0] }}
-                  transition={{ duration: 0.6, repeat: Infinity }}
+            {state.isLoading && state.turn === 0 && !state.displayedNarrative && (
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", gap: "16px" }}>
+                <motion.div
+                  style={{ width: 40, height: 40, borderRadius: "50%", border: "2px solid #06b6d4", borderTopColor: "transparent" }}
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                 />
-              )}
-            </p>
-          )}
+                <span style={{ color: "#475569", fontSize: "13px", letterSpacing: "0.1em" }}>天道推演中…</span>
+              </div>
+            )}
 
-          {!isBusy && activeDejaVuKeys.length > 0 && (
-            <div style={{ marginTop: "20px", paddingTop: "14px", borderTop: "1px solid rgba(30,41,59,0.8)" }}>
-              <p style={{ fontSize: "10px", color: "#475569", fontStyle: "italic", letterSpacing: "0.12em", marginBottom: "8px" }}>〔因果共鳴·既視感〕</p>
-              {activeDejaVuKeys.map(key => (
-                <motion.button key={key} onClick={() => fire(DEJA_VU_TRIGGERS[key].action)} whileTap={{ scale: 0.97 }}
-                  style={{ display: "block", width: "100%", textAlign: "left", fontSize: "12px", color: "rgba(251,191,36,0.85)", border: "1px solid rgba(120,53,15,0.35)", borderRadius: "10px", padding: "10px 14px", backgroundColor: "rgba(69,26,3,0.25)", cursor: "pointer", marginBottom: "6px", fontFamily: CJK }}>
-                  {DEJA_VU_TRIGGERS[key].label}
-                </motion.button>
-              ))}
+            {(state.displayedNarrative || (!state.isLoading && !state.displayedNarrative)) && (
+              <p style={{ color: "#f1f5f9", fontSize: "14px", lineHeight: 1.9, letterSpacing: "0.04em", margin: 0 }}>
+                {state.displayedNarrative}
+                {state.isTyping && (
+                  <motion.span
+                    style={{ display: "inline-block", width: "2px", height: "14px", backgroundColor: "#fbbf24", marginLeft: "2px", verticalAlign: "middle" }}
+                    animate={{ opacity: [1, 0] }}
+                    transition={{ duration: 0.6, repeat: Infinity }}
+                  />
+                )}
+              </p>
+            )}
+
+            {!isBusy && activeDejaVuKeys.length > 0 && (
+              <div style={{ marginTop: "20px", paddingTop: "14px", borderTop: "1px solid rgba(30,41,59,0.8)" }}>
+                <p style={{ fontSize: "10px", color: "#475569", fontStyle: "italic", letterSpacing: "0.12em", marginBottom: "8px" }}>〔因果共鳴·既視感〕</p>
+                {activeDejaVuKeys.map(key => (
+                  <motion.button key={key} onClick={() => fire(DEJA_VU_TRIGGERS[key].action)} whileTap={{ scale: 0.97 }}
+                    style={{ display: "block", width: "100%", textAlign: "left", fontSize: "12px", color: "rgba(251,191,36,0.85)", border: "1px solid rgba(120,53,15,0.35)", borderRadius: "10px", padding: "10px 14px", backgroundColor: "rgba(69,26,3,0.25)", cursor: "pointer", marginBottom: "6px", fontFamily: CJK }}>
+                    {DEJA_VU_TRIGGERS[key].label}
+                  </motion.button>
+                ))}
+              </div>
+            )}
+
+            {state.error && (
+              <p style={{ color: "#f87171", fontSize: "12px", marginTop: "12px", padding: "10px", backgroundColor: "rgba(239,68,68,0.1)", borderRadius: "8px", border: "1px solid rgba(239,68,68,0.2)" }}>
+                {state.error}
+              </p>
+            )}
+          </div>
+
+          {/* 遊戲戰報區 30% */}
+          <div style={{ flex: 3, display: "flex", flexDirection: "column", borderTop: "1px solid #334155", backgroundColor: "#040810", minHeight: 0 }}>
+
+            {/* 戰報標題列 */}
+            <div style={{ padding: "5px 14px 4px", borderBottom: "1px solid rgba(51,65,85,0.4)", flexShrink: 0 }}>
+              <span style={{ color: "#1e3a5f", fontSize: "10px", letterSpacing: "0.22em", fontFamily: "monospace" }}>── 戰 報 ──</span>
             </div>
-          )}
 
-          {state.error && (
-            <p style={{ color: "#f87171", fontSize: "12px", marginTop: "12px", padding: "10px", backgroundColor: "rgba(239,68,68,0.1)", borderRadius: "8px", border: "1px solid rgba(239,68,68,0.2)" }}>
-              {state.error}
-            </p>
-          )}
+            {/* 戰報條目 */}
+            <div ref={logRef} style={{ flex: 1, overflowY: "auto", padding: "6px 14px 2px", minHeight: 0 }}>
+              {state.eventLog.length === 0 ? (
+                <span style={{ color: "#1e293b", fontSize: "11px", letterSpacing: "0.12em", fontFamily: "monospace" }}>〔 尚無戰報 〕</span>
+              ) : (
+                <AnimatePresence initial={false}>
+                  {state.eventLog.map(entry => (
+                    <motion.div key={entry.id}
+                      initial={{ opacity: 0, x: -8 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.25 }}
+                      style={{ display: "flex", gap: "5px", marginBottom: "3px", fontFamily: "monospace", fontSize: "11px", lineHeight: 1.65 }}
+                    >
+                      <span style={{ color: LOG_COLORS[entry.type] ?? "#94a3b8", flexShrink: 0 }}>【{entry.type}】</span>
+                      <span style={{ color: "#475569" }}>{entry.text}</span>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              )}
+            </div>
+
+            {/* 掃描線 */}
+            <div style={{ height: "1px", overflow: "hidden", flexShrink: 0 }}>
+              <motion.div
+                style={{ width: "100%", height: "100%", background: "linear-gradient(90deg, transparent, rgba(6,182,212,0.45), transparent)" }}
+                animate={{ x: ["-100%", "100%"] }}
+                transition={{ duration: 2.8, repeat: Infinity, ease: "linear", repeatDelay: 1 }}
+              />
+            </div>
+          </div>
         </div>
 
         {/* ── FOOTER ───────────────────────────────────────────── */}
