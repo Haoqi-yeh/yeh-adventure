@@ -25,7 +25,7 @@ interface GameRequest {
   };
 }
 
-// ── 工具函式 ──────────────────────────────────────────────────────────────────
+// ── Prompt 建構 ───────────────────────────────────────────────────────────────
 
 function buildPrompt(req: GameRequest): string {
   if (req.isStart) {
@@ -37,7 +37,7 @@ function buildPrompt(req: GameRequest): string {
 
 用生動筆觸描述主角甦醒後看到的一切，讓讀者立刻感受到世界的氛圍。
 若場景中有 NPC，請在 newCharacters 欄位中加入其資訊。
-提供3個初始行動選項，讓玩家決定如何開始探索。`;
+提供3個初始行動選項。`;
   }
 
   const s = req.stats!;
@@ -57,24 +57,34 @@ function buildPrompt(req: GameRequest): string {
 【玩家行動】
 ${req.userInput}
 
-請以 GM 身份描述行動後發生的事，再給出3個接下來的選項。
-若劇情遇到新角色，請填入 newCharacters；若已有角色好感變化，填入 characterUpdates。`;
+以 GM 身份描述行動後的結果，再給出3個選項。
+若遇到新角色填 newCharacters；已有角色好感變化填 characterUpdates。`;
 }
 
-// ── Gemini REST API v1beta ────────────────────────────────────────────────────
+// ── Gemini REST API ───────────────────────────────────────────────────────────
 
 const SYSTEM_INSTRUCTION = `你是一個武俠修仙文字 RPG 的遊戲主持人（GM）。
 永遠以第二人稱「你」描述玩家角色的遭遇。
 不要逐字重複玩家輸入，直接描述行動後發生的事。
 劇情使用繁體中文，100-200字。
+
+每次回傳必須包含：
+1. imagePrompt：用30字以內的英文描述當前場景的視覺畫面，著重環境、光線、氛圍，供圖片生成使用。例如：「ancient bamboo forest, misty mountains, wuxia cultivation fantasy, cinematic lighting」
+2. eventLog：將本回合所有具體的遊戲反饋整理為條目清單，每條選擇最合適的類型：
+   - 屬性：數值或狀態變動（如「氣血減少10點」）
+   - 獲取：習得技能、道具、功法（如「獲得殘破煉氣訣」）
+   - 世界：環境事件、天象異動（如「遠處傳來洞天破碎之聲」）
+   - 戰況：戰鬥結果、傷勢描述（如「受到輕傷，左臂麻木」）
+   若無對應事件，請傳回空陣列。
+
 若劇情中出現新角色，必須在 newCharacters 填入完整資訊。
-若已知角色的關係或好感改變，在 characterUpdates 填入姓名與好感變化量（正負整數）。
 嚴格回傳 JSON，不含任何 Markdown 包裝。`;
 
 const RESPONSE_SCHEMA = {
   type: "OBJECT",
   properties: {
     narrative: { type: "STRING" },
+    imagePrompt: { type: "STRING" },
     options: {
       type: "ARRAY",
       items: {
@@ -95,6 +105,17 @@ const RESPONSE_SCHEMA = {
         mingSheng: { type: "NUMBER" },
         zuiE:      { type: "NUMBER" },
         karmaTag:  { type: "STRING" },
+      },
+    },
+    eventLog: {
+      type: "ARRAY",
+      items: {
+        type: "OBJECT",
+        properties: {
+          type: { type: "STRING" },
+          text: { type: "STRING" },
+        },
+        required: ["type", "text"],
       },
     },
     newCharacters: {
@@ -121,12 +142,11 @@ const RESPONSE_SCHEMA = {
       },
     },
   },
-  required: ["narrative", "options", "statChanges"],
+  required: ["narrative", "imagePrompt", "options", "statChanges", "eventLog"],
 };
 
 async function callGemini(apiKey: string, prompt: string): Promise<string> {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
-
   const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -139,12 +159,10 @@ async function callGemini(apiKey: string, prompt: string): Promise<string> {
       },
     }),
   });
-
   if (!res.ok) {
     const errText = await res.text();
     throw new Error(`Gemini API ${res.status}: ${errText.slice(0, 400)}`);
   }
-
   const result = await res.json();
   const text: string = result?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
   if (!text) throw new Error("Gemini 回傳空內容");
@@ -155,37 +173,24 @@ async function callGemini(apiKey: string, prompt: string): Promise<string> {
 
 export async function POST(req: NextRequest) {
   const apiKey = process.env.GEMINI_API_KEY ?? "";
-  if (!apiKey) {
-    return NextResponse.json({ error: "GEMINI_API_KEY 未設定" }, { status: 500 });
-  }
+  if (!apiKey) return NextResponse.json({ error: "GEMINI_API_KEY 未設定" }, { status: 500 });
 
   let body: GameRequest;
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
-  }
+  try { body = await req.json(); }
+  catch { return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 }); }
 
   if (!body.isStart && !body.userInput?.trim()) {
     return NextResponse.json({ error: "userInput 不可空白" }, { status: 400 });
   }
 
   try {
-    const prompt = buildPrompt(body);
-    const rawText = await callGemini(apiKey, prompt);
+    const rawText = await callGemini(apiKey, buildPrompt(body));
     const data = JSON.parse(rawText);
-
-    if (!data.narrative || !Array.isArray(data.options)) {
-      throw new Error("schema 不符");
-    }
-
+    if (!data.narrative || !Array.isArray(data.options)) throw new Error("schema 不符");
     return NextResponse.json(data);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error("Game API error:", message);
-    return NextResponse.json(
-      { error: "靈氣混亂，請重試", detail: message },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "靈氣混亂，請重試", detail: message }, { status: 500 });
   }
 }
