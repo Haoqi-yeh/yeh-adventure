@@ -36,6 +36,7 @@ interface AIGameResponse {
   newCharacters?: NPC[];
   characterUpdates?: { name: string; favorDelta: number }[];
   imagePrompt?: string;
+  eventLog?: { type: string; text: string }[];
 }
 
 interface GameState {
@@ -51,6 +52,7 @@ interface GameState {
   cultivationLevel: number;
   playerName: string;
   imagePrompt: string;
+  eventLog: { id: number; type: string; text: string }[];
   displayedNarrative: string;
   isTyping: boolean;
   isLoading: boolean;
@@ -94,7 +96,7 @@ function useGameState() {
     mingSheng: 10, zuiE: 0,
     karmaHistory: [], characters: [],
     cultivation: CULTIVATION_STAGES[0], cultivationLevel: 0,
-    playerName: "無名散修", imagePrompt: "",
+    playerName: "無名散修", imagePrompt: "", eventLog: [],
     displayedNarrative: "", isTyping: false, isLoading: true,
     turn: 0, options: [], error: null,
   });
@@ -158,6 +160,14 @@ function useGameState() {
         cultivation:     CULTIVATION_STAGES[newLevel],
         cultivationLevel: newLevel,
         imagePrompt: res.imagePrompt ?? prev.imagePrompt,
+        eventLog: isStart ? [] : [
+          ...prev.eventLog,
+          ...(res.eventLog ?? []).map((e, i) => ({
+            id: Date.now() + i,
+            type: e.type,
+            text: e.text,
+          })),
+        ],
         turn:    isStart ? 0 : prev.turn + 1,
         options: res.options ?? [],
         isLoading: false, error: null,
