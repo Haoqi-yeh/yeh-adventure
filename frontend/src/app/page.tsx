@@ -424,6 +424,46 @@ function DetailPanel({ state, onClose }: { state: GameState; onClose: () => void
   );
 }
 
+// ─── NpcPortrait ──────────────────────────────────────────────────────────────
+
+function NpcPortrait({ npc }: { npc: NPC }) {
+  const [loaded, setLoaded] = useState(false);
+  const [err, setErr] = useState(false);
+  if (!npc.physicalDescription) return null;
+  const genderTag = npc.gender === "female"
+    ? ", voluptuous body, alluring pose, masterpiece portrait, wuxia cultivation fantasy"
+    : ", strong masculine features, wuxia warrior, masterpiece portrait, wuxia cultivation fantasy";
+  const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(npc.physicalDescription + genderTag)}?width=128&height=192&nologo=true&model=flux`;
+  return (
+    <div style={{
+      width: 72, height: 108, borderRadius: "8px", flexShrink: 0, overflow: "hidden",
+      border: "1px solid #1e293b", position: "relative",
+      background: "linear-gradient(135deg,#020617,#0c1a35)",
+    }}>
+      {!loaded && !err && (
+        <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <motion.div
+            style={{ width: 18, height: 18, borderRadius: "50%", border: "2px solid #06b6d4", borderTopColor: "transparent" }}
+            animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+          />
+        </div>
+      )}
+      {!err && (
+        <img src={url} alt={npc.name}
+          onLoad={() => setLoaded(true)}
+          onError={() => setErr(true)}
+          style={{ width: "100%", height: "100%", objectFit: "cover", opacity: loaded ? 1 : 0, transition: "opacity 0.5s ease" }}
+        />
+      )}
+      {err && (
+        <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <span style={{ color: "#1e293b", fontSize: "20px" }}>人</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── CharactersPanel ──────────────────────────────────────────────────────────
 
 function CharactersPanel({ state, onClose }: { state: GameState; onClose: () => void }) {
@@ -436,16 +476,19 @@ function CharactersPanel({ state, onClose }: { state: GameState; onClose: () => 
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
           {state.characters.map(npc => (
-            <div key={npc.name} style={{ padding: "12px 14px", backgroundColor: "#0f1929", borderRadius: "10px", border: "1px solid #1e293b" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-                <span style={{ color: "#f1f5f9", fontSize: "13px", fontWeight: 700 }}>{npc.name}</span>
-                <span style={{ color: "#64748b", fontSize: "11px", backgroundColor: "#1e293b", padding: "2px 8px", borderRadius: "4px" }}>
-                  {npc.relation}
-                </span>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ color: "#475569", fontSize: "10px", flexShrink: 0 }}>好感</span>
-                <FavorBar favor={npc.favor} />
+            <div key={npc.name} style={{ display: "flex", gap: "12px", padding: "12px 14px", backgroundColor: "#0f1929", borderRadius: "10px", border: "1px solid #1e293b", alignItems: "flex-start" }}>
+              <NpcPortrait npc={npc} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                  <span style={{ color: "#f1f5f9", fontSize: "13px", fontWeight: 700 }}>{npc.name}</span>
+                  <span style={{ color: "#64748b", fontSize: "11px", backgroundColor: "#1e293b", padding: "2px 8px", borderRadius: "4px", flexShrink: 0 }}>
+                    {npc.relation}
+                  </span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span style={{ color: "#475569", fontSize: "10px", flexShrink: 0 }}>好感</span>
+                  <FavorBar favor={npc.favor} />
+                </div>
               </div>
             </div>
           ))}
@@ -464,7 +507,7 @@ function LandscapePanel({ narrative, imagePrompt, onClose }: {
   const [imgError, setImgError] = useState(false);
 
   const imageUrl = imagePrompt
-    ? `https://image.pollinations.ai/prompt/${encodeURIComponent(imagePrompt + ", wuxia cultivation fantasy, cinematic lighting, painterly")}?width=512&height=288&nologo=true`
+    ? `https://image.pollinations.ai/prompt/${encodeURIComponent(imagePrompt + ", wuxia cultivation fantasy, cinematic lighting, painterly")}?width=768&height=432&nologo=true&model=flux`
     : "";
 
   return (
