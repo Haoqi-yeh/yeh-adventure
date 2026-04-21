@@ -356,6 +356,63 @@ function Modal({ onClose, title, children }: {
   );
 }
 
+// ─── PlayerAvatar ─────────────────────────────────────────────────────────────
+
+const INVENTORY_PROMPTS: [RegExp, string][] = [
+  [/[鐵鋼鉑]?劍|長劍|飛劍|古劍/, "holding a pixelated iron sword"],
+  [/道袍|白袍|青袍|玄袍|法袍|仙袍/, "wearing a simple daoist robe"],
+  [/弓/, "carrying a pixelated bow"],
+  [/鎧甲|甲冑|護甲/, "wearing armor"],
+  [/仙杖|法杖|靈杖|禪杖|拂塵/, "holding a magic staff"],
+  [/扇/, "holding a folding fan"],
+  [/護符|符籙|靈符/, "holding a glowing talisman"],
+];
+
+function buildAvatarPrompt(cultivation: string, inventory: string[]): string {
+  const parts: string[] = [];
+  for (const item of inventory) {
+    for (const [regex, desc] of INVENTORY_PROMPTS) {
+      if (regex.test(item) && !parts.includes(desc)) { parts.push(desc); break; }
+    }
+  }
+  const equip = parts.length > 0 ? ", " + parts.join(", ") : "";
+  return `young wuxia cultivator, ${cultivation} realm${equip}, pixel art sprite, retro 16-bit RPG character, standing pose, detailed fantasy`;
+}
+
+function PlayerAvatar({ state }: { state: GameState }) {
+  const [loaded, setLoaded] = useState(false);
+  const [err, setErr] = useState(false);
+  const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(buildAvatarPrompt(state.cultivation, state.inventory))}?width=128&height=128&nologo=true&model=flux`;
+  return (
+    <div style={{
+      width: 96, height: 96, borderRadius: "12px", margin: "0 auto 16px",
+      overflow: "hidden", border: "1px solid #2d1f5e", position: "relative",
+      background: "linear-gradient(135deg,#020617 0%,#0c0a1f 50%,#020617 100%)",
+      boxShadow: "0 0 18px rgba(124,58,237,0.18)",
+    }}>
+      {!loaded && !err && (
+        <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <motion.div
+            style={{ width: 22, height: 22, borderRadius: "50%", border: "2px solid #7c3aed", borderTopColor: "transparent" }}
+            animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+          />
+        </div>
+      )}
+      {!err && (
+        <img src={url} alt={state.playerName}
+          onLoad={() => setLoaded(true)} onError={() => setErr(true)}
+          style={{ width: "100%", height: "100%", objectFit: "cover", opacity: loaded ? 1 : 0, transition: "opacity 0.5s ease" }}
+        />
+      )}
+      {err && (
+        <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <span style={{ color: "#2d1f5e", fontSize: "32px" }}>人</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── DetailPanel ──────────────────────────────────────────────────────────────
 
 function DetailPanel({ state, onClose }: { state: GameState; onClose: () => void }) {
@@ -372,8 +429,11 @@ function DetailPanel({ state, onClose }: { state: GameState; onClose: () => void
   ];
   return (
     <Modal onClose={onClose} title="⟨ 人 物 詳 細 ⟩">
+      {/* 主角頭像 */}
+      <PlayerAvatar state={state} />
+
       {/* 境界 */}
-      <div style={{ textAlign: "center", marginBottom: "18px", padding: "12px 0", borderBottom: "1px solid #1e293b" }}>
+      <div style={{ textAlign: "center", marginBottom: "10px" }}>
         <p style={{ color: "#475569", fontSize: "10px", letterSpacing: "0.18em", marginBottom: "6px" }}>[ 修為境界 ]</p>
         <span style={{ color: "#fbbf24", fontSize: "18px", fontWeight: 700, letterSpacing: "0.12em" }}>
           {state.cultivation}
@@ -383,6 +443,25 @@ function DetailPanel({ state, onClose }: { state: GameState; onClose: () => void
             第 {state.turn} 回合
           </span>
         )}
+      </div>
+
+      {/* EXP 光感條 */}
+      <div style={{ marginBottom: "18px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "5px" }}>
+          <span style={{ color: "#4c1d95", fontSize: "9px", letterSpacing: "0.2em", fontFamily: "monospace" }}>EXP</span>
+          <span style={{ color: "#a78bfa", fontSize: "9px", fontFamily: "monospace" }}>{state.lingLi}&nbsp;/&nbsp;100</span>
+        </div>
+        <div style={{ height: "5px", backgroundColor: "#0f0a1e", borderRadius: "3px", overflow: "hidden" }}>
+          <motion.div
+            style={{
+              height: "100%", borderRadius: "3px",
+              background: "linear-gradient(90deg,#5b21b6 0%,#7c3aed 55%,#c4b5fd 100%)",
+              boxShadow: "0 0 8px rgba(167,139,250,0.55)",
+            }}
+            animate={{ width: `${state.lingLi}%`, opacity: [0.75, 1, 0.75] }}
+            transition={{ width: { duration: 0.6, ease: "easeOut" }, opacity: { duration: 2.2, repeat: Infinity, ease: "easeInOut" } }}
+          />
+        </div>
       </div>
 
       {/* 兩欄屬性 */}
