@@ -35,6 +35,7 @@ interface AIGameResponse {
   };
   newCharacters?: NPC[];
   characterUpdates?: { name: string; favorDelta: number }[];
+  imagePrompt?: string;
 }
 
 interface GameState {
@@ -48,6 +49,8 @@ interface GameState {
   characters: NPC[];
   cultivation: string;
   cultivationLevel: number;
+  playerName: string;
+  imagePrompt: string;
   displayedNarrative: string;
   isTyping: boolean;
   isLoading: boolean;
@@ -91,6 +94,7 @@ function useGameState() {
     mingSheng: 10, zuiE: 0,
     karmaHistory: [], characters: [],
     cultivation: CULTIVATION_STAGES[0], cultivationLevel: 0,
+    playerName: "無名散修", imagePrompt: "",
     displayedNarrative: "", isTyping: false, isLoading: true,
     turn: 0, options: [], error: null,
   });
@@ -153,6 +157,7 @@ function useGameState() {
         characters: chars,
         cultivation:     CULTIVATION_STAGES[newLevel],
         cultivationLevel: newLevel,
+        imagePrompt: res.imagePrompt ?? prev.imagePrompt,
         turn:    isStart ? 0 : prev.turn + 1,
         options: res.options ?? [],
         isLoading: false, error: null,
@@ -420,31 +425,53 @@ function CharactersPanel({ state, onClose }: { state: GameState; onClose: () => 
 
 // ─── LandscapePanel ───────────────────────────────────────────────────────────
 
-function LandscapePanel({ narrative, onClose }: { narrative: string; onClose: () => void }) {
+function LandscapePanel({ narrative, imagePrompt, onClose }: {
+  narrative: string; imagePrompt: string; onClose: () => void;
+}) {
+  const [loaded, setLoaded] = useState(false);
+  const [imgError, setImgError] = useState(false);
+
+  const imageUrl = imagePrompt
+    ? `https://image.pollinations.ai/prompt/${encodeURIComponent(imagePrompt + ", wuxia cultivation fantasy, cinematic lighting, painterly")}?width=512&height=288&nologo=true`
+    : "";
+
   return (
     <Modal onClose={onClose} title="⟨ 眼 前 的 風 景 ⟩">
-      {/* 圖片預留區 */}
+      {/* 圖片區 */}
       <div style={{
-        width: "100%", aspectRatio: "16/9",
-        backgroundColor: "#020617",
-        borderRadius: "10px",
-        border: "1px solid #1e293b",
-        display: "flex", flexDirection: "column",
-        alignItems: "center", justifyContent: "center",
-        gap: "10px", marginBottom: "16px",
+        width: "100%", aspectRatio: "16/9", borderRadius: "10px",
+        border: "1px solid #1e293b", overflow: "hidden", position: "relative",
         background: "linear-gradient(135deg, #020617 0%, #0c1a35 50%, #020617 100%)",
+        marginBottom: "14px",
       }}>
-        <motion.div
-          animate={{ opacity: [0.3, 0.7, 0.3] }}
-          transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-          style={{ fontSize: "32px" }}
-        >
-          ✦
-        </motion.div>
-        <span style={{ color: "#334155", fontSize: "11px", letterSpacing: "0.18em" }}>靈境感知尚未開啟</span>
+        {imageUrl && !imgError ? (
+          <>
+            {!loaded && (
+              <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "10px" }}>
+                <motion.div
+                  style={{ width: 32, height: 32, borderRadius: "50%", border: "2px solid #06b6d4", borderTopColor: "transparent" }}
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                />
+                <span style={{ color: "#334155", fontSize: "11px", letterSpacing: "0.15em" }}>靈境感知中…</span>
+              </div>
+            )}
+            <img
+              src={imageUrl} alt=""
+              onLoad={() => setLoaded(true)}
+              onError={() => setImgError(true)}
+              style={{ width: "100%", height: "100%", objectFit: "cover", opacity: loaded ? 1 : 0, transition: "opacity 0.6s ease" }}
+            />
+          </>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", gap: "10px" }}>
+            <motion.div animate={{ opacity: [0.3, 0.7, 0.3] }} transition={{ duration: 3, repeat: Infinity }} style={{ fontSize: "28px" }}>✦</motion.div>
+            <span style={{ color: "#334155", fontSize: "11px", letterSpacing: "0.18em" }}>靈境感知尚未開啟</span>
+          </div>
+        )}
       </div>
 
-      {/* 當前場景描述 */}
+      {/* 場景描述 */}
       {narrative && (
         <div style={{ padding: "12px 14px", backgroundColor: "#080e1c", borderRadius: "10px", border: "1px solid #1e293b" }}>
           <p style={{ color: "#475569", fontSize: "10px", letterSpacing: "0.15em", marginBottom: "8px" }}>[ 當前場景 ]</p>
@@ -554,10 +581,10 @@ export default function Page() {
           backdropFilter: "blur(12px)", padding: "12px 14px 10px",
           borderBottom: "1px solid rgba(30,41,59,0.8)",
         }}>
-          {/* Row 1: 修為 + 眼前的風景 */}
+          {/* Row 1: 玩家名 + 眼前的風景 */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
-            <span style={{ color: "#fbbf24", fontSize: "13px", fontWeight: 700, letterSpacing: "0.1em" }}>
-              {state.cultivation}
+            <span style={{ color: "#cbd5e1", fontSize: "13px", fontWeight: 700, letterSpacing: "0.15em" }}>
+              〔&nbsp;{state.playerName}&nbsp;〕
             </span>
             <button style={{ ...hudBtn, color: "#7dd3fc", borderColor: "#1e3a5f", letterSpacing: "0.15em" }} onClick={() => setShowLandscape(true)}>
               〔 眼前的風景 〕
@@ -705,7 +732,7 @@ export default function Page() {
         <AnimatePresence>
           {showDetail    && <DetailPanel     state={state} onClose={() => setShowDetail(false)} />}
           {showChars     && <CharactersPanel state={state} onClose={() => setShowChars(false)} />}
-          {showLandscape && <LandscapePanel  narrative={state.displayedNarrative} onClose={() => setShowLandscape(false)} />}
+          {showLandscape && <LandscapePanel narrative={state.displayedNarrative} imagePrompt={state.imagePrompt} onClose={() => setShowLandscape(false)} />}
           {showBag       && <BagPanel        state={state} onClose={() => setShowBag(false)} />}
         </AnimatePresence>
 
