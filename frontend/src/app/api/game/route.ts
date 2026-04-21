@@ -85,7 +85,7 @@ const RESPONSE_SCHEMA = {
 };
 
 async function callGemini(apiKey: string, prompt: string): Promise<string> {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
 
   const res = await fetch(url, {
     method: "POST",
@@ -109,19 +109,6 @@ async function callGemini(apiKey: string, prompt: string): Promise<string> {
   const text: string = result?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
   if (!text) throw new Error("Gemini 回傳空內容");
   return text;
-}
-
-// ── GET handler：列出可用 models（debug 用）──────────────────────────────────
-
-export async function GET() {
-  const apiKey = process.env.GEMINI_API_KEY ?? "";
-  if (!apiKey) return NextResponse.json({ error: "no key" }, { status: 500 });
-
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`
-  );
-  const data = await res.json();
-  return NextResponse.json(data);
 }
 
 // ── POST handler ──────────────────────────────────────────────────────────────
