@@ -179,6 +179,9 @@ function useGameState() {
         cultivation:     CULTIVATION_STAGES[newLevel],
         cultivationLevel: newLevel,
         imagePrompt: res.imagePrompt ?? prev.imagePrompt,
+        inventory: isStart
+          ? []
+          : Array.from(new Set([...prev.inventory, ...(res.itemsAdded ?? [])])),
         eventLog: isStart ? [] : [
           ...prev.eventLog,
           ...(res.eventLog ?? []).map((e, i) => ({
@@ -516,22 +519,48 @@ function LandscapePanel({ narrative, imagePrompt, onClose }: {
 // ─── BagPanel ─────────────────────────────────────────────────────────────────
 
 function BagPanel({ state, onClose }: { state: GameState; onClose: () => void }) {
+  const hasItems = state.inventory.length > 0;
+  const hasKarma = state.karmaHistory.length > 0;
   return (
     <Modal onClose={onClose} title="⟨ 背 包 ⟩">
-      {state.karmaHistory.length === 0 ? (
+      {!hasItems && !hasKarma ? (
         <div style={{ display: "flex", justifyContent: "center", padding: "32px 0", color: "#334155", fontSize: "13px", letterSpacing: "0.12em" }}>
           〔 空空如也 〕
         </div>
       ) : (
-        <div>
-          <p style={{ color: "#334155", fontSize: "10px", letterSpacing: "0.18em", marginBottom: "12px", fontWeight: 700 }}>[ 因果印記 ]</p>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-            {state.karmaHistory.map(tag => (
-              <span key={tag} style={{ padding: "6px 14px", fontSize: "12px", borderRadius: "8px", backgroundColor: "#1e293b", color: "#94a3b8", border: "1px solid #334155" }}>
-                {tag}
-              </span>
-            ))}
-          </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+          {hasItems && (
+            <div>
+              <p style={{ color: "#334155", fontSize: "10px", letterSpacing: "0.18em", marginBottom: "12px", fontWeight: 700 }}>[ 持有物品 ]</p>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                {state.inventory.map(item => (
+                  <span key={item} style={{
+                    padding: "6px 14px", fontSize: "12px", borderRadius: "8px",
+                    backgroundColor: "#0f172a", color: "#7dd3fc",
+                    border: "1px solid #1e3a5f", letterSpacing: "0.05em",
+                  }}>
+                    {item}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+          {hasKarma && (
+            <div>
+              <p style={{ color: "#334155", fontSize: "10px", letterSpacing: "0.18em", marginBottom: "12px", fontWeight: 700 }}>[ 因果印記 ]</p>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                {state.karmaHistory.map(tag => (
+                  <span key={tag} style={{
+                    padding: "6px 14px", fontSize: "12px", borderRadius: "8px",
+                    backgroundColor: "#1e293b", color: "#94a3b8",
+                    border: "1px solid #334155",
+                  }}>
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </Modal>
