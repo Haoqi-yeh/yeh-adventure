@@ -15,6 +15,13 @@ interface NPC {
   name: string;
   relation: string;
   favor: number; // -100 ~ 100
+  gender?: string;
+  physicalDescription?: string;
+}
+
+interface CaveState {
+  lingQiLevel: number;
+  facilities: string[];
 }
 
 interface StoryOption {
@@ -37,6 +44,7 @@ interface AIGameResponse {
   characterUpdates?: { name: string; favorDelta: number }[];
   imagePrompt?: string;
   eventLog?: { type: string; text: string }[];
+  itemsAdded?: string[];
 }
 
 interface GameState {
@@ -59,6 +67,8 @@ interface GameState {
   turn: number;
   options: StoryOption[];
   error: string | null;
+  inventory: string[];
+  cave: CaveState;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -106,6 +116,8 @@ function useGameState() {
     playerName: "無名散修", imagePrompt: "", eventLog: [],
     displayedNarrative: "", isTyping: false, isLoading: true,
     turn: 0, options: [], error: null,
+    inventory: [],
+    cave: { lingQiLevel: 1, facilities: [] },
   });
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
