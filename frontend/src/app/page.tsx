@@ -610,6 +610,35 @@ function BagPanel({ state, onClose }: { state: GameState; onClose: () => void })
   );
 }
 
+// ─── CavePanel ────────────────────────────────────────────────────────────────
+
+function CavePanel({ state, onClose }: { state: GameState; onClose: () => void }) {
+  return (
+    <Modal onClose={onClose} title="⟨ 洞 府 ⟩">
+      <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", backgroundColor: "#0f172a", borderRadius: "8px", border: "1px solid #1e293b" }}>
+          <span style={{ color: "#94a3b8", fontSize: "12px" }}>靈氣濃度</span>
+          <span style={{ color: "#fbbf24", fontFamily: "monospace", fontSize: "13px", fontWeight: 700 }}>Lv.{state.cave.lingQiLevel}</span>
+        </div>
+        <div>
+          <p style={{ color: "#334155", fontSize: "10px", letterSpacing: "0.18em", marginBottom: "10px", fontWeight: 700 }}>[ 洞府設施 ]</p>
+          {state.cave.facilities.length > 0 ? (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+              {state.cave.facilities.map(f => (
+                <span key={f} style={{ padding: "4px 12px", fontSize: "11px", borderRadius: "6px", backgroundColor: "#1e293b", color: "#94a3b8", border: "1px solid #334155" }}>{f}</span>
+              ))}
+            </div>
+          ) : (
+            <div style={{ display: "flex", justifyContent: "center", padding: "20px 0", color: "#334155", fontSize: "11px", letterSpacing: "0.15em" }}>
+              〔 尚未開拓任何設施 〕
+            </div>
+          )}
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 // ─── HUD button style ─────────────────────────────────────────────────────────
 
 const hudBtn: React.CSSProperties = {
@@ -628,6 +657,8 @@ export default function Page() {
   const [showChars, setShowChars]       = useState(false);
   const [showLandscape, setShowLandscape] = useState(false);
   const [showBag, setShowBag]           = useState(false);
+  const [showCave, setShowCave]         = useState(false);
+  const [showBreakthrough, setShowBreakthrough] = useState(false);
   const logRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -648,6 +679,15 @@ export default function Page() {
     if (!inputValue.trim()) return;
     fire(inputValue);
     setInputValue("");
+  };
+
+  const fireBreakthrough = () => {
+    if (isBusy) return;
+    setShowBreakthrough(true);
+    setTimeout(() => {
+      setShowBreakthrough(false);
+      fire("我凝神靜氣，調動全身靈力，試圖衝破當前境界的枷鎖");
+    }, 1800);
   };
 
   const isBusy = state.isLoading || state.isTyping;
@@ -678,6 +718,22 @@ export default function Page() {
                 onAnimationComplete={() => setRippleKey(null)}
               />
             </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* 突破金光 */}
+        <AnimatePresence>
+          {showBreakthrough && (
+            <motion.div
+              key="breakthrough"
+              style={{
+                position: "absolute", inset: 0, pointerEvents: "none", zIndex: 25,
+                background: "radial-gradient(ellipse at center, rgba(251,191,36,0.35) 0%, rgba(245,158,11,0.18) 40%, transparent 72%)",
+              }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: [0, 1, 0.55, 1, 0.7, 0] }}
+              transition={{ duration: 1.8, times: [0, 0.2, 0.4, 0.65, 0.85, 1], ease: "easeInOut" }}
+            />
           )}
         </AnimatePresence>
 
@@ -809,7 +865,7 @@ export default function Page() {
         {/* ── FOOTER ───────────────────────────────────────────── */}
         <div style={{ flexShrink: 0, backgroundColor: "rgba(15,23,42,0.9)", borderTop: "1px solid #1e293b", padding: "12px" }}>
 
-          <div style={{ display: "flex", gap: "8px", marginBottom: "10px" }}>
+          <div style={{ display: "flex", gap: "8px", marginBottom: "10px", alignItems: "flex-start" }}>
             <input
               value={inputValue}
               onChange={e => setInputValue(e.target.value)}
@@ -833,7 +889,7 @@ export default function Page() {
                 border: "none", borderRadius: "10px", padding: "9px 0",
                 color: isBusy ? "#475569" : "#f1f5f9",
                 cursor: isBusy || !inputValue.trim() ? "not-allowed" : "pointer",
-                flexShrink: 0, width: "64px", transition: "background-color 0.2s",
+                flexShrink: 0, width: "56px", transition: "background-color 0.2s",
                 display: "flex", alignItems: "center", justifyContent: "center",
               }}
             >
@@ -845,6 +901,31 @@ export default function Page() {
                 />
               ) : "送出"}
             </motion.button>
+
+            {/* 修煉中心 */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "3px", flexShrink: 0 }}>
+              {([
+                { label: "打坐", color: "#94a3b8", border: "#334155", onClick: () => fire("我盤膝打坐，引氣入體，調息吐納，運轉功法修煉") },
+                { label: "洞府", color: "#94a3b8", border: "#334155", onClick: () => setShowCave(true) },
+                { label: "突破", color: "#fbbf24", border: "#92400e", onClick: fireBreakthrough },
+              ] as const).map(btn => (
+                <motion.button key={btn.label}
+                  onClick={btn.onClick}
+                  disabled={isBusy}
+                  whileTap={!isBusy ? { scale: 0.88 } : {}}
+                  style={{
+                    background: "none", border: `1px solid ${isBusy ? "#1e293b" : btn.border}`,
+                    borderRadius: "6px", color: isBusy ? "#334155" : btn.color,
+                    fontSize: "10px", letterSpacing: "0.1em", padding: "5px 0",
+                    cursor: isBusy ? "not-allowed" : "pointer",
+                    fontFamily: CJK, lineHeight: 1, width: "34px", textAlign: "center",
+                    boxShadow: (!isBusy && btn.label === "突破") ? "0 0 7px rgba(251,191,36,0.22)" : "none",
+                    transition: "color 0.2s, border-color 0.2s",
+                  }}>
+                  {btn.label}
+                </motion.button>
+              ))}
+            </div>
           </div>
 
           {state.isLoading && state.turn > 0 ? (
@@ -883,6 +964,7 @@ export default function Page() {
           {showChars     && <CharactersPanel state={state} onClose={() => setShowChars(false)} />}
           {showLandscape && <LandscapePanel narrative={state.displayedNarrative} imagePrompt={state.imagePrompt} onClose={() => setShowLandscape(false)} />}
           {showBag       && <BagPanel        state={state} onClose={() => setShowBag(false)} />}
+          {showCave      && <CavePanel       state={state} onClose={() => setShowCave(false)} />}
         </AnimatePresence>
 
       </div>
