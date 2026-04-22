@@ -727,6 +727,66 @@ function CavePanel({ state, onClose }: { state: GameState; onClose: () => void }
   );
 }
 
+// ─── SystemPanel ──────────────────────────────────────────────────────────────
+
+function SystemPanel({ onClose, onReincarnate }: { onClose: () => void; onReincarnate: () => void }) {
+  const [confirming, setConfirming] = useState(false);
+  return (
+    <Modal onClose={onClose} title="⟨ 系 統 ⟩">
+      {!confirming ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+          <button
+            onClick={() => setConfirming(true)}
+            style={{
+              width: "100%", padding: "14px", borderRadius: "10px",
+              border: "1px solid #7f1d1d", backgroundColor: "#1a0505",
+              color: "#fca5a5", fontSize: "14px", fontWeight: 700,
+              letterSpacing: "0.2em", cursor: "pointer", fontFamily: CJK,
+              boxShadow: "0 0 16px rgba(239,68,68,0.18)",
+            }}
+          >
+            ✦ 重新轉世 ✦
+          </button>
+          <p style={{ color: "#334155", fontSize: "11px", textAlign: "center", letterSpacing: "0.1em", margin: 0 }}>
+            放棄此世一切，轉入下一輪迴
+          </p>
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          <p style={{ color: "#f87171", fontSize: "13px", textAlign: "center", letterSpacing: "0.08em", lineHeight: 1.9, margin: 0 }}>
+            此世所有記憶、境界、因果<br />將於轉世後盡數消散<br />確認輪迴？
+          </p>
+          <div style={{ display: "flex", gap: "10px" }}>
+            <button
+              onClick={() => setConfirming(false)}
+              style={{
+                flex: 1, padding: "10px", borderRadius: "8px",
+                border: "1px solid #334155", backgroundColor: "#0f172a",
+                color: "#94a3b8", fontSize: "12px", letterSpacing: "0.1em",
+                cursor: "pointer", fontFamily: CJK,
+              }}
+            >
+              取消
+            </button>
+            <button
+              onClick={onReincarnate}
+              style={{
+                flex: 1, padding: "10px", borderRadius: "8px",
+                border: "1px solid #991b1b", backgroundColor: "#7f1d1d",
+                color: "#fecaca", fontSize: "12px", fontWeight: 700,
+                letterSpacing: "0.12em", cursor: "pointer", fontFamily: CJK,
+                boxShadow: "0 0 12px rgba(239,68,68,0.3)",
+              }}
+            >
+              ✦ 確認轉世
+            </button>
+          </div>
+        </div>
+      )}
+    </Modal>
+  );
+}
+
 // ─── HUD button style ─────────────────────────────────────────────────────────
 
 const hudBtn: React.CSSProperties = {
@@ -746,6 +806,7 @@ export default function Page() {
   const [showLandscape, setShowLandscape] = useState(false);
   const [showBag, setShowBag]           = useState(false);
   const [showCave, setShowCave]         = useState(false);
+  const [showSystem, setShowSystem]     = useState(false);
   const [showBreakthrough, setShowBreakthrough] = useState(false);
   const logRef = useRef<HTMLDivElement>(null);
 
@@ -831,19 +892,17 @@ export default function Page() {
           backdropFilter: "blur(12px)", padding: "12px 14px 10px",
           borderBottom: "1px solid rgba(30,41,59,0.8)",
         }}>
-          {/* Row 1: 玩家名居中 + 眼前的風景右側 */}
-          <div style={{ display: "flex", alignItems: "center", marginBottom: "10px", position: "relative" }}>
-            <span style={{
-              position: "absolute", left: "50%", transform: "translateX(-50%)",
-              color: "#cbd5e1", fontSize: "13px", fontWeight: 700, letterSpacing: "0.15em",
-              whiteSpace: "nowrap",
-            }}>
+          {/* Row 1: 玩家名左對齊 + 右側按鈕群 */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+            <span style={{ color: "#cbd5e1", fontSize: "13px", fontWeight: 700, letterSpacing: "0.15em" }}>
               〔&nbsp;{state.playerName}&nbsp;〕
             </span>
-            <div style={{ flex: 1 }} />
-            <button style={{ ...hudBtn, color: "#7dd3fc", borderColor: "#1e3a5f", letterSpacing: "0.15em" }} onClick={() => setShowLandscape(true)}>
-              〔 眼前的風景 〕
-            </button>
+            <div style={{ display: "flex", gap: "5px" }}>
+              <button style={{ ...hudBtn, color: "#7dd3fc", borderColor: "#1e3a5f", letterSpacing: "0.15em" }} onClick={() => setShowLandscape(true)}>
+                〔 眼前的風景 〕
+              </button>
+              <button style={hudBtn} onClick={() => setShowSystem(true)}>〔 系統 〕</button>
+            </div>
           </div>
 
           {/* HP / MP */}
@@ -1061,6 +1120,7 @@ export default function Page() {
           {showLandscape && <LandscapePanel imagePrompt={state.imagePrompt} onClose={() => setShowLandscape(false)} />}
           {showBag       && <BagPanel        state={state} onClose={() => setShowBag(false)} />}
           {showCave      && <CavePanel       state={state} onClose={() => setShowCave(false)} />}
+          {showSystem    && <SystemPanel onClose={() => setShowSystem(false)} onReincarnate={() => window.location.reload()} />}
         </AnimatePresence>
 
       </div>
