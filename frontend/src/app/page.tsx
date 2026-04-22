@@ -70,6 +70,8 @@ interface GameState {
   error: string | null;
   inventory: string[];
   cave: CaveState;
+  maxQiXue: number;
+  maxLingLi: number;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -97,6 +99,7 @@ const LOG_COLORS: Record<string, string> = {
   "獲取": "#34d399",
   "世界": "#818cf8",
   "戰況": "#f87171",
+  "修為": "#a78bfa",
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -119,6 +122,8 @@ function useGameState() {
     turn: 0, options: [], error: null,
     inventory: [],
     cave: { lingQiLevel: 1, facilities: [] },
+    maxQiXue: 100,
+    maxLingLi: 100,
   });
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -146,6 +151,20 @@ function useGameState() {
       let newLevel = prev.cultivationLevel;
       if (rawLingLi >= 100 && prev.cultivationLevel < CULTIVATION_STAGES.length - 1) {
         newLevel = prev.cultivationLevel + 1;
+      }
+      const didLevelUp = newLevel > prev.cultivationLevel;
+      const newMaxQiXue  = didLevelUp ? Math.round(prev.maxQiXue  * 1.2) : prev.maxQiXue;
+      const newMaxLingLi = didLevelUp ? Math.round(prev.maxLingLi * 1.2) : prev.maxLingLi;
+
+      // 修為 log entries (client-generated)
+      const expGain = c.lingLi ?? 0;
+      const cultivationLogs: { id: number; type: string; text: string }[] = [];
+      const now = Date.now();
+      if (!isStart && expGain > 0) {
+        cultivationLogs.push({ id: now, type: "修為", text: `獲得 ${expGain} 點修為（${Math.min(rawLingLi, 100)} / 100）` });
+      }
+      if (didLevelUp) {
+        cultivationLogs.push({ id: now + 1, type: "修為", text: `境界突破！晉升至【${CULTIVATION_STAGES[newLevel]}】，氣血補滿至 ${newMaxQiXue}` });
       }
 
       // karma
@@ -186,15 +205,19 @@ function useGameState() {
 
       return {
         ...prev,
-        qiXue:     isStart ? prev.qiXue     : clamp(prev.qiXue     + (c.qiXue     ?? 0)),
-        lingLi:    newLevel > prev.cultivationLevel ? 20 : clamp(rawLingLi),
-        age:       isStart ? prev.age        : prev.age + (c.ageAdd  ?? 0),
+        qiXue:  didLevelUp
+          ? newMaxQiXue
+          : clamp(isStart ? prev.qiXue : prev.qiXue + (c.qiXue ?? 0), 0, newMaxQiXue),
+        lingLi: didLevelUp ? 0 : clamp(rawLingLi, 0, 100),
+        maxQiXue:  newMaxQiXue,
+        maxLingLi: newMaxLingLi,
+        age:       isStart ? prev.age       : prev.age + (c.ageAdd  ?? 0),
         shouYuan:  CULTIVATION_SHOUYUAN[newLevel],
-        mingSheng: isStart ? prev.mingSheng  : clamp(prev.mingSheng + (c.mingSheng ?? 0)),
-        zuiE:      isStart ? prev.zuiE       : clamp(prev.zuiE      + (c.zuiE      ?? 0)),
+        mingSheng: isStart ? prev.mingSheng : clamp(prev.mingSheng + (c.mingSheng ?? 0)),
+        zuiE:      isStart ? prev.zuiE      : clamp(prev.zuiE      + (c.zuiE      ?? 0)),
         karmaHistory: newKarma,
         characters: chars,
-        cultivation:     CULTIVATION_STAGES[newLevel],
+        cultivation:      CULTIVATION_STAGES[newLevel],
         cultivationLevel: newLevel,
         imagePrompt: res.imagePrompt ?? prev.imagePrompt,
         inventory: isStart
@@ -202,8 +225,9 @@ function useGameState() {
           : Array.from(new Set([...prev.inventory, ...(res.itemsAdded ?? [])])),
         eventLog: isStart ? [] : [
           ...prev.eventLog,
+          ...cultivationLogs,
           ...(res.eventLog ?? []).map((e, i) => ({
-            id: Date.now() + i,
+            id: now + i + 100,
             type: e.type,
             text: e.text,
           })),
@@ -227,6 +251,7 @@ function useGameState() {
             age: s.age, shouYuan: s.shouYuan,
             mingSheng: s.mingSheng, zuiE: s.zuiE,
             cultivation: s.cultivation,
+            cultivationLevel: s.cultivationLevel,
             karmaHistory: s.karmaHistory,
             characters: s.characters,
             turn: s.turn,
@@ -435,8 +460,8 @@ function PlayerAvatar({ state }: { state: GameState }) {
 
 function DetailPanel({ state, onClose }: { state: GameState; onClose: () => void }) {
   const basicRows = [
-    { label: "氣血", value: `${state.qiXue} / 100`, color: "#ef4444" },
-    { label: "靈力", value: `${state.lingLi} / 100`, color: "#06b6d4" },
+    { label: "氣血", value: `${state.qiXue} / ${state.maxQiXue}`, color: "#ef4444" },
+    { label: "靈力", value: `${state.lingLi} / ${state.maxLingLi}`, color: "#06b6d4" },
     { label: "壽元", value: `${state.age} / ${state.shouYuan}`, color: "#34d399" },
   ];
   const worldRows = [
@@ -906,9 +931,9 @@ export default function Page() {
           </div>
 
           {/* HP / MP */}
-          <StatBar label="HP" value={state.qiXue}  from="#dc2626" to="#ef4444" />
+          <StatBar label="HP" value={state.qiXue}  maxVal={state.maxQiXue}  from="#dc2626" to="#ef4444" />
           <div style={{ marginTop: "6px" }}>
-            <StatBar label="MP" value={state.lingLi} from="#0ea5e9" to="#06b6d4" />
+            <StatBar label="MP" value={state.lingLi} maxVal={state.maxLingLi} from="#0ea5e9" to="#06b6d4" />
           </div>
 
           {/* Row 4: 名聲/罪惡 + 功能鍵 */}

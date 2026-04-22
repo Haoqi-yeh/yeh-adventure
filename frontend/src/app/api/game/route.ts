@@ -22,6 +22,7 @@ interface GameRequest {
     mingSheng: number;
     zuiE: number;
     cultivation: string;
+    cultivationLevel: number;
     karmaHistory: string[];
     characters: NPC[];
     turn: number;
@@ -49,13 +50,20 @@ function buildPrompt(req: GameRequest): string {
     ? s.characters.map(c => `${c.name}（${c.relation}，好感 ${c.favor}）`).join("、")
     : "無";
 
+  const totalStages = 10;
+  const nextStage = s.cultivationLevel < totalStages - 1 ? `下一境界：第 ${s.cultivationLevel + 1} 階` : "已達最高境界";
+
   return `【當前遊戲狀態】
-修為境界：${s.cultivation}（第 ${s.turn} 回合）
+修為境界：${s.cultivation}（第 ${s.cultivationLevel} 階 / 共 ${totalStages - 1} 階，第 ${s.turn} 回合）
+${nextStage}
 年齡：${s.age} 歲　壽元上限：${s.shouYuan} 年
-氣血：${s.qiXue}/100　靈力：${s.lingLi}/100
+氣血：${s.qiXue}　靈力/修為：${s.lingLi}/100
 名聲：${s.mingSheng}　罪惡：${s.zuiE}
 因果標記：${karma}
 已知人物：${chars}
+
+【境界規則（嚴格遵守）】
+玩家當前為第 ${s.cultivationLevel} 階。生成選項時，若涉及突破境界，只可提示突破至第 ${s.cultivationLevel + 1} 階（${s.cultivationLevel < totalStages - 1 ? `即 ${["煉氣一層","煉氣五層","煉氣九層","築基初期","築基中期","築基圓滿","金丹初期","金丹後期","元嬰初期","化神境"][s.cultivationLevel + 1] ?? "最高境界"}` : "已達頂峰，不可再突破"}）。不得出現跨越多層的突破選項。
 
 【玩家行動】
 ${req.userInput}
