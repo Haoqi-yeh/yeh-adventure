@@ -602,7 +602,13 @@ function CharactersPanel({ state, onClose }: { state: GameState; onClose: () => 
               <NpcPortrait npc={npc} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-                  <span style={{ color: "#f1f5f9", fontSize: "13px", fontWeight: 700 }}>{npc.name}</span>
+                  <Tooltip text={[
+                    `${npc.relation}`,
+                    npc.alias ? `前稱：${npc.alias}` : "",
+                    `好感：${npc.favor > 0 ? "+" : ""}${npc.favor}（${npc.favor >= 80 ? "摯友" : npc.favor >= 40 ? "友善" : npc.favor >= -10 ? "中立" : npc.favor >= -50 ? "警惕" : "敵意"}）`,
+                  ].filter(Boolean).join("　")}>
+                    <span style={{ color: "#f1f5f9", fontSize: "13px", fontWeight: 700 }}>{npc.name}</span>
+                  </Tooltip>
                   <span style={{ color: "#64748b", fontSize: "11px", backgroundColor: "#1e293b", padding: "2px 8px", borderRadius: "4px", flexShrink: 0 }}>
                     {npc.relation}
                   </span>
@@ -672,6 +678,120 @@ function LandscapePanel({ imagePrompt, onClose }: {
   );
 }
 
+// ─── Tooltip ──────────────────────────────────────────────────────────────────
+
+const KARMA_TOOLTIPS: Partial<Record<KarmaTag, string>> = {
+  "修煉": "長期靜心修煉，積累修為根基，道心漸固",
+  "吐納": "調息吐納，引天地靈氣入體，滋養丹田",
+  "淬體": "以苦難淬煉肉身，體魄強健，抗擊打能力提升",
+  "悟道": "於天地萬物中有所頓悟，道心精進，境界有望突破",
+  "遊歷": "行走四方，見識廣博，奇緣機遇自然而至",
+  "問道": "向高人求教，拓展見識格局，少走彎路",
+  "採集": "採集靈材，積累煉丹與修煉所需資源",
+  "煉丹": "嘗試煉製丹藥，熟悉藥性配方之道",
+  "殺業": "手沾鮮血，殺念凝聚心頭，業力漸重",
+  "御器": "以神識駕馭法器，飛劍聽令，指揮如意",
+  "神通": "領悟並施展神通，威能驚人，令人側目",
+  "逃遁": "危急時刻施展遁術，保全性命，留待日後",
+  "血債": "業力深重，血債纏身，難以輕易消除",
+  "天道感應": "行為感動天道，受冥冥之力庇護眷顧",
+  "業火": "罪業積累如山，業火焚身，因果難逃",
+  "渡劫": "面對天劫考驗，生死一線之間，磨礪心志",
+};
+
+const ITEM_TOOLTIP_MAP: [RegExp, string][] = [
+  [/劍|刀|斬/, "兵刃之器，可用於斬妖除魔，煉體強身"],
+  [/丹|藥|膏/, "丹藥之物，服用後可恢復氣血或增進修為"],
+  [/訣|功法|心法|秘籍|經/, "修煉典籍，記載道法精髓，習練可增強靈力"],
+  [/符籙|護符|靈符|符/, "符文之器，蘊含靈力，可護身辟邪或攻伐敵人"],
+  [/道袍|白袍|青袍|玄袍|袍/, "修士服飾，輕便靈動，利於施法行走"],
+  [/弓|箭/, "遠程兵器，以靈力驅動，可遠距精準攻擊"],
+  [/鎧甲|甲冑|護甲/, "防護之具，可減少傷害，護衛周身要害"],
+  [/玉佩|玉石|靈玉|玉/, "靈玉之物，蘊含天地靈氣，佩戴可穩固根基"],
+  [/杖|拂塵/, "法器之器，可聚集靈力，增強神通威力"],
+  [/扇/, "奇門法器，輕揮之間蘊藏莫測之力"],
+];
+
+function getItemTooltip(item: string): string {
+  for (const [regex, desc] of ITEM_TOOLTIP_MAP) {
+    if (regex.test(item)) return desc;
+  }
+  return "未知之物，其妙用尚待探索";
+}
+
+function Tooltip({ text, children }: { text: string; children: React.ReactNode }) {
+  const [tipRect, setTipRect] = useState<DOMRect | null>(null);
+  const spanRef = useRef<HTMLSpanElement>(null);
+  const longPressRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hideRef    = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const show = () => {
+    if (spanRef.current) setTipRect(spanRef.current.getBoundingClientRect());
+  };
+  const hide = () => {
+    if (hideRef.current) clearTimeout(hideRef.current);
+    setTipRect(null);
+  };
+
+  return (
+    <span
+      ref={spanRef}
+      style={{ display: "inline", cursor: "help" }}
+      onMouseEnter={show}
+      onMouseLeave={hide}
+      onTouchStart={() => { longPressRef.current = setTimeout(show, 480); }}
+      onTouchEnd={() => {
+        if (longPressRef.current) clearTimeout(longPressRef.current);
+        if (tipRect) hideRef.current = setTimeout(hide, 2200);
+      }}
+      onTouchCancel={() => { if (longPressRef.current) clearTimeout(longPressRef.current); }}
+    >
+      {children}
+      <AnimatePresence>
+        {tipRect && (
+          <motion.div
+            key="tip"
+            initial={{ opacity: 0, y: -5 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -5 }}
+            transition={{ duration: 0.13 }}
+            style={{
+              position: "fixed",
+              left: tipRect.left + tipRect.width / 2,
+              top: tipRect.top - 8,
+              transform: "translate(-50%, -100%)",
+              backgroundColor: "rgba(2,6,23,0.96)",
+              backdropFilter: "blur(14px)",
+              border: "1px solid #334155",
+              borderRadius: "8px",
+              padding: "8px 12px",
+              fontSize: "11px",
+              color: "#94a3b8",
+              zIndex: 300,
+              pointerEvents: "none",
+              letterSpacing: "0.06em",
+              lineHeight: 1.75,
+              maxWidth: "190px",
+              whiteSpace: "normal",
+              boxShadow: "0 8px 24px rgba(0,0,0,0.65)",
+            }}
+          >
+            {text}
+            <div style={{
+              position: "absolute", top: "100%", left: "50%",
+              transform: "translateX(-50%)",
+              width: 0, height: 0,
+              borderLeft: "5px solid transparent",
+              borderRight: "5px solid transparent",
+              borderTop: "5px solid #334155",
+            }} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </span>
+  );
+}
+
 // ─── BagPanel ─────────────────────────────────────────────────────────────────
 
 function BagPanel({ state, onClose }: { state: GameState; onClose: () => void }) {
@@ -690,13 +810,16 @@ function BagPanel({ state, onClose }: { state: GameState; onClose: () => void })
               <p style={{ color: "#334155", fontSize: "10px", letterSpacing: "0.18em", marginBottom: "12px", fontWeight: 700 }}>[ 持有物品 ]</p>
               <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
                 {state.inventory.map(item => (
-                  <span key={item} style={{
-                    padding: "6px 14px", fontSize: "12px", borderRadius: "8px",
-                    backgroundColor: "#0f172a", color: "#7dd3fc",
-                    border: "1px solid #1e3a5f", letterSpacing: "0.05em",
-                  }}>
-                    {item}
-                  </span>
+                  <Tooltip key={item} text={getItemTooltip(item)}>
+                    <span style={{
+                      padding: "6px 14px", fontSize: "12px", borderRadius: "8px",
+                      backgroundColor: "#0f172a", color: "#7dd3fc",
+                      border: "1px solid #1e3a5f", letterSpacing: "0.05em",
+                      display: "inline-block",
+                    }}>
+                      {item}
+                    </span>
+                  </Tooltip>
                 ))}
               </div>
             </div>
@@ -706,13 +829,15 @@ function BagPanel({ state, onClose }: { state: GameState; onClose: () => void })
               <p style={{ color: "#334155", fontSize: "10px", letterSpacing: "0.18em", marginBottom: "12px", fontWeight: 700 }}>[ 因果印記 ]</p>
               <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
                 {state.karmaHistory.map(tag => (
-                  <span key={tag} style={{
-                    padding: "6px 14px", fontSize: "12px", borderRadius: "8px",
-                    backgroundColor: "#1e293b", color: "#94a3b8",
-                    border: "1px solid #334155",
-                  }}>
-                    {tag}
-                  </span>
+                  <Tooltip key={tag} text={KARMA_TOOLTIPS[tag] ?? "修煉過程中留下的因果印記"}>
+                    <span style={{
+                      padding: "6px 14px", fontSize: "12px", borderRadius: "8px",
+                      backgroundColor: "#1e293b", color: "#94a3b8",
+                      border: "1px solid #334155", display: "inline-block",
+                    }}>
+                      {tag}
+                    </span>
+                  </Tooltip>
                 ))}
               </div>
             </div>
