@@ -26,6 +26,8 @@ interface GameRequest {
     karmaHistory: string[];
     characters: NPC[];
     turn: number;
+    atk: number;
+    def: number;
   };
 }
 
@@ -58,6 +60,7 @@ function buildPrompt(req: GameRequest): string {
 ${nextStage}
 年齡：${s.age} 歲　壽元上限：${s.shouYuan} 年
 氣血：${s.qiXue}　靈力/修為：${s.lingLi}/100
+攻擊：${s.atk}　防禦：${s.def}
 名聲：${s.mingSheng}　罪惡：${s.zuiE}
 因果標記：${karma}
 已知人物：${chars}

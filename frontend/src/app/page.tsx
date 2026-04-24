@@ -25,6 +25,19 @@ interface CaveState {
   facilities: string[];
 }
 
+interface EquippedItem {
+  name: string;
+  slot: "weapon" | "armor" | "accessory";
+  atkBonus: number;
+  defBonus: number;
+}
+
+interface ItemEffect {
+  hpRestore?: number;
+  mpRestore?: number;
+  expGain?: number;
+}
+
 interface StoryOption {
   label: string;
   action: string;
@@ -72,6 +85,9 @@ interface GameState {
   cave: CaveState;
   maxQiXue: number;
   maxLingLi: number;
+  atk: number;
+  def: number;
+  equippedItems: EquippedItem[];
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -108,6 +124,55 @@ function clamp(v: number, lo = 0, hi = 100) {
   return Math.max(lo, Math.min(hi, v));
 }
 
+// ─── Item helpers ─────────────────────────────────────────────────────────────
+
+const CONSUMABLE_RE = /丹|藥|符|茶|酒|膏|露|湯|汁|草|果|珠|石|核|果實|果子|靈液|靈泉|靈露|靈果|食物|糧食|補藥|回春|療傷|補氣|補血|增靈|淬體|養元|固元|聚靈|百草|千年|萬年|靈芝|人參|茯苓|枸杞|何首烏|薑|蒜/;
+const WEAPON_RE  = /劍|刀|槍|棍|斧|鞭|錘|弓|弩|匕首|暗器|法器|飛劍|神兵|寶劍|長劍|鐵劍|玉劍|古劍|靈劍|邪劍|聖劍|屠龍|倚天|干將|莫邪/;
+const ARMOR_RE   = /甲|盔|護|盾|鎧/;
+const ROBE_RE    = /袍|衣|服|裝|衫|裘|錦|靈衣|仙袍|道袍/;
+const ACCESSORY_RE = /環|戒|指|釧|鐲|墜|牌|符文|玉佩|護符|令牌|令符|令牌|神符|靈符|印|璽|徽|章|徽章/;
+
+type ItemCategory = "consumable" | "weapon" | "armor" | "robe" | "accessory" | "other";
+
+function getItemCategory(name: string): ItemCategory {
+  if (CONSUMABLE_RE.test(name)) return "consumable";
+  if (WEAPON_RE.test(name))     return "weapon";
+  if (ARMOR_RE.test(name))      return "armor";
+  if (ROBE_RE.test(name))       return "robe";
+  if (ACCESSORY_RE.test(name))  return "accessory";
+  return "other";
+}
+
+function getEquipSlot(name: string): EquippedItem["slot"] {
+  const cat = getItemCategory(name);
+  if (cat === "weapon")              return "weapon";
+  if (cat === "armor" || cat === "robe") return "armor";
+  return "accessory";
+}
+
+function getEquipBonuses(name: string): { atkBonus: number; defBonus: number } {
+  const cat = getItemCategory(name);
+  if (cat === "weapon")              return { atkBonus: 15, defBonus: 0 };
+  if (cat === "armor")               return { atkBonus: 0,  defBonus: 12 };
+  if (cat === "robe")                return { atkBonus: 5,  defBonus: 8  };
+  return { atkBonus: 3, defBonus: 3 };
+}
+
+function getConsumableEffect(name: string): ItemEffect {
+  if (/回春|療傷|補氣|補血/.test(name)) return { hpRestore: 30 };
+  if (/增靈|補靈|聚靈/.test(name))      return { mpRestore: 30 };
+  if (/淬體|養元|固元/.test(name))       return { hpRestore: 15, mpRestore: 15 };
+  return { hpRestore: 20 };
+}
+
+function calcBaseAtk(level: number): number {
+  return 10 + level * 8;
+}
+
+function calcBaseDef(level: number): number {
+  return 5 + level * 5;
+}
+
 // ─── useGameState ─────────────────────────────────────────────────────────────
 
 function useGameState() {
@@ -124,6 +189,9 @@ function useGameState() {
     cave: { lingQiLevel: 1, facilities: [] },
     maxQiXue: 100,
     maxLingLi: 100,
+    atk: 10,
+    def: 5,
+    equippedItems: [],
   });
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -203,6 +271,9 @@ function useGameState() {
         });
       }
 
+      const newAtk = calcBaseAtk(newLevel) + prev.equippedItems.reduce((s: number, e: EquippedItem) => s + e.atkBonus, 0);
+      const newDef = calcBaseDef(newLevel) + prev.equippedItems.reduce((s: number, e: EquippedItem) => s + e.defBonus, 0);
+
       return {
         ...prev,
         qiXue:  didLevelUp
@@ -211,6 +282,8 @@ function useGameState() {
         lingLi: didLevelUp ? 0 : clamp(rawLingLi, 0, 100),
         maxQiXue:  newMaxQiXue,
         maxLingLi: newMaxLingLi,
+        atk: newAtk,
+        def: newDef,
         age:       isStart ? prev.age       : prev.age + (c.ageAdd  ?? 0),
         shouYuan:  CULTIVATION_SHOUYUAN[newLevel],
         mingSheng: isStart ? prev.mingSheng : clamp(prev.mingSheng + (c.mingSheng ?? 0)),
@@ -255,6 +328,8 @@ function useGameState() {
             karmaHistory: s.karmaHistory,
             characters: s.characters,
             turn: s.turn,
+            atk: s.atk,
+            def: s.def,
           },
         };
 
@@ -297,7 +372,75 @@ function useGameState() {
     }
   }, [callAPI, applyResponse]);
 
-  return { state, handleSendMessage };
+  const handleUseItem = useCallback((itemName: string) => {
+    const effect = getConsumableEffect(itemName);
+    setState(prev => {
+      const newInventory = [...prev.inventory];
+      const idx = newInventory.indexOf(itemName);
+      if (idx < 0) return prev;
+      newInventory.splice(idx, 1);
+      const hpGain = effect.hpRestore ?? 0;
+      const mpGain = effect.mpRestore ?? 0;
+      const now = Date.now();
+      const newLog = [...prev.eventLog];
+      if (hpGain > 0) newLog.push({ id: now,     type: "屬性", text: `使用【${itemName}】，氣血恢復 ${hpGain} 點` });
+      if (mpGain > 0) newLog.push({ id: now + 1, type: "屬性", text: `使用【${itemName}】，靈力恢復 ${mpGain} 點` });
+      return {
+        ...prev,
+        inventory: newInventory,
+        qiXue:  clamp(prev.qiXue  + hpGain, 0, prev.maxQiXue),
+        lingLi: clamp(prev.lingLi + mpGain, 0, 100),
+        eventLog: newLog,
+      };
+    });
+  }, []);
+
+  const handleEquipItem = useCallback((itemName: string) => {
+    setState(prev => {
+      if (!prev.inventory.includes(itemName)) return prev;
+      const slot    = getEquipSlot(itemName);
+      const bonuses = getEquipBonuses(itemName);
+      const newItem: EquippedItem = { name: itemName, slot, ...bonuses };
+      // unequip existing item in same slot back to inventory
+      const displaced = prev.equippedItems.find(e => e.slot === slot);
+      const newEquipped = [
+        ...prev.equippedItems.filter(e => e.slot !== slot),
+        newItem,
+      ];
+      const newInventory = prev.inventory.filter(i => i !== itemName);
+      if (displaced) newInventory.push(displaced.name);
+      const newAtk = calcBaseAtk(prev.cultivationLevel) + newEquipped.reduce((s: number, e: EquippedItem) => s + e.atkBonus, 0);
+      const newDef = calcBaseDef(prev.cultivationLevel) + newEquipped.reduce((s: number, e: EquippedItem) => s + e.defBonus, 0);
+      const now = Date.now();
+      return {
+        ...prev,
+        inventory: newInventory,
+        equippedItems: newEquipped,
+        atk: newAtk,
+        def: newDef,
+        eventLog: [...prev.eventLog, { id: now, type: "獲取", text: `裝備【${itemName}】（${slot === "weapon" ? "武器" : slot === "armor" ? "防具" : "飾品"}欄）` }],
+      };
+    });
+  }, []);
+
+  const handleUnequipItem = useCallback((itemName: string) => {
+    setState(prev => {
+      const equipped = prev.equippedItems.find(e => e.name === itemName);
+      if (!equipped) return prev;
+      const newEquipped = prev.equippedItems.filter(e => e.name !== itemName);
+      const newAtk = calcBaseAtk(prev.cultivationLevel) + newEquipped.reduce((s: number, e: EquippedItem) => s + e.atkBonus, 0);
+      const newDef = calcBaseDef(prev.cultivationLevel) + newEquipped.reduce((s: number, e: EquippedItem) => s + e.defBonus, 0);
+      return {
+        ...prev,
+        inventory: [...prev.inventory, itemName],
+        equippedItems: newEquipped,
+        atk: newAtk,
+        def: newDef,
+      };
+    });
+  }, []);
+
+  return { state, handleSendMessage, handleUseItem, handleEquipItem, handleUnequipItem };
 }
 
 // ─── StatBar ──────────────────────────────────────────────────────────────────
@@ -463,6 +606,8 @@ function DetailPanel({ state, onClose }: { state: GameState; onClose: () => void
     { label: "氣血", value: `${state.qiXue} / ${state.maxQiXue}`, color: "#ef4444" },
     { label: "靈力", value: `${state.lingLi} / ${state.maxLingLi}`, color: "#06b6d4" },
     { label: "壽元", value: `${state.age} / ${state.shouYuan}`, color: "#34d399" },
+    { label: "攻擊", value: `${state.atk}`, color: "#fb923c" },
+    { label: "防禦", value: `${state.def}`, color: "#60a5fa" },
   ];
   const worldRows = [
     { label: "名聲", value: `${state.mingSheng}`, color: "#fbbf24" },
@@ -528,6 +673,25 @@ function DetailPanel({ state, onClose }: { state: GameState; onClose: () => void
           ))}
         </div>
       </div>
+
+      {/* 當前裝備 */}
+      {state.equippedItems.length > 0 && (
+        <div style={{ paddingTop: "14px", borderTop: "1px solid #1e293b", marginBottom: "14px" }}>
+          <p style={{ color: "#334155", fontSize: "10px", letterSpacing: "0.18em", marginBottom: "10px", fontWeight: 700 }}>[ 當前裝備 ]</p>
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            {state.equippedItems.map(e => (
+              <div key={e.name} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 10px", backgroundColor: "#0f172a", borderRadius: "6px", border: "1px solid #1e3a5f" }}>
+                <span style={{ color: "#34d399", fontSize: "12px" }}>{e.name}</span>
+                <span style={{ color: "#475569", fontSize: "10px", fontFamily: "monospace" }}>
+                  {e.slot === "weapon" ? "武器" : e.slot === "armor" ? "防具" : "飾品"}
+                  {e.atkBonus > 0 && <span style={{ color: "#fb923c", marginLeft: "8px" }}>ATK+{e.atkBonus}</span>}
+                  {e.defBonus > 0 && <span style={{ color: "#60a5fa", marginLeft: "8px" }}>DEF+{e.defBonus}</span>}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* 因果 */}
       {state.karmaHistory.length > 0 && (
@@ -794,56 +958,158 @@ function Tooltip({ text, children }: { text: string; children: React.ReactNode }
 
 // ─── BagPanel ─────────────────────────────────────────────────────────────────
 
-function BagPanel({ state, onClose }: { state: GameState; onClose: () => void }) {
+function BagPanel({
+  state, onClose, onUseItem, onEquipItem, onUnequipItem,
+}: {
+  state: GameState;
+  onClose: () => void;
+  onUseItem: (name: string) => void;
+  onEquipItem: (name: string) => void;
+  onUnequipItem: (name: string) => void;
+}) {
+  const [selected, setSelected] = useState<string | null>(null);
   const hasItems = state.inventory.length > 0;
   const hasKarma = state.karmaHistory.length > 0;
+  const hasEquipped = state.equippedItems.length > 0;
+
+  const selectedCat = selected ? getItemCategory(selected) : null;
+  const isConsumable = selectedCat === "consumable";
+  const isEquippable = selected && !isConsumable && selectedCat !== "other";
+  const equippedEntry = selected ? state.equippedItems.find(e => e.name === selected) : null;
+
+  const slotLabel = (slot: EquippedItem["slot"]) =>
+    slot === "weapon" ? "武器" : slot === "armor" ? "防具" : "飾品";
+
   return (
     <Modal onClose={onClose} title="⟨ 背 包 ⟩">
-      {!hasItems && !hasKarma ? (
-        <div style={{ display: "flex", justifyContent: "center", padding: "32px 0", color: "#334155", fontSize: "13px", letterSpacing: "0.12em" }}>
-          〔 空空如也 〕
-        </div>
-      ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-          {hasItems && (
-            <div>
-              <p style={{ color: "#334155", fontSize: "10px", letterSpacing: "0.18em", marginBottom: "12px", fontWeight: 700 }}>[ 持有物品 ]</p>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-                {state.inventory.map(item => (
-                  <Tooltip key={item} text={getItemTooltip(item)}>
-                    <span style={{
-                      padding: "6px 14px", fontSize: "12px", borderRadius: "8px",
-                      backgroundColor: "#0f172a", color: "#7dd3fc",
-                      border: "1px solid #1e3a5f", letterSpacing: "0.05em",
-                      display: "inline-block",
-                    }}>
-                      {item}
-                    </span>
-                  </Tooltip>
-                ))}
-              </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+
+        {/* 已裝備 */}
+        {hasEquipped && (
+          <div>
+            <p style={{ color: "#334155", fontSize: "10px", letterSpacing: "0.18em", marginBottom: "10px", fontWeight: 700 }}>[ 已裝備 ]</p>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+              {state.equippedItems.map(e => (
+                <button
+                  key={e.name}
+                  onClick={() => setSelected(selected === e.name ? null : e.name)}
+                  style={{
+                    padding: "6px 14px", fontSize: "12px", borderRadius: "8px",
+                    backgroundColor: selected === e.name ? "#1e3a5f" : "#0f172a",
+                    color: "#34d399",
+                    border: selected === e.name ? "1px solid #34d399" : "1px solid #1e5f3a",
+                    letterSpacing: "0.05em", cursor: "pointer",
+                    fontFamily: CJK,
+                  }}
+                >
+                  {e.name}
+                  <span style={{ color: "#475569", fontSize: "10px", marginLeft: "6px" }}>
+                    [{slotLabel(e.slot)}]
+                  </span>
+                </button>
+              ))}
             </div>
-          )}
-          {hasKarma && (
-            <div>
-              <p style={{ color: "#334155", fontSize: "10px", letterSpacing: "0.18em", marginBottom: "12px", fontWeight: 700 }}>[ 因果印記 ]</p>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-                {state.karmaHistory.map(tag => (
-                  <Tooltip key={tag} text={`【因果記憶】\n${KARMA_TOOLTIPS[tag] ?? "修煉過程中留下的因果印記"}`}>
-                    <span style={{
+          </div>
+        )}
+
+        {/* 持有物品 */}
+        {hasItems ? (
+          <div>
+            <p style={{ color: "#334155", fontSize: "10px", letterSpacing: "0.18em", marginBottom: "10px", fontWeight: 700 }}>[ 持有物品 ]</p>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+              {state.inventory.map(item => (
+                <Tooltip key={item} text={getItemTooltip(item)}>
+                  <button
+                    onClick={() => setSelected(selected === item ? null : item)}
+                    style={{
                       padding: "6px 14px", fontSize: "12px", borderRadius: "8px",
-                      backgroundColor: "#1e293b", color: "#94a3b8",
-                      border: "1px solid #334155", display: "inline-block",
-                    }}>
-                      {tag}
-                    </span>
-                  </Tooltip>
-                ))}
-              </div>
+                      backgroundColor: selected === item ? "#1e3a5f" : "#0f172a",
+                      color: "#7dd3fc",
+                      border: selected === item ? "1px solid #7dd3fc" : "1px solid #1e3a5f",
+                      letterSpacing: "0.05em", cursor: "pointer",
+                      fontFamily: CJK,
+                    }}
+                  >
+                    {item}
+                  </button>
+                </Tooltip>
+              ))}
             </div>
-          )}
-        </div>
-      )}
+          </div>
+        ) : !hasEquipped && !hasKarma && (
+          <div style={{ display: "flex", justifyContent: "center", padding: "24px 0", color: "#334155", fontSize: "13px", letterSpacing: "0.12em" }}>
+            〔 空空如也 〕
+          </div>
+        )}
+
+        {/* 操作列 */}
+        {selected && (
+          <div style={{ display: "flex", gap: "10px", paddingTop: "4px" }}>
+            {/* 已裝備 → 卸下 */}
+            {equippedEntry && (
+              <button
+                onClick={() => { onUnequipItem(selected); setSelected(null); }}
+                style={{
+                  flex: 1, padding: "8px 0", fontSize: "12px", borderRadius: "8px",
+                  backgroundColor: "#1e293b", color: "#f87171",
+                  border: "1px solid #f87171", cursor: "pointer", fontFamily: CJK,
+                  letterSpacing: "0.1em",
+                }}
+              >
+                卸 下
+              </button>
+            )}
+            {/* 消耗品 → 使用 */}
+            {isConsumable && (
+              <button
+                onClick={() => { onUseItem(selected); setSelected(null); }}
+                style={{
+                  flex: 1, padding: "8px 0", fontSize: "12px", borderRadius: "8px",
+                  backgroundColor: "#1e293b", color: "#34d399",
+                  border: "1px solid #34d399", cursor: "pointer", fontFamily: CJK,
+                  letterSpacing: "0.1em",
+                }}
+              >
+                使 用
+              </button>
+            )}
+            {/* 裝備品 → 裝備（未裝備中） */}
+            {isEquippable && !equippedEntry && (
+              <button
+                onClick={() => { onEquipItem(selected); setSelected(null); }}
+                style={{
+                  flex: 1, padding: "8px 0", fontSize: "12px", borderRadius: "8px",
+                  backgroundColor: "#1e293b", color: "#fbbf24",
+                  border: "1px solid #fbbf24", cursor: "pointer", fontFamily: CJK,
+                  letterSpacing: "0.1em",
+                }}
+              >
+                裝 備
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* 因果印記 */}
+        {hasKarma && (
+          <div>
+            <p style={{ color: "#334155", fontSize: "10px", letterSpacing: "0.18em", marginBottom: "10px", fontWeight: 700 }}>[ 因果印記 ]</p>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+              {state.karmaHistory.map(tag => (
+                <Tooltip key={tag} text={`【因果記憶】\n${KARMA_TOOLTIPS[tag] ?? "修煉過程中留下的因果印記"}`}>
+                  <span style={{
+                    padding: "6px 14px", fontSize: "12px", borderRadius: "8px",
+                    backgroundColor: "#1e293b", color: "#94a3b8",
+                    border: "1px solid #334155", display: "inline-block",
+                  }}>
+                    {tag}
+                  </span>
+                </Tooltip>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
     </Modal>
   );
 }
@@ -948,7 +1214,7 @@ const hudBtn: React.CSSProperties = {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function Page() {
-  const { state, handleSendMessage } = useGameState();
+  const { state, handleSendMessage, handleUseItem, handleEquipItem, handleUnequipItem } = useGameState();
   const [inputValue, setInputValue]     = useState("");
   const [rippleKey, setRippleKey]       = useState<number | null>(null);
   const [showDetail, setShowDetail]     = useState(false);
@@ -1268,7 +1534,7 @@ export default function Page() {
           {showDetail    && <DetailPanel     state={state} onClose={() => setShowDetail(false)} />}
           {showChars     && <CharactersPanel state={state} onClose={() => setShowChars(false)} />}
           {showLandscape && <LandscapePanel imagePrompt={state.imagePrompt} onClose={() => setShowLandscape(false)} />}
-          {showBag       && <BagPanel        state={state} onClose={() => setShowBag(false)} />}
+          {showBag       && <BagPanel        state={state} onClose={() => setShowBag(false)} onUseItem={handleUseItem} onEquipItem={handleEquipItem} onUnequipItem={handleUnequipItem} />}
           {showCave      && <CavePanel       state={state} onClose={() => setShowCave(false)} />}
           {showSystem    && <SystemPanel onClose={() => setShowSystem(false)} onReincarnate={() => window.location.reload()} />}
         </AnimatePresence>
