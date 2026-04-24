@@ -419,7 +419,7 @@ function buildAvatarPrompt(cultivation: string, inventory: string[]): string {
     }
   }
   const equip = parts.length > 0 ? ", " + parts.join(", ") : "";
-  return `young wuxia cultivator, ${cultivation} realm${equip}, pixel art sprite, retro 16-bit RPG character, standing pose, detailed fantasy`;
+  return `(masterpiece:1.2), classic japanese AVG illustration style, handsome young wuxia cultivator, ${cultivation} realm${equip}, traditional Daoist robes, sharp lines, 64-bit color depth style, standing pose, confident expression`;
 }
 
 function PlayerAvatar({ state }: { state: GameState }) {
@@ -553,8 +553,8 @@ function NpcPortrait({ npc }: { npc: NPC }) {
   const [err, setErr] = useState(false);
   if (!npc.physicalDescription) return null;
   const genderTag = npc.gender === "female"
-    ? ", voluptuous body, alluring pose, pixel art sprite, retro 16-bit, masterpiece portrait, wuxia cultivation fantasy"
-    : ", strong masculine features, wuxia warrior, pixel art sprite, retro 16-bit, masterpiece portrait, wuxia cultivation fantasy";
+    ? `, (masterpiece:1.2), classic japanese AVG illustration style, alluring anime face, (very tight skimpy low-cut Daoist robe:1.4), (breathtaking hourglass figure, bountiful bust:1.5), sharp lines, 64-bit color depth style`
+    : `, (masterpiece:1.2), classic japanese AVG illustration style, handsome young wuxia cultivator anime face, traditional flowing Daoist robes, strong build, sharp lines, 64-bit color depth style`;
   const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(npc.physicalDescription + genderTag)}?width=128&height=192&nologo=true&model=flux`;
   return (
     <div style={{
@@ -603,10 +603,10 @@ function CharactersPanel({ state, onClose }: { state: GameState; onClose: () => 
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
                   <Tooltip text={[
-                    `${npc.relation}`,
-                    npc.alias ? `前稱：${npc.alias}` : "",
-                    `好感：${npc.favor > 0 ? "+" : ""}${npc.favor}（${npc.favor >= 80 ? "摯友" : npc.favor >= 40 ? "友善" : npc.favor >= -10 ? "中立" : npc.favor >= -50 ? "警惕" : "敵意"}）`,
-                  ].filter(Boolean).join("　")}>
+                    `【身份】${npc.relation}`,
+                    npc.alias ? `【別稱】${npc.alias}` : "",
+                    `【好感】${npc.favor > 0 ? "+" : ""}${npc.favor}　${npc.favor >= 80 ? "摯友" : npc.favor >= 40 ? "友善" : npc.favor >= -10 ? "中立" : npc.favor >= -50 ? "警惕" : "敵意"}`,
+                  ].filter(Boolean).join("\n")}>
                     <span style={{ color: "#f1f5f9", fontSize: "13px", fontWeight: 700 }}>{npc.name}</span>
                   </Tooltip>
                   <span style={{ color: "#64748b", fontSize: "11px", backgroundColor: "#1e293b", padding: "2px 8px", borderRadius: "4px", flexShrink: 0 }}>
@@ -714,9 +714,9 @@ const ITEM_TOOLTIP_MAP: [RegExp, string][] = [
 
 function getItemTooltip(item: string): string {
   for (const [regex, desc] of ITEM_TOOLTIP_MAP) {
-    if (regex.test(item)) return desc;
+    if (regex.test(item)) return `【鑑定功效】\n${desc}`;
   }
-  return "未知之物，其妙用尚待探索";
+  return `【鑑定功效】\n未知之物，其妙用尚待探索`;
 }
 
 function Tooltip({ text, children }: { text: string; children: React.ReactNode }) {
@@ -771,8 +771,8 @@ function Tooltip({ text, children }: { text: string; children: React.ReactNode }
               pointerEvents: "none",
               letterSpacing: "0.06em",
               lineHeight: 1.75,
-              maxWidth: "190px",
-              whiteSpace: "normal",
+              maxWidth: "200px",
+              whiteSpace: "pre-line",
               boxShadow: "0 8px 24px rgba(0,0,0,0.65)",
             }}
           >
@@ -829,7 +829,7 @@ function BagPanel({ state, onClose }: { state: GameState; onClose: () => void })
               <p style={{ color: "#334155", fontSize: "10px", letterSpacing: "0.18em", marginBottom: "12px", fontWeight: 700 }}>[ 因果印記 ]</p>
               <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
                 {state.karmaHistory.map(tag => (
-                  <Tooltip key={tag} text={KARMA_TOOLTIPS[tag] ?? "修煉過程中留下的因果印記"}>
+                  <Tooltip key={tag} text={`【因果記憶】\n${KARMA_TOOLTIPS[tag] ?? "修煉過程中留下的因果印記"}`}>
                     <span style={{
                       padding: "6px 14px", fontSize: "12px", borderRadius: "8px",
                       backgroundColor: "#1e293b", color: "#94a3b8",
