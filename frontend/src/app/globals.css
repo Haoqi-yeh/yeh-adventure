@@ -4,17 +4,19 @@
 
 :root {
   color-scheme: dark;
-  --bg: #111318;
-  --panel: #181b22;
-  --panel-strong: #20242d;
-  --line: #303745;
-  --text: #f4f0e8;
-  --muted: #a9b0bd;
-  --soft: #788393;
-  --gold: #d6ad62;
-  --cyan: #67d4d8;
-  --rose: #e0738b;
-  --green: #82c984;
+  --bg: #120f0b;
+  --panel: #1e1712;
+  --panel-strong: #2b2118;
+  --line: #4f3d2a;
+  --text: #fff4df;
+  --muted: #c8b99f;
+  --soft: #947f60;
+  --gold: #d8a84f;
+  --gold-bright: #ffd982;
+  --ink: #100c09;
+  --jade: #7ac7a5;
+  --rose: #d56d6d;
+  --green: #9ecf82;
 }
 
 * {
@@ -29,8 +31,9 @@ body {
 
 body {
   background:
-    linear-gradient(135deg, rgba(214, 173, 98, 0.10), transparent 32%),
-    linear-gradient(225deg, rgba(103, 212, 216, 0.10), transparent 36%),
+    radial-gradient(circle at 50% 0%, rgba(255, 217, 130, 0.18), transparent 34%),
+    linear-gradient(135deg, rgba(139, 63, 30, 0.26), transparent 34%),
+    linear-gradient(225deg, rgba(71, 112, 86, 0.18), transparent 38%),
     var(--bg);
   color: var(--text);
   font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Noto Sans TC", "PingFang TC", sans-serif;
@@ -58,16 +61,84 @@ button {
   padding: 32px 0;
 }
 
-.setup-panel {
-  width: min(880px, 100%);
+.cover-panel {
+  position: relative;
+  width: min(1080px, 100%);
   display: grid;
-  grid-template-columns: 0.9fr 1.1fr;
+  grid-template-columns: 0.84fr 1.16fr;
   gap: 32px;
   align-items: start;
-  padding: 28px;
+  overflow: hidden;
+  padding: 30px;
   border: 1px solid var(--line);
-  background: rgba(24, 27, 34, 0.86);
-  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.28);
+  background:
+    linear-gradient(180deg, rgba(255, 244, 223, 0.04), transparent 38%),
+    rgba(30, 23, 18, 0.9);
+  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.38);
+}
+
+.cover-panel::before {
+  content: "";
+  position: absolute;
+  inset: 10px;
+  pointer-events: none;
+  border: 1px solid rgba(216, 168, 79, 0.22);
+}
+
+.cover-art {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.62;
+}
+
+.moon {
+  position: absolute;
+  top: 42px;
+  left: 84px;
+  width: 112px;
+  aspect-ratio: 1;
+  border-radius: 999px;
+  background: radial-gradient(circle, #ffe8aa, #b9843e 68%, transparent 70%);
+  box-shadow: 0 0 70px rgba(255, 217, 130, 0.28);
+}
+
+.mountain {
+  position: absolute;
+  left: -8%;
+  right: 44%;
+  bottom: -18px;
+  height: 48%;
+  background: linear-gradient(135deg, transparent 0 38%, rgba(73, 55, 38, 0.92) 38% 64%, transparent 64%);
+}
+
+.mountain-back {
+  bottom: 54px;
+  opacity: 0.35;
+  transform: scaleX(1.2);
+}
+
+.mountain-front {
+  opacity: 0.74;
+}
+
+.sword-mark {
+  position: absolute;
+  top: 116px;
+  left: 190px;
+  width: 8px;
+  height: 220px;
+  transform: rotate(37deg);
+  border-radius: 99px;
+  background: linear-gradient(180deg, transparent, rgba(255, 217, 130, 0.84), transparent);
+}
+
+.brand-row,
+.setup-copy,
+.setup-form {
+  position: relative;
+  z-index: 1;
 }
 
 .brand-row,
@@ -95,8 +166,10 @@ button {
 }
 
 .setup-copy h1 {
-  font-size: clamp(34px, 7vw, 72px);
-  max-width: 8em;
+  font-size: clamp(38px, 6.4vw, 78px);
+  max-width: 7.8em;
+  color: var(--text);
+  text-shadow: 0 0 34px rgba(216, 168, 79, 0.18);
 }
 
 .setup-copy p:last-child {
@@ -107,7 +180,7 @@ button {
 
 .eyebrow {
   margin: 0 0 10px;
-  color: var(--cyan);
+  color: var(--jade);
   font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.16em;
@@ -116,12 +189,19 @@ button {
 
 .setup-form {
   display: grid;
-  gap: 16px;
+  gap: 18px;
 }
 
-label {
+label,
+.field-group {
   display: grid;
   gap: 8px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.field-group > span {
   color: var(--muted);
   font-size: 13px;
   font-weight: 700;
@@ -130,8 +210,8 @@ label {
 input,
 textarea {
   width: 100%;
-  border: 1px solid var(--line);
-  background: #101218;
+  border: 1px solid rgba(216, 168, 79, 0.28);
+  background: rgba(16, 12, 9, 0.78);
   color: var(--text);
   padding: 12px 14px;
   resize: vertical;
@@ -140,43 +220,73 @@ textarea {
 
 input:focus,
 textarea:focus {
-  border-color: var(--gold);
+  border-color: var(--gold-bright);
+  box-shadow: 0 0 0 3px rgba(216, 168, 79, 0.14);
 }
 
-.world-grid {
+.name-row {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr) 48px;
+  gap: 8px;
+}
+
+.name-row button {
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(216, 168, 79, 0.36);
+  background: rgba(216, 168, 79, 0.12);
+  color: var(--gold-bright);
+}
+
+.segment-grid,
+.card-grid {
+  display: grid;
   gap: 10px;
 }
 
-.world-card {
-  min-height: 96px;
+.segment-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.card-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.choice-card {
+  min-height: 82px;
   display: grid;
   gap: 8px;
   text-align: left;
-  border: 1px solid var(--line);
-  background: #141720;
+  border: 1px solid rgba(216, 168, 79, 0.22);
+  background: rgba(16, 12, 9, 0.52);
   color: var(--text);
   padding: 14px;
+  transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease;
 }
 
-.world-card span {
+.choice-card:hover {
+  transform: translateY(-1px);
+  border-color: rgba(216, 168, 79, 0.46);
+}
+
+.choice-card span {
   color: var(--soft);
   font-size: 13px;
   line-height: 1.5;
 }
 
-.world-card.selected {
-  border-color: var(--gold);
-  background: rgba(214, 173, 98, 0.12);
+.choice-card.selected {
+  border-color: var(--gold-bright);
+  background: linear-gradient(135deg, rgba(216, 168, 79, 0.2), rgba(122, 199, 165, 0.08));
+  box-shadow: inset 0 0 0 1px rgba(255, 217, 130, 0.1), 0 12px 32px rgba(0, 0, 0, 0.18);
 }
 
 .primary-action,
 .action-form button {
   justify-content: center;
   border: 0;
-  background: var(--gold);
-  color: #17130d;
+  background: linear-gradient(135deg, var(--gold), var(--gold-bright));
+  color: var(--ink);
   padding: 13px 18px;
   font-weight: 900;
 }
@@ -191,7 +301,7 @@ textarea:focus {
 .status-rail,
 .story-stage {
   border: 1px solid var(--line);
-  background: rgba(24, 27, 34, 0.9);
+  background: rgba(30, 23, 18, 0.9);
 }
 
 .status-rail {
@@ -244,7 +354,7 @@ textarea:focus {
 .stat-track span {
   display: block;
   height: 100%;
-  background: linear-gradient(90deg, var(--cyan), var(--green));
+  background: linear-gradient(90deg, var(--jade), var(--green));
 }
 
 .memory-box {
@@ -312,7 +422,7 @@ textarea:focus {
 }
 
 .story-entry.story {
-  border-left-color: var(--cyan);
+  border-left-color: var(--jade);
 }
 
 .choice-row {
@@ -355,7 +465,7 @@ textarea:focus {
     width: min(100vw - 20px, 640px);
   }
 
-  .setup-panel,
+  .cover-panel,
   .game-shell {
     grid-template-columns: 1fr;
   }
@@ -371,7 +481,12 @@ textarea:focus {
 
   .choice-row,
   .action-form,
-  .world-grid {
+  .segment-grid,
+  .card-grid {
     grid-template-columns: 1fr;
+  }
+
+  .cover-art {
+    opacity: 0.32;
   }
 }

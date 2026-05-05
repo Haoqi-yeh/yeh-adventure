@@ -1,24 +1,39 @@
 import type {
   AdventureRequest,
   AdventureState,
+  Destiny,
+  Gender,
+  Origin,
   PlayerProfile,
   StoryChoice,
   StoryEntry,
-  WorldPreset,
 } from "./types";
 
-const WORLD_LABEL: Record<WorldPreset, string> = {
-  urban_fantasy: "台北異聞",
-  xianxia: "現代修真",
-  school_mystery: "校園怪談",
-  custom: "自訂世界",
+const GENDER_LABEL: Record<Gender, string> = {
+  male: "男修",
+  female: "女修",
+  unspecified: "不拘",
 };
 
-const OPENING_BY_WORLD: Record<WorldPreset, string> = {
-  urban_fantasy: "捷運末班車停在不存在的站名下，月台廣播用你的名字提醒你下車。",
-  xianxia: "你在便利商店的冷藏櫃前醒來，掌心多了一道像呼吸一樣發亮的靈紋。",
-  school_mystery: "晚自習鐘聲響過三次後，教室裡只剩你，黑板卻自己寫下明天的日期。",
-  custom: "世界像一張剛被翻開的紙，第一行字還沒有定稿，只等你走進去。",
+const ORIGIN_LABEL: Record<Origin, string> = {
+  wandering: "江湖散修",
+  fallen_clan: "沒落世家",
+  outer_disciple: "宗門外門",
+  hidden_bloodline: "隱脈遺孤",
+};
+
+const DESTINY_LABEL: Record<Destiny, string> = {
+  sword: "劍修",
+  alchemy: "丹道",
+  formation: "陣法",
+  beast_taming: "御獸",
+};
+
+const OPENING_BY_ORIGIN: Record<Origin, string> = {
+  wandering: "你背著一柄缺口鐵劍，沿著青石山道走到雲霧盡頭。山門前的銅鐘無風自鳴，像是在確認你的名字。",
+  fallen_clan: "祖宅被封的第七年，你在廢井裡找到一枚裂開的玉簡。玉簡只剩半句話：若葉家仍有血脈，速往青玄山。",
+  outer_disciple: "你掃了三年藏經閣，從未被任何長老記住。直到今晚，書架最底層那本無字經自己翻開，露出一道微光。",
+  hidden_bloodline: "你一直以為自己只是市井孤兒，直到追殺者叫出了你母親的道號。那一刻，沉睡多年的靈根終於發燙。",
 };
 
 const CHOICE_BANK: StoryChoice[][] = [
@@ -53,22 +68,24 @@ function makeEntry(speaker: StoryEntry["speaker"], text: string): StoryEntry {
 
 function normalizeProfile(profile: PlayerProfile): PlayerProfile {
   return {
-    name: profile.name.trim() || "無名者",
-    premise: profile.premise.trim() || "一個想知道故事會把自己帶去哪裡的人。",
-    world: profile.world,
+    name: profile.name.trim() || "無名散修",
+    premise: profile.premise.trim() || "一個初入江湖，想在仙路上留下姓名的人。",
+    gender: profile.gender,
+    origin: profile.origin,
+    destiny: profile.destiny,
   };
 }
 
 export function createInitialAdventure(profile: PlayerProfile): AdventureState {
   const normalized = normalizeProfile(profile);
-  const opening = OPENING_BY_WORLD[normalized.world];
+  const opening = OPENING_BY_ORIGIN[normalized.origin];
 
   return {
     phase: "playing",
     turn: 1,
     profile: normalized,
-    location: WORLD_LABEL[normalized.world],
-    mood: "異常剛剛開始",
+    location: "青玄山門",
+    mood: "仙路初開",
     stats: {
       focus: 54,
       nerve: 46,
@@ -76,11 +93,11 @@ export function createInitialAdventure(profile: PlayerProfile): AdventureState {
     },
     memory: [
       `${normalized.name}：${normalized.premise}`,
-      `世界：${WORLD_LABEL[normalized.world]}`,
+      `身份：${GENDER_LABEL[normalized.gender]}，${ORIGIN_LABEL[normalized.origin]}，偏向${DESTINY_LABEL[normalized.destiny]}`,
     ],
     entries: [
       makeEntry("system", "冒險開始。"),
-      makeEntry("story", `${opening}\n\n你很確定，這不是普通的一天。`),
+      makeEntry("story", `${opening}\n\n你知道自己還很弱，但今日若退，往後便再也踏不上這條仙路。`),
     ],
     choices: CHOICE_BANK[0],
   };
@@ -94,14 +111,14 @@ export function advanceAdventure({ state, action }: AdventureRequest): Adventure
 
   const consequence = [
     `你選擇：「${cleanAction}」。`,
-    "空氣像被輕輕折了一下，原本模糊的線索開始靠近。",
-    `這一次行動讓你更接近真相，但也讓${state.location}記住了你的輪廓。`,
+    "山霧在你身前分開一線，遠處傳來劍鳴，又像是有人在低聲誦訣。",
+    `這一次行動讓你離青玄山更近，也讓暗處的目光開始記住${state.profile.name}這個名字。`,
   ].join("\n\n");
 
   return {
     ...state,
     turn: nextTurn,
-    mood: nextTurn % 3 === 0 ? "事件正在收束" : "未知仍在擴大",
+    mood: nextTurn % 3 === 0 ? "因果將至" : "山門未開",
     stats: {
       focus: clamp(state.stats.focus + 3 + statShift),
       nerve: clamp(state.stats.nerve + (statShift > 4 ? 4 : -2)),

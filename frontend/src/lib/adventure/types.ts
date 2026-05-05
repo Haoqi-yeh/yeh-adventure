@@ -1,11 +1,17 @@
 export type GamePhase = "setup" | "playing";
 
-export type WorldPreset = "urban_fantasy" | "xianxia" | "school_mystery" | "custom";
+export type Gender = "male" | "female" | "unspecified";
+
+export type Origin = "wandering" | "fallen_clan" | "outer_disciple" | "hidden_bloodline";
+
+export type Destiny = "sword" | "alchemy" | "formation" | "beast_taming";
 
 export interface PlayerProfile {
   name: string;
   premise: string;
-  world: WorldPreset;
+  gender: Gender;
+  origin: Origin;
+  destiny: Destiny;
 }
 
 export interface StatBlock {

@@ -1,21 +1,47 @@
 "use client";
 
 import { FormEvent, useMemo, useState } from "react";
-import { ArrowUp, RotateCcw, Sparkles } from "lucide-react";
+import { ArrowUp, Dices, RotateCcw, Sparkles } from "lucide-react";
 import { createInitialAdventure } from "@/lib/adventure/engine";
-import type { AdventureResponse, AdventureState, WorldPreset } from "@/lib/adventure/types";
+import type { AdventureResponse, AdventureState, Destiny, Gender, Origin } from "@/lib/adventure/types";
 
-const WORLDS: { id: WorldPreset; title: string; subtitle: string }[] = [
-  { id: "urban_fantasy", title: "台北異聞", subtitle: "日常邊緣冒出一點不合理" },
-  { id: "xianxia", title: "現代修真", subtitle: "靈氣、代價、城市裡的修行者" },
-  { id: "school_mystery", title: "校園怪談", subtitle: "鐘聲、規則、沒離開的人" },
-  { id: "custom", title: "自訂世界", subtitle: "先用一句話把世界推開" },
+const GENDERS: { id: Gender; title: string; subtitle: string }[] = [
+  { id: "male", title: "男修", subtitle: "名入江湖，劍氣未成" },
+  { id: "female", title: "女修", subtitle: "袖藏鋒芒，心有乾坤" },
+  { id: "unspecified", title: "不拘", subtitle: "此身由故事定義" },
+];
+
+const ORIGINS: { id: Origin; title: string; subtitle: string }[] = [
+  { id: "wandering", title: "江湖散修", subtitle: "無門無派，自尋仙路" },
+  { id: "fallen_clan", title: "沒落世家", subtitle: "祖上有名，今日無人" },
+  { id: "outer_disciple", title: "宗門外門", subtitle: "低處起步，藏經三年" },
+  { id: "hidden_bloodline", title: "隱脈遺孤", subtitle: "血脈未醒，追殺已至" },
+];
+
+const DESTINIES: { id: Destiny; title: string; subtitle: string }[] = [
+  { id: "sword", title: "劍修", subtitle: "一劍破局，快意恩仇" },
+  { id: "alchemy", title: "丹道", subtitle: "草木入爐，命可重煉" },
+  { id: "formation", title: "陣法", subtitle: "借天地勢，困敵護身" },
+  { id: "beast_taming", title: "御獸", subtitle: "山海異獸，同行同命" },
+];
+
+const RANDOM_NAMES = [
+  "葉青玄",
+  "沈照夜",
+  "柳扶風",
+  "秦問舟",
+  "顧雲歸",
+  "謝聽雪",
+  "林照微",
+  "陸懷真",
 ];
 
 export default function Home() {
   const [name, setName] = useState("");
   const [premise, setPremise] = useState("");
-  const [world, setWorld] = useState<WorldPreset>("urban_fantasy");
+  const [gender, setGender] = useState<Gender>("unspecified");
+  const [origin, setOrigin] = useState<Origin>("wandering");
+  const [destiny, setDestiny] = useState<Destiny>("sword");
   const [state, setState] = useState<AdventureState | null>(null);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -26,7 +52,13 @@ export default function Home() {
   function startAdventure(event: FormEvent) {
     event.preventDefault();
     setError(null);
-    setState(createInitialAdventure({ name, premise, world }));
+    setState(createInitialAdventure({ name, premise, gender, origin, destiny }));
+  }
+
+  function rollName() {
+    const currentIndex = RANDOM_NAMES.indexOf(name);
+    const nextIndex = currentIndex >= 0 ? (currentIndex + 1) % RANDOM_NAMES.length : Math.floor(Math.random() * RANDOM_NAMES.length);
+    setName(RANDOM_NAMES[nextIndex]);
   }
 
   async function sendAction(action: string) {
@@ -59,53 +91,92 @@ export default function Home() {
   if (!state) {
     return (
       <main className="shell setup-shell">
-        <section className="setup-panel">
+        <section className="cover-panel">
+          <div className="cover-art" aria-hidden="true">
+            <div className="moon" />
+            <div className="mountain mountain-back" />
+            <div className="mountain mountain-front" />
+            <div className="sword-mark" />
+          </div>
+
           <div className="brand-row">
             <Sparkles size={18} />
-            <span>Yeh Adventure</span>
+            <span>Yeh Adventure 修仙篇</span>
           </div>
 
           <div className="setup-copy">
-            <p className="eyebrow">Clean rebuild</p>
-            <h1>先從一個能長大的故事核心開始。</h1>
+            <p className="eyebrow">Wuxia cultivation</p>
+            <h1>你的仙路，從山門前一念開始。</h1>
             <p>
-              這個版本會先保留最重要的循環：建立角色、進入世界、輸入行動、得到下一段故事。
-              之後再把記憶、NPC、擲骰、存檔和 AI 串接逐步接回來。
+              先建立一位能進入故事的修行者。世界觀會在冒險中慢慢揭露，封面只保留足以開局的角色資訊。
             </p>
           </div>
 
           <form className="setup-form" onSubmit={startAdventure}>
             <label>
-              角色名字
-              <input value={name} onChange={(event) => setName(event.target.value)} placeholder="例如：葉河" />
+              姓名
+              <div className="name-row">
+                <input value={name} onChange={(event) => setName(event.target.value)} placeholder="例如：葉青玄" />
+                <button aria-label="隨機姓名" onClick={rollName} type="button">
+                  <Dices size={18} />
+                </button>
+              </div>
             </label>
 
+            <FieldGroup label="性別">
+              <SegmentGrid>
+                {GENDERS.map((item) => (
+                  <OptionButton
+                    isSelected={item.id === gender}
+                    key={item.id}
+                    onClick={() => setGender(item.id)}
+                    subtitle={item.subtitle}
+                    title={item.title}
+                  />
+                ))}
+              </SegmentGrid>
+            </FieldGroup>
+
             <label>
-              角色起點
+              角色補充資訊
               <textarea
                 value={premise}
                 onChange={(event) => setPremise(event.target.value)}
-                placeholder="用一句話描述你想扮演的人，或你想遇到的開場。"
-                rows={4}
+                placeholder="例如：表面是藥鋪學徒，其實能聽見劍靈說話。也可以寫性格、弱點、仇家、想追求的道。"
+                rows={5}
               />
             </label>
 
-            <div className="world-grid" role="radiogroup" aria-label="選擇世界">
-              {WORLDS.map((item) => (
-                <button
-                  className={item.id === world ? "world-card selected" : "world-card"}
-                  key={item.id}
-                  onClick={() => setWorld(item.id)}
-                  type="button"
-                >
-                  <strong>{item.title}</strong>
-                  <span>{item.subtitle}</span>
-                </button>
-              ))}
-            </div>
+            <FieldGroup label="開局出身">
+              <CardGrid>
+                {ORIGINS.map((item) => (
+                  <OptionButton
+                    isSelected={item.id === origin}
+                    key={item.id}
+                    onClick={() => setOrigin(item.id)}
+                    subtitle={item.subtitle}
+                    title={item.title}
+                  />
+                ))}
+              </CardGrid>
+            </FieldGroup>
+
+            <FieldGroup label="修行傾向">
+              <CardGrid>
+                {DESTINIES.map((item) => (
+                  <OptionButton
+                    isSelected={item.id === destiny}
+                    key={item.id}
+                    onClick={() => setDestiny(item.id)}
+                    subtitle={item.subtitle}
+                    title={item.title}
+                  />
+                ))}
+              </CardGrid>
+            </FieldGroup>
 
             <button className="primary-action" type="submit">
-              開始冒險
+              踏入山門
               <ArrowUp size={16} />
             </button>
           </form>
@@ -200,5 +271,41 @@ function Stat({ label, value }: { label: string; value: number }) {
         <span style={{ width: `${value}%` }} />
       </div>
     </div>
+  );
+}
+
+function FieldGroup({ children, label }: { children: React.ReactNode; label: string }) {
+  return (
+    <div className="field-group">
+      <span>{label}</span>
+      {children}
+    </div>
+  );
+}
+
+function SegmentGrid({ children }: { children: React.ReactNode }) {
+  return <div className="segment-grid">{children}</div>;
+}
+
+function CardGrid({ children }: { children: React.ReactNode }) {
+  return <div className="card-grid">{children}</div>;
+}
+
+function OptionButton({
+  isSelected,
+  onClick,
+  subtitle,
+  title,
+}: {
+  isSelected: boolean;
+  onClick: () => void;
+  subtitle: string;
+  title: string;
+}) {
+  return (
+    <button className={isSelected ? "choice-card selected" : "choice-card"} onClick={onClick} type="button">
+      <strong>{title}</strong>
+      <span>{subtitle}</span>
+    </button>
   );
 }
