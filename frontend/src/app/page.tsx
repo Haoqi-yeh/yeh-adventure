@@ -1242,23 +1242,22 @@ const BG_TEMPLATES: { label: string; text: string }[] = [
   { label: "皇室遺孤", text: "前朝皇室後裔，幼時被忠臣秘密護送出宮，隱姓埋名長大。復國之志從未熄滅，只待時機與實力具備之日。" },
 ];
 
-// Deterministic particle positions (stable across renders)
 const START_PARTICLES = Array.from({ length: 22 }, (_, i) => ({
   id: i,
   x: (i * 4.7 + 2) % 96 + 2,
   duration: 14 + (i * 2.3) % 16,
   delay: (i * 1.8) % 12,
   size: 1 + (i * 0.55) % 2,
-  opacity: 0.12 + (i * 0.032) % 0.28,
+  opacity: 0.1 + (i * 0.028) % 0.22,
 }));
 
 // ─── StartScreen ──────────────────────────────────────────────────────────────
 
 function StartScreen({ onStart }: { onStart: (name: string, gender: "male" | "female", bg: string) => void }) {
-  const [name, setName]       = useState("");
-  const [gender, setGender]   = useState<"male" | "female">("male");
-  const [bg, setBg]           = useState("");
-  const [leaving, setLeaving] = useState(false);
+  const [name, setName]         = useState("");
+  const [gender, setGender]     = useState<"male" | "female">("male");
+  const [bg, setBg]             = useState("");
+  const [leaving, setLeaving]   = useState(false);
   const [btnHover, setBtnHover] = useState(false);
   const nameIdxRef = useRef(0);
 
@@ -1273,23 +1272,32 @@ function StartScreen({ onStart }: { onStart: (name: string, gender: "male" | "fe
     setName(WUXIA_NAMES[nameIdxRef.current]);
   };
 
-  const fieldLabel = (text: string, sub?: string) => (
-    <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "10px" }}>
-      <div style={{ flex: 1, height: "1px", background: "linear-gradient(90deg, transparent, #1e293b)" }} />
-      <span style={{ color: "#475569", fontSize: "10px", letterSpacing: "0.26em", fontWeight: 700, whiteSpace: "nowrap" }}>{text}</span>
-      {sub && <span style={{ color: "#1e3a5f", fontSize: "9px", letterSpacing: "0.06em" }}>{sub}</span>}
-      <div style={{ flex: 1, height: "1px", background: "linear-gradient(90deg, #1e293b, transparent)" }} />
+  // 菱形分隔線
+  const SectionDivider = ({ label, sub }: { label: string; sub?: string }) => (
+    <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
+      <div style={{ flex: 1, height: "1px", background: "linear-gradient(90deg, transparent, rgba(30,41,59,0.8))" }} />
+      <span style={{ color: "#1e293b", fontSize: "8px", flexShrink: 0 }}>◆</span>
+      <span style={{ color: "#475569", fontSize: "10px", letterSpacing: "0.28em", fontWeight: 700, whiteSpace: "nowrap", flexShrink: 0 }}>{label}</span>
+      {sub && <span style={{ color: "#1e3a5f", fontSize: "9px", letterSpacing: "0.04em", whiteSpace: "nowrap" }}>{sub}</span>}
+      <span style={{ color: "#1e293b", fontSize: "8px", flexShrink: 0 }}>◆</span>
+      <div style={{ flex: 1, height: "1px", background: "linear-gradient(90deg, rgba(30,41,59,0.8), transparent)" }} />
     </div>
   );
 
   const inputBase: React.CSSProperties = {
-    width: "100%", backgroundColor: "rgba(10,17,30,0.85)", border: "1px solid #1e293b",
-    borderRadius: "10px", color: "#e2e8f0", fontFamily: CJK,
-    fontSize: "14px", outline: "none", boxSizing: "border-box",
-    transition: "border-color 0.25s, box-shadow 0.25s",
+    width: "100%", backgroundColor: "rgba(8,14,26,0.9)",
+    borderTop: "none", borderLeft: "none", borderRight: "none",
+    borderBottom: "1px solid #1e293b",
+    color: "#e2e8f0", fontFamily: CJK, fontSize: "14px", outline: "none",
+    boxSizing: "border-box", transition: "border-color 0.25s, box-shadow 0.25s",
+    borderRadius: 0, background: "transparent",
   };
 
-  const delay = (d: number) => ({ initial: { opacity: 0, y: 18 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.55, delay: d, ease: "easeOut" } });
+  const delay = (d: number) => ({
+    initial: { opacity: 0, y: 16 },
+    animate: { opacity: 1, y: 0 },
+    transition: { duration: 0.5, delay: d, ease: "easeOut" },
+  });
 
   return (
     <motion.div
@@ -1297,122 +1305,126 @@ function StartScreen({ onStart }: { onStart: (name: string, gender: "male" | "fe
       transition={{ duration: 0.7, ease: "easeInOut" }}
       style={{ position: "fixed", inset: 0, backgroundColor: "#020617", overflow: "hidden", fontFamily: CJK }}
     >
-      {/* ── 背景粒子 ── */}
+      {/* 粒子 */}
       {START_PARTICLES.map(p => (
         <motion.div key={p.id}
           style={{ position: "absolute", left: `${p.x}%`, bottom: -4, width: p.size, height: p.size, borderRadius: "50%", backgroundColor: "#fbbf24", opacity: 0, pointerEvents: "none" }}
-          animate={{ y: [0, -600], opacity: [0, p.opacity, p.opacity * 0.5, 0] }}
+          animate={{ y: [0, -700], opacity: [0, p.opacity, p.opacity * 0.4, 0] }}
           transition={{ duration: p.duration, delay: p.delay, repeat: Infinity, ease: "linear" }}
         />
       ))}
 
-      {/* ── 雲霧層 ── */}
+      {/* 雲霧 */}
       <motion.div
-        style={{ position: "absolute", bottom: "18%", left: "-15%", right: "-15%", height: 100, background: "radial-gradient(ellipse 80% 100% at 50% 50%, rgba(15,23,42,0.75) 0%, transparent 100%)", filter: "blur(22px)", pointerEvents: "none" }}
-        animate={{ x: [0, 50, 0], opacity: [0.5, 0.8, 0.5] }}
-        transition={{ duration: 20, repeat: Infinity, ease: "easeInOut" }}
+        style={{ position: "absolute", bottom: "16%", left: "-15%", right: "-15%", height: 90, background: "radial-gradient(ellipse 80% 100% at 50% 50%, rgba(15,23,42,0.7) 0%, transparent 100%)", filter: "blur(24px)", pointerEvents: "none" }}
+        animate={{ x: [0, 45, 0], opacity: [0.45, 0.75, 0.45] }}
+        transition={{ duration: 22, repeat: Infinity, ease: "easeInOut" }}
       />
       <motion.div
-        style={{ position: "absolute", bottom: "30%", left: "-20%", right: "-20%", height: 70, background: "radial-gradient(ellipse 80% 100% at 50% 50%, rgba(30,41,59,0.6) 0%, transparent 100%)", filter: "blur(16px)", pointerEvents: "none" }}
-        animate={{ x: [0, -40, 0], opacity: [0.35, 0.6, 0.35] }}
-        transition={{ duration: 26, repeat: Infinity, ease: "easeInOut" }}
+        style={{ position: "absolute", bottom: "28%", left: "-20%", right: "-20%", height: 60, background: "radial-gradient(ellipse 80% 100% at 50% 50%, rgba(30,41,59,0.55) 0%, transparent 100%)", filter: "blur(18px)", pointerEvents: "none" }}
+        animate={{ x: [0, -38, 0], opacity: [0.3, 0.55, 0.3] }}
+        transition={{ duration: 28, repeat: Infinity, ease: "easeInOut" }}
       />
 
-      {/* ── 遠山剪影 ── */}
+      {/* 遠山 */}
       <svg viewBox="0 0 800 160" preserveAspectRatio="none"
-        style={{ position: "absolute", bottom: 0, left: 0, right: 0, width: "100%", height: 160, pointerEvents: "none", opacity: 0.22 }}>
+        style={{ position: "absolute", bottom: 0, left: 0, right: 0, width: "100%", height: 160, pointerEvents: "none", opacity: 0.18 }}>
         <path d="M0,160 L0,95 L80,55 L160,85 L260,30 L360,70 L460,25 L540,60 L620,38 L700,65 L800,40 L800,160 Z" fill="#0f172a" />
         <path d="M0,160 L0,120 L100,90 L200,110 L300,80 L400,100 L500,75 L600,95 L700,82 L800,90 L800,160 Z" fill="#0a111e" />
       </svg>
 
-      {/* ── 齒輪 ── */}
-      <button
-        onClick={() => alert("後台建置中，敬請期待")}
-        title="管理員後台"
-        style={{ position: "absolute", top: 18, right: 20, background: "none", border: "none", cursor: "pointer", color: "#1e293b", fontSize: 19, lineHeight: 1, padding: 4, transition: "color 0.2s", zIndex: 20 }}
-        onMouseEnter={e => (e.currentTarget.style.color = "#475569")}
+      {/* 齒輪 */}
+      <button onClick={() => alert("後台建置中，敬請期待")} title="管理員後台"
+        style={{ position: "absolute", top: 18, right: 20, background: "none", border: "none", cursor: "pointer", color: "#1e293b", fontSize: 18, lineHeight: 1, padding: 4, transition: "color 0.2s", zIndex: 20 }}
+        onMouseEnter={e => (e.currentTarget.style.color = "#334155")}
         onMouseLeave={e => (e.currentTarget.style.color = "#1e293b")}
       >⚙</button>
 
-      {/* ── 可捲動內容 ── */}
-      <div style={{ position: "relative", zIndex: 10, height: "100%", overflowY: "auto", display: "flex", alignItems: "center", justifyContent: "center", padding: "36px 24px" }}>
-        <div style={{ width: "100%", maxWidth: "400px" }}>
+      {/* 主內容 */}
+      <div style={{ position: "relative", zIndex: 10, height: "100%", overflowY: "auto", display: "flex", alignItems: "center", justifyContent: "center", padding: "36px 28px" }}>
+        <div style={{ width: "100%", maxWidth: "390px" }}>
 
           {/* 標題 */}
-          <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: "easeOut" }}
-            style={{ textAlign: "center", marginBottom: "40px" }}>
+          <motion.div initial={{ opacity: 0, y: -14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}
+            style={{ textAlign: "center", marginBottom: "44px" }}>
             <motion.h1
-              animate={{ textShadow: ["0 0 20px rgba(251,191,36,0.4), 0 0 50px rgba(251,191,36,0.15)", "0 0 35px rgba(251,191,36,0.7), 0 0 80px rgba(251,191,36,0.3)", "0 0 20px rgba(251,191,36,0.4), 0 0 50px rgba(251,191,36,0.15)"] }}
-              transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
-              style={{ fontSize: "36px", fontWeight: 900, letterSpacing: "0.45em", color: "#fbbf24", margin: "0 0 12px", lineHeight: 1.1 }}
+              animate={{ textShadow: ["0 0 18px rgba(251,191,36,0.35), 0 0 45px rgba(251,191,36,0.12), 0 4px 20px rgba(0,0,0,0.8)", "0 0 32px rgba(251,191,36,0.65), 0 0 70px rgba(251,191,36,0.25), 0 4px 20px rgba(0,0,0,0.8)", "0 0 18px rgba(251,191,36,0.35), 0 0 45px rgba(251,191,36,0.12), 0 4px 20px rgba(0,0,0,0.8)"] }}
+              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+              style={{ fontSize: "38px", fontWeight: 900, letterSpacing: "0.5em", color: "#fbbf24", margin: "0 0 10px", lineHeight: 1.1, textIndent: "0.5em" }}
             >白日夢冒險</motion.h1>
-            <p style={{ color: "#334155", fontSize: "10px", letterSpacing: "0.32em", margin: 0 }}>武　俠　修　仙　文　字　RPG</p>
-            <motion.div
-              style={{ width: 60, height: 1, background: "linear-gradient(90deg, transparent, #fbbf24, transparent)", margin: "14px auto 0" }}
-              animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 2.5, repeat: Infinity }}
-            />
+            <p style={{ color: "#334155", fontSize: "9px", letterSpacing: "0.38em", margin: "0 0 16px", textIndent: "0.38em" }}>武　俠　修　仙　文　字　RPG</p>
+            <motion.div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+              <motion.div style={{ height: 1, background: "linear-gradient(90deg, transparent, #78350f)" }} animate={{ width: [20, 35, 20] }} transition={{ duration: 3, repeat: Infinity }} />
+              <motion.span style={{ color: "#92400e", fontSize: 8 }} animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 2, repeat: Infinity }}>◆</motion.span>
+              <motion.div style={{ height: 1, background: "linear-gradient(90deg, #78350f, transparent)" }} animate={{ width: [20, 35, 20] }} transition={{ duration: 3, repeat: Infinity }} />
+            </motion.div>
           </motion.div>
 
           {/* 江湖名號 */}
-          <motion.div {...delay(0.35)} style={{ marginBottom: "24px" }}>
-            {fieldLabel("江 湖 名 號")}
-            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-              <input
-                type="text" value={name}
-                onChange={e => setName(e.target.value.slice(0, 12))}
-                placeholder="無名散修" maxLength={12}
-                style={{ ...inputBase, flex: 1, padding: "12px 14px" }}
-                onFocus={e => { e.target.style.borderColor = "#fbbf24"; e.target.style.boxShadow = "0 0 12px rgba(251,191,36,0.15)"; }}
-                onBlur={e => { e.target.style.borderColor = "#1e293b"; e.target.style.boxShadow = "none"; }}
-              />
+          <motion.div {...delay(0.3)} style={{ marginBottom: "28px" }}>
+            <SectionDivider label="江 湖 名 號" />
+            <div style={{ display: "flex", gap: "10px", alignItems: "flex-end" }}>
+              <div style={{ flex: 1 }}>
+                <input
+                  type="text" value={name}
+                  onChange={e => setName(e.target.value.slice(0, 12))}
+                  placeholder="無名散修" maxLength={12}
+                  style={{ ...inputBase, padding: "10px 2px", fontSize: "16px", letterSpacing: "0.12em", width: "100%" }}
+                  onFocus={e => { e.target.style.borderColor = "#fbbf24"; e.target.style.boxShadow = "0 2px 12px rgba(251,191,36,0.12)"; }}
+                  onBlur={e => { e.target.style.borderColor = "#1e293b"; e.target.style.boxShadow = "none"; }}
+                />
+                <p style={{ color: "#1e3a5f", fontSize: "9px", textAlign: "right", margin: "4px 0 0" }}>{name.length} / 12</p>
+              </div>
               <button onClick={rollName} title="隨機取名"
-                style={{ flexShrink: 0, padding: "11px 13px", backgroundColor: "rgba(10,17,30,0.85)", border: "1px solid #1e293b", borderRadius: "10px", color: "#475569", fontSize: 16, cursor: "pointer", transition: "all 0.2s", fontFamily: CJK, lineHeight: 1 }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = "#fbbf24"; e.currentTarget.style.color = "#fbbf24"; }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = "#1e293b"; e.currentTarget.style.color = "#475569"; }}
+                style={{ flexShrink: 0, marginBottom: "18px", padding: "8px 11px", background: "none", border: "1px solid #1e293b", borderRadius: "6px", color: "#334155", fontSize: 14, cursor: "pointer", transition: "all 0.2s", fontFamily: CJK, lineHeight: 1 }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = "#92400e"; e.currentTarget.style.color = "#fbbf24"; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = "#1e293b"; e.currentTarget.style.color = "#334155"; }}
               >骰</button>
             </div>
-            <p style={{ color: "#1e3a5f", fontSize: "9px", textAlign: "right", margin: "4px 2px 0" }}>{name.length} / 12</p>
           </motion.div>
 
-          {/* 拉開褲頭 */}
-          <motion.div {...delay(0.55)} style={{ marginBottom: "24px" }}>
-            {fieldLabel("拉 開 褲 頭")}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+          {/* 探查根骨（性別） */}
+          <motion.div {...delay(0.5)} style={{ marginBottom: "28px" }}>
+            <SectionDivider label="探 查 根 骨" />
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
               {(["male", "female"] as const).map(g => {
                 const sel = gender === g;
                 const isMale = g === "male";
+                const accentColor = isMale ? "#7dd3fc" : "#6ee7b7";
                 return (
                   <button key={g} onClick={() => setGender(g)}
                     style={{
-                      position: "relative", overflow: "hidden", padding: "0", height: "120px",
-                      borderRadius: "12px", cursor: "pointer", fontFamily: CJK,
-                      border: sel ? "1px solid #fbbf24" : "1px solid #1e3a5f",
-                      background: isMale
-                        ? "linear-gradient(160deg, #0c1a2e 0%, #0f2744 50%, #071320 100%)"
-                        : "linear-gradient(160deg, #0c1a1e 0%, #0f2e2a 50%, #071615 100%)",
-                      boxShadow: sel ? `0 0 20px ${isMale ? "rgba(96,165,250,0.25)" : "rgba(52,211,153,0.25)"}, 0 0 6px rgba(251,191,36,0.3)` : "none",
-                      transition: "all 0.25s",
+                      position: "relative", overflow: "hidden", padding: 0, height: "110px",
+                      borderRadius: "10px", cursor: "pointer", fontFamily: CJK,
+                      border: sel ? `1px solid rgba(${isMale ? "125,211,252" : "110,231,183"},0.35)` : "1px solid rgba(30,41,59,0.6)",
+                      background: sel
+                        ? isMale ? "rgba(14,36,64,0.7)" : "rgba(8,52,44,0.7)"
+                        : "rgba(8,14,26,0.5)",
+                      boxShadow: sel ? `inset 0 0 30px rgba(${isMale ? "125,211,252" : "110,231,183"},0.08), 0 0 14px rgba(${isMale ? "125,211,252" : "110,231,183"},0.12)` : "none",
+                      transition: "all 0.3s",
                     }}
                   >
-                    {/* 大字裝飾 */}
-                    <span style={{ position: "absolute", right: "8px", bottom: "-8px", fontSize: "72px", lineHeight: 1, opacity: sel ? 0.14 : 0.07, color: isMale ? "#60a5fa" : "#34d399", userSelect: "none", transition: "opacity 0.3s" }}>
-                      {isMale ? "劍" : "蓮"}
-                    </span>
-                    {/* 內容 */}
-                    <div style={{ position: "relative", zIndex: 2, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", gap: "8px" }}>
-                      <span style={{ fontSize: "28px" }}>{isMale ? "⚔" : "❀"}</span>
-                      <span style={{ color: sel ? "#fbbf24" : isMale ? "#60a5fa" : "#34d399", fontSize: "15px", fontWeight: 700, letterSpacing: "0.2em", transition: "color 0.25s" }}>
+                    {/* 圖騰大字 */}
+                    <span style={{
+                      position: "absolute", right: "-8px", bottom: "-20px",
+                      fontSize: "108px", lineHeight: 1, userSelect: "none",
+                      color: accentColor, opacity: sel ? 0.22 : 0.07,
+                      transition: "opacity 0.35s", fontWeight: 900,
+                    }}>{isMale ? "劍" : "蓮"}</span>
+                    {/* 文字內容（左下對齊） */}
+                    <div style={{ position: "relative", zIndex: 2, display: "flex", flexDirection: "column", justifyContent: "flex-end", alignItems: "flex-start", height: "100%", padding: "0 14px 14px" }}>
+                      <span style={{ fontSize: "18px", fontWeight: 900, letterSpacing: "0.22em", color: sel ? accentColor : "#334155", transition: "color 0.3s" }}>
                         {isMale ? "男兒" : "女俠"}
                       </span>
-                      <span style={{ color: "#334155", fontSize: "9px", letterSpacing: "0.08em", lineHeight: 1.6, textAlign: "center", padding: "0 8px" }}>
-                        {isMale ? "頂天立地\n仗劍行俠" : "巾幗不讓\n玲瓏心思"}
+                      <span style={{ color: sel ? "#475569" : "#1e293b", fontSize: "9px", letterSpacing: "0.08em", marginTop: "3px", transition: "color 0.3s" }}>
+                        {isMale ? "頂天立地・仗劍行俠" : "巾幗不讓・玲瓏心思"}
                       </span>
                     </div>
-                    {/* 選中光邊 */}
+                    {/* 選中時脈動光邊 */}
                     {sel && (
                       <motion.div
-                        initial={{ opacity: 0 }} animate={{ opacity: [0.4, 0.9, 0.4] }} transition={{ duration: 2, repeat: Infinity }}
-                        style={{ position: "absolute", inset: 0, borderRadius: "11px", border: `1px solid ${isMale ? "rgba(96,165,250,0.5)" : "rgba(52,211,153,0.5)"}`, pointerEvents: "none" }}
+                        animate={{ opacity: [0.2, 0.6, 0.2] }} transition={{ duration: 2.5, repeat: Infinity }}
+                        style={{ position: "absolute", inset: 0, borderRadius: "9px", boxShadow: `inset 0 0 18px rgba(${isMale ? "125,211,252" : "110,231,183"},0.15)`, pointerEvents: "none" }}
                       />
                     )}
                   </button>
@@ -1422,56 +1434,80 @@ function StartScreen({ onStart }: { onStart: (name: string, gender: "male" | "fe
           </motion.div>
 
           {/* 身世背景 */}
-          <motion.div {...delay(0.75)} style={{ marginBottom: "28px" }}>
-            {fieldLabel("身 世 背 景", "選填・AI 以此為最高優先展開故事")}
-            {/* 快選標籤 */}
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "10px" }}>
-              {BG_TEMPLATES.map(t => (
-                <button key={t.label} onClick={() => setBg(t.text)}
-                  style={{ padding: "4px 10px", fontSize: "10px", borderRadius: "6px", fontFamily: CJK, cursor: "pointer", letterSpacing: "0.06em", transition: "all 0.2s", backgroundColor: bg === t.text ? "rgba(251,191,36,0.12)" : "transparent", border: bg === t.text ? "1px solid rgba(251,191,36,0.5)" : "1px solid #1e293b", color: bg === t.text ? "#fbbf24" : "#475569" }}
-                  onMouseEnter={e => { if (bg !== t.text) { e.currentTarget.style.borderColor = "#334155"; e.currentTarget.style.color = "#94a3b8"; } }}
-                  onMouseLeave={e => { if (bg !== t.text) { e.currentTarget.style.borderColor = "#1e293b"; e.currentTarget.style.color = "#475569"; } }}
-                >{t.label}</button>
-              ))}
+          <motion.div {...delay(0.7)} style={{ marginBottom: "32px" }}>
+            <SectionDivider label="身 世 背 景" sub="選填" />
+            {/* 印章標籤 */}
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "12px" }}>
+              {BG_TEMPLATES.map(t => {
+                const active = bg === t.text;
+                return (
+                  <button key={t.label} onClick={() => setBg(active ? "" : t.text)}
+                    style={{
+                      padding: "3px 9px", fontSize: "10px", fontFamily: CJK,
+                      cursor: "pointer", letterSpacing: "0.1em",
+                      border: active ? "1px solid rgba(185,28,28,0.7)" : "1px solid rgba(127,29,29,0.35)",
+                      borderRadius: "3px",
+                      backgroundColor: active ? "rgba(153,27,27,0.22)" : "rgba(127,29,29,0.06)",
+                      color: active ? "#fca5a5" : "#7f1d1d",
+                      transform: active ? "rotate(-0.6deg)" : "none",
+                      boxShadow: active ? "0 1px 6px rgba(153,27,27,0.25)" : "none",
+                      transition: "all 0.2s",
+                    }}
+                    onMouseEnter={e => { if (!active) { e.currentTarget.style.borderColor = "rgba(185,28,28,0.5)"; e.currentTarget.style.color = "#fca5a5"; } }}
+                    onMouseLeave={e => { if (!active) { e.currentTarget.style.borderColor = "rgba(127,29,29,0.35)"; e.currentTarget.style.color = "#7f1d1d"; } }}
+                  >{t.label}</button>
+                );
+              })}
             </div>
-            <textarea
-              value={bg} onChange={e => setBg(e.target.value.slice(0, 150))}
-              placeholder="你從何處來？心中藏著什麼仇恨或使命，驅使你踏入這萬丈紅塵…"
-              rows={4}
-              style={{ ...inputBase, padding: "12px 14px", resize: "none", lineHeight: 1.75 }}
-              onFocus={e => { e.target.style.borderColor = "#fbbf24"; e.target.style.boxShadow = "0 0 12px rgba(251,191,36,0.12)"; }}
-              onBlur={e => { e.target.style.borderColor = "#1e293b"; e.target.style.boxShadow = "none"; }}
-            />
-            <p style={{ color: "#1e3a5f", fontSize: "9px", textAlign: "right", margin: "4px 2px 0" }}>{bg.length} / 150</p>
+            {/* 卷軸質感 Textarea */}
+            <div style={{ position: "relative" }}>
+              <textarea
+                value={bg} onChange={e => setBg(e.target.value.slice(0, 150))}
+                placeholder={"你從何處來？\n心中藏著什麼仇恨或使命，驅使你踏入這萬丈紅塵…"}
+                rows={4}
+                style={{
+                  width: "100%", backgroundColor: "rgba(8,14,26,0.75)",
+                  border: "1px solid #1e293b", borderLeft: "2px solid rgba(120,53,15,0.35)",
+                  borderRight: "2px solid rgba(120,53,15,0.35)",
+                  borderRadius: "6px", color: "#cbd5e1", fontFamily: CJK,
+                  fontSize: "13px", outline: "none", boxSizing: "border-box",
+                  padding: "12px 16px", resize: "none", lineHeight: 1.8,
+                  transition: "border-color 0.25s",
+                }}
+                onFocus={e => { e.target.style.borderColor = "rgba(251,191,36,0.4)"; e.target.style.borderLeftColor = "rgba(251,191,36,0.5)"; e.target.style.borderRightColor = "rgba(251,191,36,0.5)"; }}
+                onBlur={e => { e.target.style.borderColor = "#1e293b"; e.target.style.borderLeftColor = "rgba(120,53,15,0.35)"; e.target.style.borderRightColor = "rgba(120,53,15,0.35)"; }}
+              />
+              <p style={{ color: "#1e3a5f", fontSize: "9px", textAlign: "right", margin: "4px 0 0" }}>{bg.length} / 150</p>
+            </div>
           </motion.div>
 
           {/* 踏入江湖 */}
-          <motion.div {...delay(0.95)}>
+          <motion.div {...delay(0.9)}>
             <motion.button
-              whileTap={{ scale: 0.96 }}
+              whileTap={{ scale: 0.97 }}
               onClick={handleStart}
               onMouseEnter={() => setBtnHover(true)}
               onMouseLeave={() => setBtnHover(false)}
               style={{
                 position: "relative", overflow: "hidden",
-                width: "100%", padding: "17px", borderRadius: "12px",
-                border: "1px solid #92400e", cursor: "pointer", fontFamily: CJK,
-                background: "linear-gradient(135deg, #6b2d0f 0%, #92400e 45%, #78350f 100%)",
-                color: "#fde68a", fontSize: "15px", fontWeight: 900, letterSpacing: "0.45em",
+                width: "100%", padding: "16px",
+                borderRadius: "10px", cursor: "pointer", fontFamily: CJK,
+                background: "transparent",
+                border: `1px solid rgba(251,191,36,${btnHover ? "0.75" : "0.35"})`,
+                color: "#fbbf24", fontSize: "14px", fontWeight: 900, letterSpacing: "0.48em",
+                textShadow: btnHover ? "0 0 20px rgba(251,191,36,0.9)" : "0 0 10px rgba(251,191,36,0.45)",
                 boxShadow: btnHover
-                  ? "0 0 40px rgba(251,191,36,0.5), 0 0 80px rgba(251,191,36,0.2), inset 0 1px 0 rgba(251,191,36,0.2)"
-                  : "0 0 20px rgba(251,191,36,0.2), inset 0 1px 0 rgba(251,191,36,0.12)",
-                textShadow: "0 0 16px rgba(251,191,36,0.7)",
-                transition: "box-shadow 0.3s",
+                  ? "0 0 30px rgba(251,191,36,0.22), 0 4px 24px rgba(0,0,0,0.5), inset 0 0 20px rgba(251,191,36,0.06)"
+                  : "0 2px 16px rgba(0,0,0,0.4), inset 0 0 10px rgba(251,191,36,0.03)",
+                transition: "border-color 0.3s, box-shadow 0.3s, text-shadow 0.3s",
               }}
             >
-              {btnHover && (
-                <motion.div
-                  initial={{ scale: 0, opacity: 0.5 }} animate={{ scale: 3, opacity: 0 }}
-                  transition={{ duration: 0.7, ease: "easeOut" }}
-                  style={{ position: "absolute", inset: 0, margin: "auto", width: 80, height: 80, borderRadius: "50%", backgroundColor: "rgba(251,191,36,0.3)", pointerEvents: "none" }}
-                />
-              )}
+              {/* 流光掃過 */}
+              <motion.div
+                animate={{ x: ["-120%", "220%"] }}
+                transition={{ duration: 2.8, repeat: Infinity, repeatDelay: 1.5, ease: "easeInOut" }}
+                style={{ position: "absolute", top: 0, bottom: 0, left: 0, width: "35%", background: "linear-gradient(90deg, transparent, rgba(251,191,36,0.15), rgba(251,191,36,0.08), transparent)", pointerEvents: "none" }}
+              />
               ✦ 踏 入 江 湖 ✦
             </motion.button>
           </motion.div>
@@ -1481,6 +1517,7 @@ function StartScreen({ onStart }: { onStart: (name: string, gender: "male" | "fe
     </motion.div>
   );
 }
+
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
