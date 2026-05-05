@@ -35,7 +35,6 @@ interface EquippedItem {
 interface ItemEffect {
   hpRestore?: number;
   mpRestore?: number;
-  expGain?: number;
 }
 
 interface StoryOption {
@@ -84,7 +83,6 @@ interface GameState {
   inventory: string[];
   cave: CaveState;
   maxQiXue: number;
-  maxLingLi: number;
   atk: number;
   def: number;
   equippedItems: EquippedItem[];
@@ -188,7 +186,6 @@ function useGameState() {
     inventory: [],
     cave: { lingQiLevel: 1, facilities: [] },
     maxQiXue: 100,
-    maxLingLi: 100,
     atk: 10,
     def: 5,
     equippedItems: [],
@@ -222,7 +219,6 @@ function useGameState() {
       }
       const didLevelUp = newLevel > prev.cultivationLevel;
       const newMaxQiXue  = didLevelUp ? Math.round(prev.maxQiXue  * 1.2) : prev.maxQiXue;
-      const newMaxLingLi = didLevelUp ? Math.round(prev.maxLingLi * 1.2) : prev.maxLingLi;
 
       // 修為 log entries (client-generated)
       const expGain = c.lingLi ?? 0;
@@ -281,7 +277,6 @@ function useGameState() {
           : clamp(isStart ? prev.qiXue : prev.qiXue + (c.qiXue ?? 0), 0, newMaxQiXue),
         lingLi: didLevelUp ? 0 : clamp(rawLingLi, 0, 100),
         maxQiXue:  newMaxQiXue,
-        maxLingLi: newMaxLingLi,
         atk: newAtk,
         def: newDef,
         age:       isStart ? prev.age       : prev.age + (c.ageAdd  ?? 0),
@@ -604,7 +599,7 @@ function PlayerAvatar({ state }: { state: GameState }) {
 function DetailPanel({ state, onClose }: { state: GameState; onClose: () => void }) {
   const basicRows = [
     { label: "氣血", value: `${state.qiXue} / ${state.maxQiXue}`, color: "#ef4444" },
-    { label: "靈力", value: `${state.lingLi} / ${state.maxLingLi}`, color: "#06b6d4" },
+    { label: "靈力", value: `${state.lingLi} / 100`, color: "#06b6d4" },
     { label: "壽元", value: `${state.age} / ${state.shouYuan}`, color: "#34d399" },
     { label: "攻擊", value: `${state.atk}`, color: "#fb923c" },
     { label: "防禦", value: `${state.def}`, color: "#60a5fa" },
@@ -612,8 +607,6 @@ function DetailPanel({ state, onClose }: { state: GameState; onClose: () => void
   const worldRows = [
     { label: "名聲", value: `${state.mingSheng}`, color: "#fbbf24" },
     { label: "罪惡", value: `${state.zuiE}`,      color: "#f87171" },
-    { label: "魅力", value: "—",                   color: "#a78bfa" },
-    { label: "意志", value: "—",                   color: "#60a5fa" },
   ];
   return (
     <Modal onClose={onClose} title="⟨ 人 物 詳 細 ⟩">
@@ -717,8 +710,8 @@ function NpcPortrait({ npc }: { npc: NPC }) {
   const [err, setErr] = useState(false);
   if (!npc.physicalDescription) return null;
   const genderTag = npc.gender === "female"
-    ? `, (masterpiece:1.3), wuxia xianxia RPG game character portrait, semi-realistic Chinese fantasy illustration, upper body, (seductive alluring beauty:1.3), (low-cut revealing silk hanfu:1.4), (voluptuous hourglass figure, ample bust:1.5), intricate fabric embroidery, delicate hair ornaments, misty bamboo mountain background, soft cinematic rim lighting, Chinese game art style`
-    : `, (masterpiece:1.3), wuxia xianxia RPG game character portrait, semi-realistic Chinese fantasy illustration, upper body, handsome wuxia cultivator, traditional flowing Daoist robes, strong confident build, detailed fabric embroidery, topknot with jade pin, ancient mountain temple background, soft cinematic lighting, Chinese game art style`;
+    ? `, (masterpiece:1.3), wuxia xianxia RPG game character portrait, semi-realistic Chinese fantasy illustration, upper body, (seductive alluring beauty:1.3), (revealing low-cut outfit:1.2), (voluptuous hourglass figure, ample bust:1.5), misty bamboo mountain background, soft cinematic rim lighting, Chinese game art style`
+    : `, (masterpiece:1.3), wuxia xianxia RPG game character portrait, semi-realistic Chinese fantasy illustration, upper body, wuxia landscape background, soft cinematic lighting, Chinese game art style`;
   const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(npc.physicalDescription + genderTag)}?width=128&height=192&nologo=true&model=flux`;
   return (
     <div style={{
@@ -1324,7 +1317,7 @@ export default function Page() {
           {/* HP / MP */}
           <StatBar label="HP" value={state.qiXue}  maxVal={state.maxQiXue}  from="#dc2626" to="#ef4444" />
           <div style={{ marginTop: "6px" }}>
-            <StatBar label="MP" value={state.lingLi} maxVal={state.maxLingLi} from="#0ea5e9" to="#06b6d4" />
+            <StatBar label="MP" value={state.lingLi} maxVal={100} from="#0ea5e9" to="#06b6d4" />
           </div>
 
           {/* Row 4: 名聲/罪惡 + 功能鍵 */}

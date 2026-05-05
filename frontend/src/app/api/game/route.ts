@@ -94,9 +94,9 @@ const SYSTEM_INSTRUCTION = `你是一個武俠修仙文字 RPG 的遊戲主持�
 
 若劇情中出現新角色，必須在 newCharacters 填入完整資訊，包括：
 - gender：角色性別，"male" 或 "female"
-- physicalDescription：30字以內的英文外貌描述，用於遊戲角色肖像生成（半寫實中式插畫風格），著重臉部特徵、髮型髮飾、服裝細節。
-  女性角色：突出性感魅力，必須包含臉部（如 seductive eyes, red lips, porcelain skin）、髮飾（如 elaborate golden hairpins, black updo）、低胸服裝（如 low-cut crimson silk hanfu）。例如：「seductive young woman, elegant black updo with golden hairpins, low-cut red silk hanfu, alluring phoenix eyes, porcelain skin, cherry lips」
-  男性角色：突出英氣外貌，包含臉部（如 sharp eyes, strong jaw）、髮型（如 topknot with jade pin）、道袍（如 dark blue Daoist robes）。例如：「handsome middle-aged man, silver-streaked topknot with jade pin, dark blue Daoist robes, sharp commanding eyes, chiseled jaw」
+- physicalDescription：30字以內的英文外貌描述，用於遊戲角色肖像生成（半寫實中式插畫風格）。必須包含三項：①臉部特徵、②髮型髮飾、③符合角色身份的服裝。服裝要根據角色在故事中的身份與處境決定（如刺客穿黑衣、老乞丐穿破袍、魔宗長老穿深紅法袍），不要一律套道袍。
+  女性角色：服裝須為低胸或露肩設計以突顯性感魅力。例如刺客：「cold-eyed young woman, black tight bun, (low-cut black assassin outfit), sharp gaze, pale skin」；仙子：「ethereal beauty, flowing silver hair with jade pins, (off-shoulder white celestial robe), gentle luminous eyes」
+  男性角色：服裝完全由角色身份決定。例如書生：「refined young scholar, neat topknot, light blue scholar robes, calm eyes, slight smile」；魔頭：「stern middle-aged man, disheveled black hair, (dark blood-red robe with skull motifs), cold piercing eyes」
 - alias（選填）：若此角色是玩家先前認識的 NPC 的真實身份揭露（如「神秘老人」被揭露為「青雲長老」），則在 alias 填入玩家原本知道的舊名稱（「神秘老人」）。系統將自動合併為同一人，保留好感值。若為全新角色，不填此欄。
 嚴格回傳 JSON，不含任何 Markdown 包裝。`;
 
