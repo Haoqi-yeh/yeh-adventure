@@ -1254,11 +1254,10 @@ const START_PARTICLES = Array.from({ length: 22 }, (_, i) => ({
 // ─── StartScreen ──────────────────────────────────────────────────────────────
 
 function StartScreen({ onStart }: { onStart: (name: string, gender: "male" | "female", bg: string) => void }) {
-  const [name, setName]         = useState("");
-  const [gender, setGender]     = useState<"male" | "female">("male");
-  const [bg, setBg]             = useState("");
-  const [leaving, setLeaving]   = useState(false);
-  const [btnHover, setBtnHover] = useState(false);
+  const [name, setName]       = useState("");
+  const [gender, setGender]   = useState<"male" | "female">("male");
+  const [bg, setBg]           = useState("");
+  const [leaving, setLeaving] = useState(false);
   const nameIdxRef = useRef(0);
 
   const handleStart = () => {
@@ -1272,31 +1271,36 @@ function StartScreen({ onStart }: { onStart: (name: string, gender: "male" | "fe
     setName(WUXIA_NAMES[nameIdxRef.current]);
   };
 
-  // 菱形分隔線
   const SectionDivider = ({ label, sub }: { label: string; sub?: string }) => (
-    <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
-      <div style={{ flex: 1, height: "1px", background: "linear-gradient(90deg, transparent, rgba(30,41,59,0.8))" }} />
-      <span style={{ color: "#1e293b", fontSize: "8px", flexShrink: 0 }}>◆</span>
-      <span style={{ color: "#475569", fontSize: "10px", letterSpacing: "0.28em", fontWeight: 700, whiteSpace: "nowrap", flexShrink: 0 }}>{label}</span>
-      {sub && <span style={{ color: "#1e3a5f", fontSize: "9px", letterSpacing: "0.04em", whiteSpace: "nowrap" }}>{sub}</span>}
-      <span style={{ color: "#1e293b", fontSize: "8px", flexShrink: 0 }}>◆</span>
-      <div style={{ flex: 1, height: "1px", background: "linear-gradient(90deg, rgba(30,41,59,0.8), transparent)" }} />
+    <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "14px" }}>
+      <div style={{ flex: 1, height: "1px", background: "linear-gradient(90deg, transparent, rgba(184,134,11,0.4))" }} />
+      <span style={{ color: "#92400e", fontSize: "8px", flexShrink: 0 }}>◆</span>
+      <span style={{ color: "#B8860B", fontSize: "10px", letterSpacing: "0.28em", fontWeight: 700, whiteSpace: "nowrap", flexShrink: 0 }}>{label}</span>
+      {sub && <span style={{ color: "#78350f", fontSize: "9px", letterSpacing: "0.04em", whiteSpace: "nowrap" }}>{sub}</span>}
+      <span style={{ color: "#92400e", fontSize: "8px", flexShrink: 0 }}>◆</span>
+      <div style={{ flex: 1, height: "1px", background: "linear-gradient(90deg, rgba(184,134,11,0.4), transparent)" }} />
     </div>
   );
-
-  const inputBase: React.CSSProperties = {
-    width: "100%", backgroundColor: "rgba(8,14,26,0.9)",
-    borderTop: "none", borderLeft: "none", borderRight: "none",
-    borderBottom: "1px solid #1e293b",
-    color: "#e2e8f0", fontFamily: CJK, fontSize: "14px", outline: "none",
-    boxSizing: "border-box", transition: "border-color 0.25s, box-shadow 0.25s",
-    borderRadius: 0, background: "transparent",
-  };
 
   const delay = (d: number) => ({
     initial: { opacity: 0, y: 16 },
     animate: { opacity: 1, y: 0 },
     transition: { duration: 0.5, delay: d, ease: "easeOut" },
+  });
+
+  const cornerStyle = (pos: "tl" | "tr" | "bl" | "br"): React.CSSProperties => ({
+    position: "absolute",
+    width: "12px", height: "12px",
+    borderColor: "rgba(184,134,11,0.55)",
+    borderStyle: "solid",
+    borderTopWidth: pos === "tl" || pos === "tr" ? "1px" : 0,
+    borderBottomWidth: pos === "bl" || pos === "br" ? "1px" : 0,
+    borderLeftWidth: pos === "tl" || pos === "bl" ? "1px" : 0,
+    borderRightWidth: pos === "tr" || pos === "br" ? "1px" : 0,
+    top: pos === "tl" || pos === "tr" ? 0 : undefined,
+    bottom: pos === "bl" || pos === "br" ? 0 : undefined,
+    left: pos === "tl" || pos === "bl" ? 0 : undefined,
+    right: pos === "tr" || pos === "br" ? 0 : undefined,
   });
 
   return (
@@ -1346,13 +1350,17 @@ function StartScreen({ onStart }: { onStart: (name: string, gender: "male" | "fe
 
           {/* 標題 */}
           <motion.div initial={{ opacity: 0, y: -14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}
-            style={{ textAlign: "center", marginBottom: "44px" }}>
+            style={{ textAlign: "center", marginBottom: "52px" }}>
             <motion.h1
-              animate={{ textShadow: ["0 0 18px rgba(251,191,36,0.35), 0 0 45px rgba(251,191,36,0.12), 0 4px 20px rgba(0,0,0,0.8)", "0 0 32px rgba(251,191,36,0.65), 0 0 70px rgba(251,191,36,0.25), 0 4px 20px rgba(0,0,0,0.8)", "0 0 18px rgba(251,191,36,0.35), 0 0 45px rgba(251,191,36,0.12), 0 4px 20px rgba(0,0,0,0.8)"] }}
+              animate={{ textShadow: [
+                "0 0 28px rgba(251,191,36,0.6), 0 0 60px rgba(251,191,36,0.2), 0 0 100px rgba(251,191,36,0.08), 0 4px 24px rgba(0,0,0,0.9)",
+                "0 0 48px rgba(251,191,36,0.9), 0 0 90px rgba(251,191,36,0.4), 0 0 140px rgba(251,191,36,0.18), 0 4px 24px rgba(0,0,0,0.9)",
+                "0 0 28px rgba(251,191,36,0.6), 0 0 60px rgba(251,191,36,0.2), 0 0 100px rgba(251,191,36,0.08), 0 4px 24px rgba(0,0,0,0.9)",
+              ] }}
               transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
               style={{ fontSize: "38px", fontWeight: 900, letterSpacing: "0.5em", color: "#fbbf24", margin: "0 0 10px", lineHeight: 1.1, textIndent: "0.5em" }}
             >白日夢冒險</motion.h1>
-            <p style={{ color: "#334155", fontSize: "9px", letterSpacing: "0.38em", margin: "0 0 16px", textIndent: "0.38em" }}>武　俠　修　仙　文　字　RPG</p>
+            <p style={{ color: "#334155", fontSize: "9px", letterSpacing: "0.5em", margin: "0 0 16px", textIndent: "0.5em" }}>武　俠　修　仙　文　字　RPG</p>
             <motion.div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
               <motion.div style={{ height: 1, background: "linear-gradient(90deg, transparent, #78350f)" }} animate={{ width: [20, 35, 20] }} transition={{ duration: 3, repeat: Infinity }} />
               <motion.span style={{ color: "#92400e", fontSize: 8 }} animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 2, repeat: Infinity }}>◆</motion.span>
@@ -1361,70 +1369,77 @@ function StartScreen({ onStart }: { onStart: (name: string, gender: "male" | "fe
           </motion.div>
 
           {/* 江湖名號 */}
-          <motion.div {...delay(0.3)} style={{ marginBottom: "28px" }}>
+          <motion.div {...delay(0.3)} style={{ marginBottom: "52px" }}>
             <SectionDivider label="江 湖 名 號" />
-            <div style={{ display: "flex", gap: "10px", alignItems: "flex-end" }}>
-              <div style={{ flex: 1 }}>
-                <input
-                  type="text" value={name}
-                  onChange={e => setName(e.target.value.slice(0, 12))}
-                  placeholder="無名散修" maxLength={12}
-                  style={{ ...inputBase, padding: "10px 2px", fontSize: "16px", letterSpacing: "0.12em", width: "100%" }}
-                  onFocus={e => { e.target.style.borderColor = "#fbbf24"; e.target.style.boxShadow = "0 2px 12px rgba(251,191,36,0.12)"; }}
-                  onBlur={e => { e.target.style.borderColor = "#1e293b"; e.target.style.boxShadow = "none"; }}
-                />
-                <p style={{ color: "#1e3a5f", fontSize: "9px", textAlign: "right", margin: "4px 0 0" }}>{name.length} / 12</p>
-              </div>
+            <div style={{ position: "relative" }}>
+              <input
+                type="text" value={name}
+                onChange={e => setName(e.target.value.slice(0, 12))}
+                placeholder="無名散修" maxLength={12}
+                style={{
+                  width: "100%", boxSizing: "border-box",
+                  backgroundColor: "transparent",
+                  borderTop: "none", borderLeft: "none", borderRight: "none",
+                  borderBottom: "1px solid #1e293b",
+                  color: "#e2e8f0", fontFamily: CJK, fontSize: "16px",
+                  letterSpacing: "0.12em", outline: "none",
+                  padding: "10px 44px 10px 2px",
+                  borderRadius: 0, transition: "border-color 0.25s, box-shadow 0.25s",
+                }}
+                onFocus={e => { e.target.style.borderColor = "#fbbf24"; e.target.style.boxShadow = "0 2px 12px rgba(251,191,36,0.12)"; }}
+                onBlur={e => { e.target.style.borderColor = "#1e293b"; e.target.style.boxShadow = "none"; }}
+              />
+              {/* 骰子按鈕（輸入框內右側） */}
               <button onClick={rollName} title="隨機取名"
-                style={{ flexShrink: 0, marginBottom: "18px", padding: "8px 11px", background: "none", border: "1px solid #1e293b", borderRadius: "6px", color: "#334155", fontSize: 14, cursor: "pointer", transition: "all 0.2s", fontFamily: CJK, lineHeight: 1 }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = "#92400e"; e.currentTarget.style.color = "#fbbf24"; }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = "#1e293b"; e.currentTarget.style.color = "#334155"; }}
-              >骰</button>
+                style={{ position: "absolute", right: "2px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", fontSize: "18px", lineHeight: 1, padding: "4px 6px", opacity: 0.45, transition: "opacity 0.2s" }}
+                onMouseEnter={e => { e.currentTarget.style.opacity = "1"; }}
+                onMouseLeave={e => { e.currentTarget.style.opacity = "0.45"; }}
+              >🎲</button>
+              <p style={{ color: "#1e3a5f", fontSize: "9px", textAlign: "right", margin: "4px 0 0", opacity: 0.55 }}>{name.length} / 12</p>
             </div>
           </motion.div>
 
           {/* 探查根骨（性別） */}
-          <motion.div {...delay(0.5)} style={{ marginBottom: "28px" }}>
+          <motion.div {...delay(0.5)} style={{ marginBottom: "52px" }}>
             <SectionDivider label="探 查 根 骨" />
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
               {(["male", "female"] as const).map(g => {
                 const sel = gender === g;
                 const isMale = g === "male";
-                const accentColor = isMale ? "#7dd3fc" : "#6ee7b7";
                 return (
                   <button key={g} onClick={() => setGender(g)}
                     style={{
                       position: "relative", overflow: "hidden", padding: 0, height: "110px",
                       borderRadius: "10px", cursor: "pointer", fontFamily: CJK,
-                      border: sel ? `1px solid rgba(${isMale ? "125,211,252" : "110,231,183"},0.35)` : "1px solid rgba(30,41,59,0.6)",
-                      background: sel
-                        ? isMale ? "rgba(14,36,64,0.7)" : "rgba(8,52,44,0.7)"
-                        : "rgba(8,14,26,0.5)",
-                      boxShadow: sel ? `inset 0 0 30px rgba(${isMale ? "125,211,252" : "110,231,183"},0.08), 0 0 14px rgba(${isMale ? "125,211,252" : "110,231,183"},0.12)` : "none",
+                      border: sel ? "1px solid rgba(212,175,55,0.65)" : "1px solid rgba(30,41,59,0.6)",
+                      background: "rgba(8,14,26,0.6)",
+                      boxShadow: sel ? "0 0 20px rgba(212,175,55,0.22), inset 0 0 26px rgba(212,175,55,0.07)" : "none",
                       transition: "all 0.3s",
                     }}
+                    onMouseEnter={e => { if (!sel) { e.currentTarget.style.boxShadow = "inset 0 0 30px rgba(255,255,255,0.04)"; e.currentTarget.style.borderColor = "rgba(30,41,59,0.9)"; } }}
+                    onMouseLeave={e => { if (!sel) { e.currentTarget.style.boxShadow = "none"; e.currentTarget.style.borderColor = "rgba(30,41,59,0.6)"; } }}
                   >
-                    {/* 圖騰大字 */}
+                    {/* 圖騰大字（弱化水印） */}
                     <span style={{
                       position: "absolute", right: "-8px", bottom: "-20px",
                       fontSize: "108px", lineHeight: 1, userSelect: "none",
-                      color: accentColor, opacity: sel ? 0.22 : 0.07,
+                      color: "#fbbf24", opacity: sel ? 0.08 : 0.05,
                       transition: "opacity 0.35s", fontWeight: 900,
                     }}>{isMale ? "劍" : "蓮"}</span>
-                    {/* 文字內容（左下對齊） */}
+                    {/* 文字內容 */}
                     <div style={{ position: "relative", zIndex: 2, display: "flex", flexDirection: "column", justifyContent: "flex-end", alignItems: "flex-start", height: "100%", padding: "0 14px 14px" }}>
-                      <span style={{ fontSize: "18px", fontWeight: 900, letterSpacing: "0.22em", color: sel ? accentColor : "#334155", transition: "color 0.3s" }}>
+                      <span style={{ fontSize: "22px", fontWeight: 900, letterSpacing: "0.22em", color: sel ? "#D4AF37" : "#475569", transition: "color 0.3s" }}>
                         {isMale ? "男兒" : "女俠"}
                       </span>
-                      <span style={{ color: sel ? "#475569" : "#1e293b", fontSize: "9px", letterSpacing: "0.08em", marginTop: "3px", transition: "color 0.3s" }}>
+                      <span style={{ color: sel ? "#78350f" : "#1e293b", fontSize: "9px", letterSpacing: "0.08em", marginTop: "4px", transition: "color 0.3s" }}>
                         {isMale ? "頂天立地・仗劍行俠" : "巾幗不讓・玲瓏心思"}
                       </span>
                     </div>
-                    {/* 選中時脈動光邊 */}
+                    {/* 選中金光脈動 */}
                     {sel && (
                       <motion.div
-                        animate={{ opacity: [0.2, 0.6, 0.2] }} transition={{ duration: 2.5, repeat: Infinity }}
-                        style={{ position: "absolute", inset: 0, borderRadius: "9px", boxShadow: `inset 0 0 18px rgba(${isMale ? "125,211,252" : "110,231,183"},0.15)`, pointerEvents: "none" }}
+                        animate={{ opacity: [0.15, 0.5, 0.15] }} transition={{ duration: 2.5, repeat: Infinity }}
+                        style={{ position: "absolute", inset: 0, borderRadius: "9px", boxShadow: "inset 0 0 22px rgba(212,175,55,0.18)", pointerEvents: "none" }}
                       />
                     )}
                   </button>
@@ -1434,10 +1449,10 @@ function StartScreen({ onStart }: { onStart: (name: string, gender: "male" | "fe
           </motion.div>
 
           {/* 身世背景 */}
-          <motion.div {...delay(0.7)} style={{ marginBottom: "32px" }}>
+          <motion.div {...delay(0.7)} style={{ marginBottom: "44px" }}>
             <SectionDivider label="身 世 背 景" sub="選填" />
-            {/* 印章標籤 */}
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "12px" }}>
+            {/* 印章標籤（暗金色） */}
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "14px" }}>
               {BG_TEMPLATES.map(t => {
                 const active = bg === t.text;
                 return (
@@ -1445,68 +1460,75 @@ function StartScreen({ onStart }: { onStart: (name: string, gender: "male" | "fe
                     style={{
                       padding: "3px 9px", fontSize: "10px", fontFamily: CJK,
                       cursor: "pointer", letterSpacing: "0.1em",
-                      border: active ? "1px solid rgba(185,28,28,0.7)" : "1px solid rgba(127,29,29,0.35)",
+                      border: active ? "1px solid rgba(212,175,55,0.8)" : "1px solid rgba(184,134,11,0.35)",
                       borderRadius: "3px",
-                      backgroundColor: active ? "rgba(153,27,27,0.22)" : "rgba(127,29,29,0.06)",
-                      color: active ? "#fca5a5" : "#7f1d1d",
+                      backgroundColor: active ? "rgba(184,134,11,0.18)" : "rgba(184,134,11,0.05)",
+                      color: active ? "#FFD700" : "#B8860B",
                       transform: active ? "rotate(-0.6deg)" : "none",
-                      boxShadow: active ? "0 1px 6px rgba(153,27,27,0.25)" : "none",
+                      boxShadow: active ? "0 1px 6px rgba(212,175,55,0.2)" : "none",
                       transition: "all 0.2s",
                     }}
-                    onMouseEnter={e => { if (!active) { e.currentTarget.style.borderColor = "rgba(185,28,28,0.5)"; e.currentTarget.style.color = "#fca5a5"; } }}
-                    onMouseLeave={e => { if (!active) { e.currentTarget.style.borderColor = "rgba(127,29,29,0.35)"; e.currentTarget.style.color = "#7f1d1d"; } }}
+                    onMouseEnter={e => { if (!active) { e.currentTarget.style.borderColor = "rgba(212,175,55,0.55)"; e.currentTarget.style.color = "#D4AF37"; } }}
+                    onMouseLeave={e => { if (!active) { e.currentTarget.style.borderColor = "rgba(184,134,11,0.35)"; e.currentTarget.style.color = "#B8860B"; } }}
                   >{t.label}</button>
                 );
               })}
             </div>
-            {/* 卷軸質感 Textarea */}
-            <div style={{ position: "relative" }}>
+            {/* 古籍護角 Textarea */}
+            <div style={{ position: "relative", padding: "2px" }}>
+              <span style={cornerStyle("tl")} />
+              <span style={cornerStyle("tr")} />
+              <span style={cornerStyle("bl")} />
+              <span style={cornerStyle("br")} />
               <textarea
                 value={bg} onChange={e => setBg(e.target.value.slice(0, 150))}
                 placeholder={"你從何處來？\n心中藏著什麼仇恨或使命，驅使你踏入這萬丈紅塵…"}
                 rows={4}
                 style={{
                   width: "100%", backgroundColor: "rgba(8,14,26,0.75)",
-                  border: "1px solid #1e293b", borderLeft: "2px solid rgba(120,53,15,0.35)",
-                  borderRight: "2px solid rgba(120,53,15,0.35)",
-                  borderRadius: "6px", color: "#cbd5e1", fontFamily: CJK,
+                  border: "none",
+                  borderRadius: "4px", color: "#cbd5e1", fontFamily: CJK,
                   fontSize: "13px", outline: "none", boxSizing: "border-box",
-                  padding: "12px 16px", resize: "none", lineHeight: 1.8,
-                  transition: "border-color 0.25s",
+                  padding: "14px 16px 28px", resize: "none", lineHeight: 1.8,
+                  transition: "background-color 0.25s", display: "block",
                 }}
-                onFocus={e => { e.target.style.borderColor = "rgba(251,191,36,0.4)"; e.target.style.borderLeftColor = "rgba(251,191,36,0.5)"; e.target.style.borderRightColor = "rgba(251,191,36,0.5)"; }}
-                onBlur={e => { e.target.style.borderColor = "#1e293b"; e.target.style.borderLeftColor = "rgba(120,53,15,0.35)"; e.target.style.borderRightColor = "rgba(120,53,15,0.35)"; }}
+                onFocus={e => { e.target.style.backgroundColor = "rgba(12,20,38,0.9)"; }}
+                onBlur={e => { e.target.style.backgroundColor = "rgba(8,14,26,0.75)"; }}
               />
-              <p style={{ color: "#1e3a5f", fontSize: "9px", textAlign: "right", margin: "4px 0 0" }}>{bg.length} / 150</p>
+              {/* 字數（內部右下） */}
+              <span style={{ position: "absolute", bottom: "8px", right: "12px", color: "#334155", fontSize: "9px", opacity: 0.45, pointerEvents: "none" }}>
+                {bg.length} / 150
+              </span>
             </div>
           </motion.div>
 
           {/* 踏入江湖 */}
           <motion.div {...delay(0.9)}>
             <motion.button
-              whileTap={{ scale: 0.97 }}
+              whileTap={{ scale: 0.96 }}
               onClick={handleStart}
-              onMouseEnter={() => setBtnHover(true)}
-              onMouseLeave={() => setBtnHover(false)}
+              animate={{ boxShadow: [
+                "0 4px 20px rgba(212,175,55,0.3), 0 2px 8px rgba(0,0,0,0.5)",
+                "0 4px 40px rgba(212,175,55,0.6), 0 2px 8px rgba(0,0,0,0.5)",
+                "0 4px 20px rgba(212,175,55,0.3), 0 2px 8px rgba(0,0,0,0.5)",
+              ] }}
+              transition={{ boxShadow: { duration: 2.5, repeat: Infinity, ease: "easeInOut" } }}
               style={{
                 position: "relative", overflow: "hidden",
                 width: "100%", padding: "16px",
                 borderRadius: "10px", cursor: "pointer", fontFamily: CJK,
-                background: "transparent",
-                border: `1px solid rgba(251,191,36,${btnHover ? "0.75" : "0.35"})`,
-                color: "#fbbf24", fontSize: "14px", fontWeight: 900, letterSpacing: "0.48em",
-                textShadow: btnHover ? "0 0 20px rgba(251,191,36,0.9)" : "0 0 10px rgba(251,191,36,0.45)",
-                boxShadow: btnHover
-                  ? "0 0 30px rgba(251,191,36,0.22), 0 4px 24px rgba(0,0,0,0.5), inset 0 0 20px rgba(251,191,36,0.06)"
-                  : "0 2px 16px rgba(0,0,0,0.4), inset 0 0 10px rgba(251,191,36,0.03)",
-                transition: "border-color 0.3s, box-shadow 0.3s, text-shadow 0.3s",
+                background: "linear-gradient(135deg, #D4AF37 0%, #FFD700 50%, #D4AF37 100%)",
+                border: "none",
+                color: "#1a0800", fontSize: "15px", fontWeight: 900, letterSpacing: "0.48em",
+                textShadow: "0 1px 2px rgba(255,255,255,0.28)",
+                textIndent: "0.48em",
               }}
             >
               {/* 流光掃過 */}
               <motion.div
                 animate={{ x: ["-120%", "220%"] }}
                 transition={{ duration: 2.8, repeat: Infinity, repeatDelay: 1.5, ease: "easeInOut" }}
-                style={{ position: "absolute", top: 0, bottom: 0, left: 0, width: "35%", background: "linear-gradient(90deg, transparent, rgba(251,191,36,0.15), rgba(251,191,36,0.08), transparent)", pointerEvents: "none" }}
+                style={{ position: "absolute", top: 0, bottom: 0, left: 0, width: "35%", background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.28), rgba(255,255,255,0.12), transparent)", pointerEvents: "none" }}
               />
               ✦ 踏 入 江 湖 ✦
             </motion.button>
