@@ -545,13 +545,13 @@ function Modal({ onClose, title, children }: {
 // ─── PlayerAvatar ─────────────────────────────────────────────────────────────
 
 const INVENTORY_PROMPTS: [RegExp, string][] = [
-  [/[鐵鋼鉑]?劍|長劍|飛劍|古劍/, "holding a pixelated iron sword"],
-  [/道袍|白袍|青袍|玄袍|法袍|仙袍/, "wearing a simple daoist robe"],
-  [/弓/, "carrying a pixelated bow"],
-  [/鎧甲|甲冑|護甲/, "wearing armor"],
-  [/仙杖|法杖|靈杖|禪杖|拂塵/, "holding a magic staff"],
-  [/扇/, "holding a folding fan"],
-  [/護符|符籙|靈符/, "holding a glowing talisman"],
+  [/[鐵鋼鉑]?劍|長劍|飛劍|古劍/, "holding an ornate wuxia sword"],
+  [/道袍|白袍|青袍|玄袍|法袍|仙袍/, "wearing elegant Daoist robes"],
+  [/弓/, "carrying a lacquered bow"],
+  [/鎧甲|甲冑|護甲/, "wearing ancient Chinese armor"],
+  [/仙杖|法杖|靈杖|禪杖|拂塵/, "holding a jade cultivation staff"],
+  [/扇/, "holding a decorated folding fan"],
+  [/護符|符籙|靈符/, "holding a glowing spirit talisman"],
 ];
 
 function buildAvatarPrompt(cultivation: string, inventory: string[]): string {
@@ -562,7 +562,7 @@ function buildAvatarPrompt(cultivation: string, inventory: string[]): string {
     }
   }
   const equip = parts.length > 0 ? ", " + parts.join(", ") : "";
-  return `(masterpiece:1.2), classic japanese AVG illustration style, handsome young wuxia cultivator, ${cultivation} realm${equip}, traditional Daoist robes, sharp lines, 64-bit color depth style, standing pose, confident expression`;
+  return `(masterpiece:1.3), wuxia xianxia RPG game character portrait, semi-realistic Chinese fantasy illustration, upper body, handsome young male wuxia cultivator, ${cultivation} realm${equip}, traditional Daoist robes with detailed embroidery, topknot with jade hairpin, confident expression, misty ancient mountain forest background, soft cinematic rim lighting, Chinese game art style`;
 }
 
 function PlayerAvatar({ state }: { state: GameState }) {
@@ -717,8 +717,8 @@ function NpcPortrait({ npc }: { npc: NPC }) {
   const [err, setErr] = useState(false);
   if (!npc.physicalDescription) return null;
   const genderTag = npc.gender === "female"
-    ? `, (masterpiece:1.2), classic japanese AVG illustration style, alluring anime face, (very tight skimpy low-cut Daoist robe:1.4), (breathtaking hourglass figure, bountiful bust:1.5), sharp lines, 64-bit color depth style`
-    : `, (masterpiece:1.2), classic japanese AVG illustration style, handsome young wuxia cultivator anime face, traditional flowing Daoist robes, strong build, sharp lines, 64-bit color depth style`;
+    ? `, (masterpiece:1.3), wuxia xianxia RPG game character portrait, semi-realistic Chinese fantasy illustration, upper body, (seductive alluring beauty:1.3), (low-cut revealing silk hanfu:1.4), (voluptuous hourglass figure, ample bust:1.5), intricate fabric embroidery, delicate hair ornaments, misty bamboo mountain background, soft cinematic rim lighting, Chinese game art style`
+    : `, (masterpiece:1.3), wuxia xianxia RPG game character portrait, semi-realistic Chinese fantasy illustration, upper body, handsome wuxia cultivator, traditional flowing Daoist robes, strong confident build, detailed fabric embroidery, topknot with jade pin, ancient mountain temple background, soft cinematic lighting, Chinese game art style`;
   const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(npc.physicalDescription + genderTag)}?width=128&height=192&nologo=true&model=flux`;
   return (
     <div style={{
