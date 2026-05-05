@@ -13,6 +13,9 @@ interface NPC {
 
 interface GameRequest {
   isStart?: boolean;
+  playerName?: string;
+  playerGender?: string;
+  playerBackground?: string;
   userInput?: string;
   stats?: {
     qiXue: number;
@@ -35,13 +38,26 @@ interface GameRequest {
 
 function buildPrompt(req: GameRequest): string {
   if (req.isStart) {
-    return `請隨機生成一個武俠修仙世界的開局場景。
-主角剛剛甦醒，失去了所有記憶，不知道自己是誰或為何在此，年紀約莫十八歲。
+    const gender = req.playerGender === "female" ? "女性" : "男性";
+    const name   = req.playerName?.trim() || "無名散修";
+    const bg     = req.playerBackground?.trim();
+    const bgBlock = bg
+      ? `\n\n【身世背景·最高優先級——故事必須以此為根基展開】\n${bg}`
+      : "";
+    return `請為以下角色生成武俠修仙世界的開局場景。${bgBlock}
+
+【角色設定】
+江湖名號：${name}
+性別：${gender}
+年紀：約莫十八歲
+
 場景必須是以下之一（隨機選擇，每次不同）：
 - 深山竹林、雲霧繚繞的山頂、熱鬧的江湖城鎮、廢棄的古老宗門遺址、
   海上漂浮的孤島、地下洞窟的靈穴、邊境沙漠的廢墟、懸崖邊的茅屋
 
-用生動筆觸描述主角甦醒後看到的一切，讓讀者立刻感受到世界的氛圍。
+若玩家提供了身世背景，場景與伏筆必須與之呼應；若未提供，主角失去所有記憶，不知自己是誰。
+用生動筆觸描述主角所見所感，讓讀者立刻感受到世界的氛圍。
+以第二人稱「你」敘述，稱呼角色時可用其江湖名號。
 若場景中有 NPC，請在 newCharacters 欄位中加入其資訊。
 提供3個初始行動選項。`;
   }

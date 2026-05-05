@@ -72,6 +72,8 @@ interface GameState {
   cultivation: string;
   cultivationLevel: number;
   playerName: string;
+  playerGender: "male" | "female";
+  playerBackground: string;
   imagePrompt: string;
   eventLog: { id: number; type: string; text: string }[];
   displayedNarrative: string;
@@ -180,8 +182,9 @@ function useGameState() {
     mingSheng: 10, zuiE: 0,
     karmaHistory: [], characters: [],
     cultivation: CULTIVATION_STAGES[0], cultivationLevel: 0,
-    playerName: "無名散修", imagePrompt: "", eventLog: [],
-    displayedNarrative: "", isTyping: false, isLoading: true,
+    playerName: "無名散修", playerGender: "male", playerBackground: "",
+    imagePrompt: "", eventLog: [],
+    displayedNarrative: "", isTyping: false, isLoading: false,
     turn: 0, options: [], error: null,
     inventory: [],
     cave: { lingQiLevel: 1, facilities: [] },
@@ -311,7 +314,7 @@ function useGameState() {
   const callAPI = useCallback(async (userInput: string | null): Promise<AIGameResponse> => {
     const s = stateRef.current;
     const body = userInput === null
-      ? { isStart: true }
+      ? { isStart: true, playerName: s.playerName, playerGender: s.playerGender, playerBackground: s.playerBackground }
       : {
           userInput,
           stats: {
@@ -341,15 +344,21 @@ function useGameState() {
   }, []);
 
   useEffect(() => {
-    callAPI(null)
-      .then(r => applyResponse(r, true))
-      .catch(err => setState(s => ({
-        ...s, isLoading: false, displayedNarrative: "",
-        error: `開局失敗：${err instanceof Error ? err.message : err}`,
-      })));
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const startGame = useCallback(async (name: string, gender: "male" | "female", background: string) => {
+    setState(s => ({ ...s, playerName: name, playerGender: gender, playerBackground: background, isLoading: true }));
+    try {
+      const r = await callAPI(null);
+      applyResponse(r, true);
+    } catch (err) {
+      setState(s => ({
+        ...s, isLoading: false,
+        error: `開局失敗：${err instanceof Error ? err.message : err}`,
+      }));
+    }
+  }, [callAPI, applyResponse]);
 
   const handleSendMessage = useCallback(async (userInput: string) => {
     const s = stateRef.current;
@@ -435,7 +444,7 @@ function useGameState() {
     });
   }, []);
 
-  return { state, handleSendMessage, handleUseItem, handleEquipItem, handleUnequipItem };
+  return { state, startGame, handleSendMessage, handleUseItem, handleEquipItem, handleUnequipItem };
 }
 
 // ─── StatBar ──────────────────────────────────────────────────────────────────
@@ -549,7 +558,7 @@ const INVENTORY_PROMPTS: [RegExp, string][] = [
   [/護符|符籙|靈符/, "holding a glowing spirit talisman"],
 ];
 
-function buildAvatarPrompt(cultivation: string, inventory: string[]): string {
+function buildAvatarPrompt(cultivation: string, inventory: string[], gender: "male" | "female"): string {
   const parts: string[] = [];
   for (const item of inventory) {
     for (const [regex, desc] of INVENTORY_PROMPTS) {
@@ -557,13 +566,16 @@ function buildAvatarPrompt(cultivation: string, inventory: string[]): string {
     }
   }
   const equip = parts.length > 0 ? ", " + parts.join(", ") : "";
+  if (gender === "female") {
+    return `(masterpiece:1.3), wuxia xianxia RPG game character portrait, semi-realistic Chinese fantasy illustration, upper body, alluring young female wuxia cultivator, ${cultivation} realm${equip}, (low-cut revealing hanfu:1.2), (voluptuous figure, ample bust:1.4), elegant hair ornaments, misty ancient mountain forest background, soft cinematic rim lighting, Chinese game art style`;
+  }
   return `(masterpiece:1.3), wuxia xianxia RPG game character portrait, semi-realistic Chinese fantasy illustration, upper body, handsome young male wuxia cultivator, ${cultivation} realm${equip}, traditional Daoist robes with detailed embroidery, topknot with jade hairpin, confident expression, misty ancient mountain forest background, soft cinematic rim lighting, Chinese game art style`;
 }
 
 function PlayerAvatar({ state }: { state: GameState }) {
   const [loaded, setLoaded] = useState(false);
   const [err, setErr] = useState(false);
-  const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(buildAvatarPrompt(state.cultivation, state.inventory))}?width=128&height=128&nologo=true&model=flux`;
+  const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(buildAvatarPrompt(state.cultivation, state.inventory, state.playerGender))}?width=128&height=128&nologo=true&model=flux`;
   return (
     <div style={{
       width: 96, height: 96, borderRadius: "12px", margin: "0 auto 16px",
@@ -1204,10 +1216,185 @@ const hudBtn: React.CSSProperties = {
   padding: "4px 8px", cursor: "pointer", fontFamily: CJK, lineHeight: 1,
 };
 
+// ─── StartScreen ──────────────────────────────────────────────────────────────
+
+function StartScreen({ onStart }: { onStart: (name: string, gender: "male" | "female", bg: string) => void }) {
+  const [name, setName]       = useState("");
+  const [gender, setGender]   = useState<"male" | "female">("male");
+  const [bg, setBg]           = useState("");
+  const [leaving, setLeaving] = useState(false);
+
+  const handleStart = () => {
+    if (leaving) return;
+    setLeaving(true);
+    setTimeout(() => onStart(name.trim() || "無名散修", gender, bg.trim()), 600);
+  };
+
+  const inputBase: React.CSSProperties = {
+    width: "100%", backgroundColor: "#0a111e", border: "1px solid #1e293b",
+    borderRadius: "10px", color: "#e2e8f0", fontFamily: CJK,
+    fontSize: "14px", outline: "none", boxSizing: "border-box",
+    transition: "border-color 0.2s",
+  };
+
+  return (
+    <motion.div
+      animate={{ opacity: leaving ? 0 : 1 }}
+      transition={{ duration: 0.6, ease: "easeInOut" }}
+      style={{
+        position: "fixed", inset: 0,
+        backgroundColor: "#020617",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        padding: "20px", fontFamily: CJK,
+      }}
+    >
+      {/* 齒輪 */}
+      <button
+        style={{
+          position: "absolute", top: "18px", right: "20px",
+          background: "none", border: "none", cursor: "pointer",
+          color: "#334155", fontSize: "20px", lineHeight: 1, padding: "4px",
+          transition: "color 0.2s",
+        }}
+        onMouseEnter={e => (e.currentTarget.style.color = "#64748b")}
+        onMouseLeave={e => (e.currentTarget.style.color = "#334155")}
+        title="管理員後台"
+        onClick={() => alert("後台建置中，敬請期待")}
+      >
+        ⚙
+      </button>
+
+      <div style={{ width: "100%", maxWidth: "400px", display: "flex", flexDirection: "column", gap: "28px" }}>
+
+        {/* 標題 */}
+        <div style={{ textAlign: "center" }}>
+          <motion.h1
+            initial={{ opacity: 0, y: -12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, ease: "easeOut" }}
+            style={{
+              fontSize: "32px", fontWeight: 900, letterSpacing: "0.35em",
+              color: "#fbbf24", margin: 0,
+              textShadow: "0 0 24px rgba(251,191,36,0.55), 0 0 60px rgba(251,191,36,0.2)",
+            }}
+          >
+            白日夢冒險
+          </motion.h1>
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.8, delay: 0.4 }}
+            style={{ color: "#475569", fontSize: "11px", letterSpacing: "0.28em", margin: "10px 0 0", }}
+          >
+            武俠修仙文字 RPG
+          </motion.p>
+        </div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.5 }}
+          style={{ display: "flex", flexDirection: "column", gap: "20px" }}
+        >
+          {/* 江湖名號 */}
+          <div>
+            <p style={{ color: "#475569", fontSize: "10px", letterSpacing: "0.22em", marginBottom: "8px", fontWeight: 700 }}>
+              ── 江 湖 名 號 ──
+            </p>
+            <input
+              type="text"
+              value={name}
+              onChange={e => setName(e.target.value.slice(0, 12))}
+              placeholder="無名散修"
+              maxLength={12}
+              style={{ ...inputBase, padding: "12px 14px" }}
+              onFocus={e => (e.target.style.borderColor = "#fbbf24")}
+              onBlur={e => (e.target.style.borderColor = "#1e293b")}
+            />
+            <p style={{ color: "#1e293b", fontSize: "10px", textAlign: "right", margin: "4px 2px 0", letterSpacing: "0.05em" }}>
+              {name.length} / 12
+            </p>
+          </div>
+
+          {/* 拉開褲頭 */}
+          <div>
+            <p style={{ color: "#475569", fontSize: "10px", letterSpacing: "0.22em", marginBottom: "8px", fontWeight: 700 }}>
+              ── 拉 開 褲 頭 ──
+            </p>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+              {(["male", "female"] as const).map(g => (
+                <button
+                  key={g}
+                  onClick={() => setGender(g)}
+                  style={{
+                    padding: "14px 10px", borderRadius: "10px", cursor: "pointer",
+                    fontFamily: CJK, transition: "all 0.2s",
+                    border: gender === g ? "1px solid #fbbf24" : "1px solid #1e293b",
+                    backgroundColor: gender === g ? "rgba(251,191,36,0.08)" : "#0a111e",
+                    boxShadow: gender === g ? "0 0 16px rgba(251,191,36,0.18)" : "none",
+                  }}
+                >
+                  <div style={{ fontSize: "22px", marginBottom: "6px" }}>
+                    {g === "male" ? "⚔" : "✿"}
+                  </div>
+                  <div style={{ color: gender === g ? "#fbbf24" : "#64748b", fontSize: "13px", fontWeight: 700, letterSpacing: "0.15em" }}>
+                    {g === "male" ? "男" : "女"}
+                  </div>
+                  <div style={{ color: "#334155", fontSize: "10px", marginTop: "4px", letterSpacing: "0.08em" }}>
+                    {g === "male" ? "頂天立地，仗劍行俠" : "巾幗不讓，玲瓏心思"}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 身世背景 */}
+          <div>
+            <p style={{ color: "#475569", fontSize: "10px", letterSpacing: "0.22em", marginBottom: "8px", fontWeight: 700 }}>
+              ── 身 世 背 景 ──
+              <span style={{ color: "#1e3a5f", fontWeight: 400, marginLeft: "8px" }}>（選填，AI 將以此為基礎展開故事）</span>
+            </p>
+            <textarea
+              value={bg}
+              onChange={e => setBg(e.target.value.slice(0, 150))}
+              placeholder="你從哪裡來？有何仇恨？背負著什麼使命踏入這江湖…"
+              rows={4}
+              style={{ ...inputBase, padding: "12px 14px", resize: "none", lineHeight: 1.7 }}
+              onFocus={e => (e.target.style.borderColor = "#fbbf24")}
+              onBlur={e => (e.target.style.borderColor = "#1e293b")}
+            />
+            <p style={{ color: "#1e293b", fontSize: "10px", textAlign: "right", margin: "4px 2px 0", letterSpacing: "0.05em" }}>
+              {bg.length} / 150
+            </p>
+          </div>
+
+          {/* 開始按鈕 */}
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={handleStart}
+            style={{
+              width: "100%", padding: "16px", borderRadius: "12px",
+              border: "1px solid #92400e", cursor: "pointer", fontFamily: CJK,
+              background: "linear-gradient(135deg, #78350f 0%, #92400e 50%, #78350f 100%)",
+              color: "#fbbf24", fontSize: "15px", fontWeight: 900,
+              letterSpacing: "0.4em",
+              boxShadow: "0 0 24px rgba(251,191,36,0.25), inset 0 1px 0 rgba(251,191,36,0.15)",
+              textShadow: "0 0 12px rgba(251,191,36,0.6)",
+            }}
+          >
+            ✦ 踏 入 江 湖 ✦
+          </motion.button>
+        </motion.div>
+
+      </div>
+    </motion.div>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function Page() {
-  const { state, handleSendMessage, handleUseItem, handleEquipItem, handleUnequipItem } = useGameState();
+  const { state, startGame, handleSendMessage, handleUseItem, handleEquipItem, handleUnequipItem } = useGameState();
   const [inputValue, setInputValue]     = useState("");
   const [rippleKey, setRippleKey]       = useState<number | null>(null);
   const [showDetail, setShowDetail]     = useState(false);
@@ -1249,6 +1436,11 @@ export default function Page() {
   };
 
   const isBusy = state.isLoading || state.isTyping;
+  const gameStarted = state.turn > 0 || state.isLoading || !!state.displayedNarrative;
+
+  if (!gameStarted) {
+    return <StartScreen onStart={startGame} />;
+  }
 
   return (
     <div style={{
